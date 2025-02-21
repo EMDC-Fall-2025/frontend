@@ -1,27 +1,26 @@
 FROM node:22-bullseye as base
-
 WORKDIR /home/node/app
-
 COPY package*.json ./
 
-#------------------------------------------------
-# Separate dev stage with nodemon and different CMD
+# Development Stage
 FROM base as dev
 RUN --mount=type=cache,target=/home/node/app/.npm \
   npm set cache /home/node/app/.npm && \
   npm install
-COPY . .
-# "npm run dev" corresponds to "nodemon src/index.js"
+COPY . . 
 CMD ["npm", "run", "dev"]
-#------------------------------------------------
 
-FROM base as production
-ENV NODE_ENV production
+# Build Stage
+FROM base as build
 RUN --mount=type=cache,target=/home/node/app/.npm \
   npm set cache /home/node/app/.npm && \
   npm ci --only=production && \
   npm run build
+
+# Production Stage
+FROM base as production
+ENV NODE_ENV production
 USER node
-COPY --chown=node:node ./dist/ .
+COPY --from=build --chown=node:node /home/node/app/dist ./dist
 EXPOSE 5173
-CMD [ "node", "index.js" ]
+CMD ["node", "index.js"]
