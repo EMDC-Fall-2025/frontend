@@ -2,6 +2,8 @@ FROM node:22-bullseye as base
 WORKDIR /home/node/app
 COPY package*.json ./
 COPY tsconfig*.json ./
+COPY src/ ./src/
+COPY vite.config.ts ./
 
 # Development Stage
 FROM base as dev
