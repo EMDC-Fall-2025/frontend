@@ -14,7 +14,7 @@ CMD ["npm", "run", "dev"]
 FROM base as build
 RUN --mount=type=cache,target=/home/node/app/.npm \
   npm set cache /home/node/app/.npm && \
-  npm ci --only=production && \
+  npm install && \
   npm run build
 
 # Production Stage
