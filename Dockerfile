@@ -5,6 +5,7 @@ COPY package*.json ./
 COPY tsconfig.json ./  
 COPY tsconfig.app.json ./  
 COPY tsconfig.node.json ./  
+COPY src ./src  
 
 # Dev stage
 FROM base as dev
@@ -19,7 +20,7 @@ FROM base as builder
 ENV NODE_ENV production
 RUN --mount=type=cache,target=/home/node/app/.npm \
   npm set cache /home/node/app/.npm && \
-  npm ci --include=dev && \ 
+  npm ci --include=dev && \  
   npm run build
 
 # Production stage
