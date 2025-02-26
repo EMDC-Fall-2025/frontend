@@ -35,4 +35,6 @@ RUN --mount=type=cache,target=/home/node/app/.npm \
 COPY --from=builder --chown=node:node /home/node/app/dist ./dist
 
 # Set user and expose port
-USER
+USER node
+EXPOSE 5173
+CMD ["node", "dist/app/index.js"] 
