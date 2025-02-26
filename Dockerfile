@@ -7,6 +7,7 @@ COPY tsconfig.app.json ./
 COPY tsconfig.node.json ./ 
 COPY src ./src  
 COPY vite.config.ts ./ 
+COPY index.html ./
 
 # Dev stage
 FROM base as dev
