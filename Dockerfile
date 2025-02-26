@@ -3,9 +3,9 @@ FROM node:22-bullseye as base
 
 WORKDIR /home/node/app
 
-# Copy package files and install dependencies
+# Copy package files and install both production and dev dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --production=false
 
 # Copy application files
 COPY . .
@@ -13,7 +13,7 @@ COPY . .
 # Set environment variables
 ENV NODE_ENV=production
 
-# Build application (if applicable)
+# Build application
 RUN npm run build
 
 # Set non-root user
