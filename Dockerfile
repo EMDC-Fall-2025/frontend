@@ -1,26 +1,16 @@
-# Use official Node.js LTS image
 FROM node:22-bullseye as base
 
 WORKDIR /home/node/app
 
-# Copy package files and install both production and dev dependencies
 COPY package*.json ./
-RUN npm install --production=false
 
-# Copy application files
-COPY . .
-
-# Set environment variables
-ENV NODE_ENV=production
-
-# Build application
-RUN npm run build
-
-# Set non-root user
+FROM base as production
+ENV NODE_ENV production
+RUN --mount=type=cache,target=/home/node/app/.npm \
+  npm set cache /home/node/app/.npm && \
+  npm ci --only=production && \
+  npm run build
 USER node
-
-# Expose necessary port
+COPY --chown=node:node ./dist/ .
 EXPOSE 5173
-
-# Start the application
-CMD ["node", "dist/index.js"]
+CMD [ "node", "index.js" ]
