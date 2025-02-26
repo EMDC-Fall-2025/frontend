@@ -24,9 +24,13 @@ ENV NODE_ENV production
 # Copy all files before running the build
 COPY . .
 
+# Ensure TypeScript is installed globally if needed
+RUN npm install -g typescript
+
 RUN --mount=type=cache,target=/home/node/app/.npm \
   npm set cache /home/node/app/.npm && \
   npm ci --only=production && \
+  npx tsc && \
   npm run build
 
 # Ensure dist directory exists
