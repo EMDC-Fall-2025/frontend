@@ -12,7 +12,7 @@ export default defineConfig({
     host: "0.0.0.0",
     proxy: {
       "/api": {
-        target: "https://emdc-backend-mahe5.ondigitalocean.app",
+        target: process.env.VITE_BACKEND_URL,
         changeOrigin: true,
         secure: false,
         configure: (proxy, _options) => {

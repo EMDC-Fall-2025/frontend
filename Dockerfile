@@ -1,16 +1,23 @@
-FROM node:22-bullseye as base
+FROM node:18 AS base
 
-WORKDIR /home/node/app
+# Set working directory
+WORKDIR /home/node/app/
 
+# Copy package.json and package-lock.json first to leverage Docker cache
 COPY package*.json ./
 
-#------------------------------------------------
-# Separate dev stage with nodemon and different CMD
-FROM base as dev
-RUN --mount=type=cache,target=/home/node/app/.npm \
-  npm set cache /home/node/app/.npm && \
-  npm install
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the application
 COPY . .
-# "npm run dev" corresponds to "nodemon src/index.js"
+
+# Set environment variables
+ARG VITE_BACKEND_URL
+ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
+
+# Expose the port the app runs on
+EXPOSE 5173
+
+# Start the application in development mode
 CMD ["npm", "run", "dev"]
-#------------------------------------------------
