@@ -12,7 +12,7 @@ COPY package*.json ./
 RUN --mount=type=cache,target=/home/node/app/.npm \
   npm set cache /home/node/app/.npm && \
   npm install
-COPY . .  
+COPY . . 
 CMD ["npm", "run", "dev"]
 #------------------------------------------------
 
@@ -36,7 +36,7 @@ RUN ls -la /home/node/app/dist || mkdir -p /home/node/app/dist
 
 # Change ownership and copy dist separately
 USER node
-COPY --chown=node:node --from=production /home/node/app/dist ./dist
+COPY --chown=node:node ./dist ./dist
 
 EXPOSE 5173
 CMD ["node", "index.js"]
