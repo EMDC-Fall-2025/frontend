@@ -22,9 +22,11 @@ FROM node:22-bullseye as build
 WORKDIR /home/node/app
 COPY package*.json ./
 
+# Install dependencies, including TypeScript
 RUN --mount=type=cache,target=/home/node/app/.npm \
   npm set cache /home/node/app/.npm && \
-  npm ci --only=production
+  npm ci --only=production && \
+  npm install -g typescript # <-- Ensure TypeScript is installed
 
 COPY . .  
 RUN npm run build
@@ -43,5 +45,5 @@ RUN npm ci --only=production
 
 # Use Vite to serve the built project
 USER node
-EXPOSE 4173 
+EXPOSE 4173  
 CMD ["npm", "run", "preview"]
