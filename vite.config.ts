@@ -33,19 +33,4 @@ export default defineConfig({
       },
     },
   },
-  // Add the build configuration
-  build: {
-    outDir: "dist",  // Output directory for the production build
-    emptyOutDir: true,  // Clear the dist directory before building
-    sourcemap: true,  // Generate source maps for debugging
-    rollupOptions: {
-      output: {
-        manualChunks: (id) => {
-          if (id.includes("node_modules")) {
-            return "vendor";  // Split vendor (node_modules) code into a separate chunk
-          }
-        },
-      },
-    },
-  },
 });
