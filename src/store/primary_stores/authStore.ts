@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import axios from "axios";
 import { Role } from "../../types";
-import api from "../../api";
 
 interface AuthState {
   user: null | { id: number; username: string };
@@ -29,7 +28,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoadingAuth: true });
         set({ authError: null });
         try {
-          const response = await api.post(`/api/login/`, {
+          const response = await axios.post(`/api/login/`, {
             username: username,
             password: password,
           });
