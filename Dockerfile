@@ -19,7 +19,7 @@ FROM base as builder
 ENV NODE_ENV production
 RUN --mount=type=cache,target=/home/node/app/.npm \
   npm set cache /home/node/app/.npm && \
-  npm ci --include=dev && \  # Install dev dependencies for the build
+  npm ci --include=dev && \ 
   npm run build
 
 # Production stage
@@ -27,7 +27,7 @@ FROM base as production
 ENV NODE_ENV production
 RUN --mount=type=cache,target=/home/node/app/.npm \
   npm set cache /home/node/app/.npm && \
-  npm ci --only=production  # Install only production dependencies
+  npm ci --only=production  
 
 # Copy built files from the builder stage
 COPY --from=builder --chown=node:node /home/node/app/dist ./dist
