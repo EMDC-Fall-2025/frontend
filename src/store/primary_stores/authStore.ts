@@ -26,6 +26,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       
       login: async (username, password) => {
+        console.log("API_BASE_URL:", API_BASE_URL);
         set({ isLoadingAuth: true });
         set({ authError: null });
         try {
