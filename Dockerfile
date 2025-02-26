@@ -17,23 +17,17 @@ COPY . .
 CMD ["npm", "run", "dev"]
 
 #------------------------------------------------
-# Build Stage (Separate from Final Production)
+# Build Stage
 FROM node:22-bullseye as build
 WORKDIR /home/node/app
 COPY package*.json ./
 
-# Install both production and dev dependencies to include TypeScript
 RUN --mount=type=cache,target=/home/node/app/.npm \
   npm set cache /home/node/app/.npm && \
-  npm ci  # Install all dependencies, including devDependencies
+  npm ci --only=production
 
 COPY . .  
-
-# Ensure TypeScript is installed globally (optional but helpful)
-RUN npm install -g typescript
-
-# Run the TypeScript compiler and Vite build
-RUN npx tsc -b && npm run build
+RUN npm run build
 
 #------------------------------------------------
 # Production Stage
@@ -41,17 +35,13 @@ FROM node:22-bullseye as production
 WORKDIR /home/node/app
 ENV NODE_ENV production
 
-# Copy only necessary production files from the build stage
+# Copy built `dist` from the build stage
 COPY --from=build /home/node/app/dist ./dist  
-COPY package*.json ./
 
-# Install only production dependencies to keep the final image lightweight
-RUN --mount=type=cache,target=/home/node/app/.npm \
-  npm ci --only=production
+# Install production dependencies (if needed)
+RUN npm ci --only=production
 
-# Ensure the `dist` folder exists
-RUN ls -la ./dist  
-
+# Use Vite to serve the built project
 USER node
-EXPOSE 5173
-CMD ["node", "index.js"]
+EXPOSE 4173 
+CMD ["npm", "run", "preview"]
