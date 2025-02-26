@@ -2,6 +2,7 @@
 FROM node:22-bullseye as base
 WORKDIR /home/node/app
 COPY package*.json ./
+COPY tsconfig.json ./ 
 
 # Dev stage
 FROM base as dev
