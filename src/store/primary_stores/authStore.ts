@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import axios from "axios";
 import { Role } from "../../types";
-const API_BASE_URL = (import.meta as any).env.VITE_BACKEND_URL;
+import api from "../../api";
 
 interface AuthState {
   user: null | { id: number; username: string };
@@ -26,11 +26,10 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       
       login: async (username, password) => {
-        console.log("API_BASE_URL:", API_BASE_URL);
         set({ isLoadingAuth: true });
         set({ authError: null });
         try {
-          const response = await axios.post(`${API_BASE_URL}/api/login/`, {
+          const response = await api.post(`/api/login/`, {
             username: username,
             password: password,
           });
