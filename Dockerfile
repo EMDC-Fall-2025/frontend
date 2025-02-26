@@ -3,6 +3,7 @@ FROM node:22-bullseye as base
 
 WORKDIR /home/node/app
 
+# Copy package files first to leverage Docker caching
 COPY package*.json ./
 
 #------------------------------------------------
@@ -12,9 +13,7 @@ RUN --mount=type=cache,target=/home/node/app/.npm \
   npm set cache /home/node/app/.npm && \
   npm install
 COPY . .  
-# Expose port for frontend
 EXPOSE 5173
-# Ensure Vite binds to 0.0.0.0 (update vite.config.ts if needed)
 CMD ["npm", "run", "dev"]
 #------------------------------------------------
 
@@ -22,13 +21,16 @@ CMD ["npm", "run", "dev"]
 FROM base as production
 ENV NODE_ENV production
 
+# Copy all files before running the build
+COPY . .
+
 RUN --mount=type=cache,target=/home/node/app/.npm \
   npm set cache /home/node/app/.npm && \
   npm ci --only=production && \
   npm run build
 
-# Copy build output and ensure ownership
-COPY --chown=node:node ./dist/ ./dist/
+# Ensure dist directory exists
+RUN ls -la ./dist || mkdir ./dist
 
 # Switch to non-root user
 USER node
