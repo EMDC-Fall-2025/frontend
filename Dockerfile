@@ -2,7 +2,9 @@
 FROM node:22-bullseye as base
 WORKDIR /home/node/app
 COPY package*.json ./
-COPY tsconfig.json ./ 
+COPY tsconfig.json ./  
+COPY tsconfig.app.json ./  
+COPY tsconfig.node.json ./  
 
 # Dev stage
 FROM base as dev
@@ -17,7 +19,7 @@ FROM base as builder
 ENV NODE_ENV production
 RUN --mount=type=cache,target=/home/node/app/.npm \
   npm set cache /home/node/app/.npm && \
-  npm ci --include=dev && \ 
+  npm ci --include=dev && \  # Install dev dependencies for the build
   npm run build
 
 # Production stage
