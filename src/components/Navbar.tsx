@@ -3,10 +3,9 @@ import logo from "../assets/EMDC_Fullcolor.png";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import { Button } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 import AreYouSureModal from "./Modals/AreYouSureModal";
 
 export default function Nav() {
@@ -14,6 +13,7 @@ export default function Nav() {
   const { isAuthenticated, role, logout, authError } = useAuthStore();
   const [logoUrl, setLogoUrl] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = async () => {
     try {
@@ -47,6 +47,8 @@ export default function Nav() {
     }
   }, [isAuthenticated, role, navigate]);
 
+  const isHomePage = location.pathname === "/";
+
   return (
     <>
       <Box sx={{ flexGrow: 1 }}>
@@ -55,23 +57,47 @@ export default function Nav() {
             <Box component={Link} to={logoUrl}>
               <img src={logo} style={{ width: "8rem" }} alt="Logo" />
             </Box>
-            {isAuthenticated ? (
-              <Button
-                variant="contained"
-                onClick={() => setOpenAreYouSure(true)}
-                sx={{ ml: "auto" }}
-              >
-                Logout
-              </Button>
-            ) : (
-              <Button
-                variant="contained"
-                onClick={() => navigate("/login/")}
-                sx={{ ml: "auto" }}
-              >
-                Login
-              </Button>
-            )}
+            <Box sx={{ display: "flex", alignItems: "center", ml: "auto", gap: 2 }}>
+              {isHomePage && (
+                <Button
+                  variant="contained"
+                  onClick={() => navigate("/contestPage")}
+                  sx={{ 
+                    minWidth: { xs: 'auto', sm: '120px' }, 
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' }, 
+                    whiteSpace: 'nowrap', 
+                    px: { xs: 1, sm: 2 },
+                  }}
+                >
+                  Contest Results
+                </Button>
+              )}
+              {isAuthenticated ? (
+                <Button
+                  variant="contained"
+                  onClick={() => setOpenAreYouSure(true)}
+                  sx={{ 
+                    minWidth: { xs: '80px', sm: '120px' },
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    whiteSpace: 'nowrap', 
+                  }}
+                >
+                  Logout
+                </Button>
+              ) : (
+                <Button
+                  variant="contained"
+                  onClick={() => navigate("/login/")}
+                  sx={{ 
+                    minWidth: { xs: '80px', sm: '120px' },
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Login
+                </Button>
+              )}
+            </Box>
           </Toolbar>
         </AppBar>
       </Box>

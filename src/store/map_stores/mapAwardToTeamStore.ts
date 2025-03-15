@@ -1,17 +1,24 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import axios from "axios";
+// FILE OVERVIEW: This file contains a zustand store for managing special awards
+//                Handles API calls and manages loading/error states and persists data in session storage
 
-interface SpecialAward {
+// Define structure of SpecialAward 
+export interface SpecialAward {
   teamid: number;
   award_name: string;
+  isJudge: boolean;
 }
 
+// Define structure of the state managed by store
 interface SpecialAwardState {
   awards: SpecialAward[];
   isLoading: boolean;
   error: string | null;
 
+  // Methods to interact with the state/backend
+  getAllAwards: () => Promise<void>;
   getAwardsByTeam: (teamId: number) => Promise<void>;
   AwardsByTeamTable: (teamId: number) => Promise<void>;
   createAward: (award: SpecialAward) => Promise<void>;
@@ -20,6 +27,7 @@ interface SpecialAwardState {
   clearAwards: () => void;
 }
 
+// create Zustand store
 const useSpecialAwardStore = create<SpecialAwardState>()(
   persist(
     (set) => ({
@@ -27,6 +35,25 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
       isLoading: false,
       error: null,
 
+      // Method to get all awards
+      getAllAwards: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          const token = localStorage.getItem("token");
+          const response = await axios.get(`/api/mapping/awardToTeam/getAllAwards/`, {
+            headers: {
+              Authorization: `Token ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+          
+          set({ awards: response.data.awards, isLoading: false });
+        } catch (error: any) {
+          set({ error: "Error fetching awards", isLoading: false });
+        }
+      },
+
+      // Method to get awards for specific team
       getAwardsByTeam: async (teamId: number) => {
         set({ isLoading: true, error: null });
         try {
@@ -43,6 +70,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
         }
       },
 
+      // Method to get and organize award data for a specific team
       AwardsByTeamTable: async (teamId: number) => {
         set({ isLoading: true, error: null });
         try {
@@ -63,7 +91,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
         }
       },
       
-
+      // Method to create a new award
       createAward: async (award: SpecialAward) => {
         set({ isLoading: true, error: null });
         try {
@@ -80,6 +108,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
         }
       },
 
+      // Method to update an existing award
       updateAward: async (teamId: number, awardName: string, updatedAward: SpecialAward) => {
         set({ isLoading: true, error: null });
         try {
@@ -101,6 +130,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
         }
       },
 
+      // Method to delete an award
       deleteAward: async (teamId: number, awardName: string) => {
         set({ isLoading: true, error: null });
         try {

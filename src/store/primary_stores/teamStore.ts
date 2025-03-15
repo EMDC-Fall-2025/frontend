@@ -5,9 +5,11 @@ import { Team, NewTeam, EditedTeam } from "../../types";
 
 interface TeamState {
   team: Team | null;
+  teams: Team[]; // Add teams array to store all teams
   isLoadingTeam: boolean;
   teamError: string | null;
   fetchTeamById: (teamId: number) => Promise<void>;
+  fetchAllTeams: () => Promise<void>; // Add fetchAllTeams function
   createTeam: (newTeam: NewTeam) => Promise<void>;
   editTeam: (editedTeam: EditedTeam) => Promise<void>;
   deleteTeam: (teamId: number) => Promise<void>;
@@ -18,6 +20,7 @@ export const useTeamStore = create<TeamState>()(
   persist(
     (set) => ({
       team: null,
+      teams: [], 
       isLoadingTeam: false,
       teamError: null,
 
@@ -48,6 +51,25 @@ export const useTeamStore = create<TeamState>()(
         } catch (teamError: any) {
           set({ teamError: "Failure fetching team" });
           throw new Error("Failure fetching team");
+        } finally {
+          set({ isLoadingTeam: false });
+        }
+      },
+
+      fetchAllTeams: async () => {
+        set({ isLoadingTeam: true });
+        try {
+          const token = localStorage.getItem("token");
+          const response = await axios.get("/api/team/getAllTeams/", {
+            headers: {
+              Authorization: `Token ${token}`,
+            },
+          });
+          set({ teams: response.data.teams });
+          set({ teamError: null });
+        } catch (teamError: any) {
+          set({ teamError: "Failure fetching all teams" });
+          throw new Error("Failure fetching all teams");
         } finally {
           set({ isLoadingTeam: false });
         }

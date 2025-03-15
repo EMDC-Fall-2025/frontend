@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Typography, Button, Box, Tab, Container } from "@mui/material";
 import { TabPanel, TabContext, TabList } from "@mui/lab";
+import { useNavigate } from "react-router-dom";
 import theme from "../theme";
 import AdminContestTable from "../components/Tables/AdminContestTable";
 import OrganizerModal from "../components/Modals/OrganizerModal";
@@ -11,6 +12,7 @@ export default function Admin() {
   const [value, setValue] = useState("1");
   const [contestModal, setContestModal] = useState(false);
   const [organizerModal, setOrganizerModal] = useState(false);
+  const navigate = useNavigate();
 
   const handleChange = (_event: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);
@@ -54,6 +56,18 @@ export default function Admin() {
           }}
         >
           Create Organizer
+        </Button>
+        <Button
+          variant="contained"
+          onClick={() => navigate("/awards")}
+          sx={{
+            mb: 2,
+            bgcolor: `${theme.palette.secondary.main}`,
+            color: `${theme.palette.primary.main}`,
+            ml: 2,
+          }}
+        >
+          Create Award
         </Button>
         <TabContext value={value}>
           <Box
