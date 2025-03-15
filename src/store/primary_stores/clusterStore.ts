@@ -37,7 +37,7 @@ export const useClusterStore = create<ClusterState>()(
         set({ isLoadingCluster: true });
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/cluster/get/${clusterId}/`, {
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/cluster/get/${clusterId}/`, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -61,7 +61,7 @@ export const useClusterStore = create<ClusterState>()(
         set({ isLoadingCluster: true });
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.post(`/api/cluster/create/`, data, {
+          const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/cluster/create/`, data, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -82,7 +82,7 @@ export const useClusterStore = create<ClusterState>()(
         set({ isLoadingCluster: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.post(`/api/cluster/edit/`, data, {
+          await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/cluster/edit/`, data, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -102,7 +102,7 @@ export const useClusterStore = create<ClusterState>()(
         set({ isLoadingCluster: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.delete(`/api/cluster/delete/${clusterId}/`, {
+          await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/cluster/delete/${clusterId}/`, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",

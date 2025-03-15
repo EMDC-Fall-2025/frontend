@@ -40,7 +40,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
         set({ isLoading: true, error: null });
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/mapping/awardToTeam/getAllAwards/`, {
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/mapping/awardToTeam/getAllAwards/`, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -58,7 +58,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
         set({ isLoading: true, error: null });
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/mapping/awardToTeam/getAwardByTeam/${teamId}/`, {
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/mapping/awardToTeam/getAwardByTeam/${teamId}/`, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -75,7 +75,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
         set({ isLoading: true, error: null });
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/mapping/awardToTeam/getAwardByTeam/${teamId}/`, {
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/mapping/awardToTeam/getAwardByTeam/${teamId}/`, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -96,7 +96,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
         set({ isLoading: true, error: null });
         try {
           const token = localStorage.getItem("token");
-          await axios.post(`/api/mapping/awardToTeam/create/`, award, {
+          await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/mapping/awardToTeam/create/`, award, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -113,7 +113,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
         set({ isLoading: true, error: null });
         try {
           const token = localStorage.getItem("token");
-          await axios.put(`/api/mapping/awardToTeam/update/${teamId}/${awardName}/`, updatedAward, {
+          await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/mapping/awardToTeam/update/${teamId}/${awardName}/`, updatedAward, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -135,7 +135,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
         set({ isLoading: true, error: null });
         try {
           const token = localStorage.getItem("token");
-          await axios.delete(`/api/mapping/awardToTeam/delete/${teamId}/${awardName}/`, {
+          await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/mapping/awardToTeam/delete/${teamId}/${awardName}/`, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",

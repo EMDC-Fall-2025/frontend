@@ -28,7 +28,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoadingAuth: true });
         set({ authError: null });
         try {
-          const response = await axios.post(`/api/login/`, {
+          const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/login/`, {
             username: username,
             password: password,
           });

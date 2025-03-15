@@ -53,7 +53,7 @@ export const useJudgeStore = create<JudgeState>()(
         set({ isLoadingJudge: true });
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/judge/get/${judgeId}/`, {
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/judge/get/${judgeId}/`, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -74,7 +74,7 @@ export const useJudgeStore = create<JudgeState>()(
         set({ isLoadingJudge: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.post(`/api/judge/create/`, newJudge, {
+          await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/judge/create/`, newJudge, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -94,7 +94,7 @@ export const useJudgeStore = create<JudgeState>()(
         set({ isLoadingJudge: true });
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.post(`/api/judge/edit/`, editedJudge, {
+          const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/judge/edit/`, editedJudge, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -117,7 +117,7 @@ export const useJudgeStore = create<JudgeState>()(
         set({ isLoadingJudge: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.delete(`/api/judge/delete/${judgeId}/`, {
+          await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/judge/delete/${judgeId}/`, {
             headers: {
               Authorization: `Token ${token}`,
             },
@@ -137,7 +137,7 @@ export const useJudgeStore = create<JudgeState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.post(
-            `/api/judge/allScoreSheetsSubmitted/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/judge/allScoreSheetsSubmitted/`,
             judges,
             {
               headers: {
@@ -163,7 +163,7 @@ export const useJudgeStore = create<JudgeState>()(
         try {
           const token = localStorage.getItem("token");
           await axios.post(
-            `/api/judge/disqualifyTeam/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/judge/disqualifyTeam/`,
             { teamid: teamId, judge_disqualified: isDisqualified },
             {
               headers: {

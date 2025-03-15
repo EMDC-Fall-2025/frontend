@@ -83,7 +83,7 @@ export const useMapCoachToTeamStore = create<MapCoachTeamState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/mapping/coachToTeam/teamsByCoach/${coachId}/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/coachToTeam/teamsByCoach/${coachId}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -105,7 +105,7 @@ export const useMapCoachToTeamStore = create<MapCoachTeamState>()(
         set({ isLoadingMapCoachToTeam: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.delete(`/api/mapping/coachToTeam/delete/${mapId}/`, {
+          await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/mapping/coachToTeam/delete/${mapId}/`, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",

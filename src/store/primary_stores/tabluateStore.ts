@@ -24,7 +24,7 @@ export const useTabulateStore = create<TabulateState>()(
         try {
           const token = localStorage.getItem("token");
           await axios.put(
-            `/api/tabulation/tabulateScores/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/tabulation/tabulateScores/`,
             { contestid: contest_id },
             {
               headers: {

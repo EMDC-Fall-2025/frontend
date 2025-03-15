@@ -21,7 +21,7 @@ export const useSignupStore = create<SignupState>()(
       signup: async (username, password) => {
         set({ isLoadingSignup: true, authError: null });
         try {
-          const response = await axios.post(`/api/signup/`, {
+          const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/signup/`, {
             username: username,
             password: password,
           });

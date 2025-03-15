@@ -58,7 +58,7 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/mapping/teamToContest/getTeamsByContest/${contestId}/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/teamToContest/getTeamsByContest/${contestId}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,

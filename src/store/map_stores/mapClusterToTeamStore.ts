@@ -39,7 +39,7 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/clusters?contestId=${contestId}`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/clusters?contestId=${contestId}`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -58,7 +58,7 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/mapping/clusterToTeam/getAllTeamsByCluster/${clusterId}/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/clusterToTeam/getAllTeamsByCluster/${clusterId}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -83,7 +83,7 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.post(
-            `/api/mapping/clusterToTeam/create/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/clusterToTeam/create/`,
             data,
             {
               headers: {
@@ -108,7 +108,7 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
         set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
         try {
           const token = localStorage.getItem("token");
-          await axios.delete(`/api/mapping/clusterToTeam/delete/${mapId}/`, {
+          await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/mapping/clusterToTeam/delete/${mapId}/`, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",

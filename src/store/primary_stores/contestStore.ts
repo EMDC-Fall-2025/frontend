@@ -48,7 +48,7 @@ export const useContestStore = create<ContestState>()(
         set({ isLoadingContest: true });
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/contest/getAll/`, {
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/contest/getAll/`, {
             headers: {
               Authorization: `Token ${token}`,
             },
@@ -67,7 +67,7 @@ export const useContestStore = create<ContestState>()(
         set({ isLoadingContest: true });
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/contest/get/${contestId}/`, {
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/contest/get/${contestId}/`, {
             headers: {
               Authorization: `Token ${token}`,
             },
@@ -89,7 +89,7 @@ export const useContestStore = create<ContestState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.post(
-            `/api/contest/create/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/contest/create/`,
             newContest,
             {
               headers: {
@@ -115,7 +115,7 @@ export const useContestStore = create<ContestState>()(
         set({ isLoadingContest: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.post(`/api/contest/edit/`, editedContest, {
+          await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/contest/edit/`, editedContest, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -134,7 +134,7 @@ export const useContestStore = create<ContestState>()(
         set({ isLoadingContest: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.delete(`/api/contest/delete/${contestId}/`, {
+          await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/contest/delete/${contestId}/`, {
             headers: {
               Authorization: `Token ${token}`,
             },

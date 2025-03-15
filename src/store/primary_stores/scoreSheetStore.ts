@@ -70,7 +70,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
         set({ isLoadingScoreSheet: true });
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/scoreSheet/get/${scoresId}/`, {
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/scoreSheet/get/${scoresId}/`, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -91,7 +91,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/scoreSheet/getDetails/${teamId}/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/scoreSheet/getDetails/${teamId}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -114,7 +114,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
         set({ isLoadingScoreSheet: true });
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.post(`/api/scoreSheet/create/`, data, {
+          const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/scoreSheet/create/`, data, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -135,7 +135,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
         set({ isLoadingScoreSheet: true });
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.post(`/api/scoreSheet/edit/`, data, {
+          const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/scoreSheet/edit/`, data, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -157,7 +157,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.post(
-            `/api/scoreSheet/edit/updateScores/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/scoreSheet/edit/updateScores/`,
             data,
             {
               headers: {
@@ -186,7 +186,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.post(
-            `/api/scoreSheet/edit/editField/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/scoreSheet/edit/editField/`,
             { id, field, new_value: newValue },
             {
               headers: {
@@ -210,7 +210,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
         set({ isLoadingScoreSheet: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.delete(`/api/scoreSheet/delete/${scoresId}/`, {
+          await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/scoreSheet/delete/${scoresId}/`, {
             headers: {
               Authorization: `Token ${token}`,
             },
@@ -237,7 +237,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
         try {
           const token = localStorage.getItem("token");
           await axios.post(
-            `/api/scoreSheet/createForCluster/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/scoreSheet/createForCluster/`,
             { judgeId, clusterId, penalties, presentation, journal, mdo },
             {
               headers: {

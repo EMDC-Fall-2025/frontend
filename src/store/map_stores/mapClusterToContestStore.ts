@@ -34,7 +34,7 @@ export const useMapClusterToContestStore = create<MapClusterContestState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/mapping/clusterToContest/getAllClustersByContest/${contestId}/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/clusterToContest/getAllClustersByContest/${contestId}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,

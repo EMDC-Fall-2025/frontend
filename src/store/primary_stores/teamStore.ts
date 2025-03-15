@@ -40,7 +40,7 @@ export const useTeamStore = create<TeamState>()(
         set({ isLoadingTeam: true });
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/team/get/${teamId}/`, {
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/team/get/${teamId}/`, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -79,7 +79,7 @@ export const useTeamStore = create<TeamState>()(
         set({ isLoadingTeam: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.post(`/api/team/create/`, newTeam, {
+          await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/team/create/`, newTeam, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -98,7 +98,7 @@ export const useTeamStore = create<TeamState>()(
         set({ isLoadingTeam: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.post(`/api/team/edit/`, editedTeam, {
+          await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/team/edit/`, editedTeam, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -117,7 +117,7 @@ export const useTeamStore = create<TeamState>()(
         set({ isLoadingTeam: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.delete(`/api/team/delete/${teamId}/`, {
+          await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/team/delete/${teamId}/`, {
             headers: {
               Authorization: `Token ${token}`,
             },

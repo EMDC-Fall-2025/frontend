@@ -85,7 +85,7 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/mapping/scoreSheet/getSheetsByJudge/${judgeId}/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/scoreSheet/getSheetsByJudge/${judgeId}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -127,7 +127,7 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/mapping/scoreSheet/getByTeamJudge/${sheetType}/${judgeId}/${teamId}/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/scoreSheet/getByTeamJudge/${sheetType}/${judgeId}/${teamId}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -152,7 +152,7 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.post(
-            `/api/mapping/scoreSheet/allSheetsSubmittedForContests/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/scoreSheet/allSheetsSubmittedForContests/`,
             contests,
             {
               headers: {
@@ -180,7 +180,7 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.post(
-            `/api/scoreSheet/mapping/create/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/scoreSheet/mapping/create/`,
             mapping,
             {
               headers: {
@@ -207,7 +207,7 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
         set({ isLoadingMapScoreSheet: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.delete(`/api/scoreSheet/mapping/delete/${mapId}/`, {
+          await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/scoreSheet/mapping/delete/${mapId}/`, {
             headers: {
               Authorization: `Token ${token}`,
             },
@@ -228,7 +228,7 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
         try {
           const token = localStorage.getItem("token");
           await axios.post(
-            `/api/mapping/scoreSheet/submitAllPenalties/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/scoreSheet/submitAllPenalties/`,
             { judge_id: judgeId },
             {
               headers: {

@@ -43,7 +43,7 @@ export const useOrganizerStore = create<OrganizerState>()(
         set({ isLoadingOrganizer: true });
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/organizer/getAll/`, {
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/organizer/getAll/`, {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Token ${token}`,
@@ -66,7 +66,7 @@ export const useOrganizerStore = create<OrganizerState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/organizer/get/${organizerId}/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/organizer/get/${organizerId}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -87,7 +87,7 @@ export const useOrganizerStore = create<OrganizerState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.post(
-            `/api/organizer/create/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/organizer/create/`,
             newOrganizer,
             {
               headers: {
@@ -113,7 +113,7 @@ export const useOrganizerStore = create<OrganizerState>()(
         set({ isLoadingOrganizer: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.post(`/api/organizer/edit/`, editedOrganizer, {
+          await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/organizer/edit/`, editedOrganizer, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
@@ -137,7 +137,7 @@ export const useOrganizerStore = create<OrganizerState>()(
         set({ isLoadingOrganizer: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.delete(`/api/organizer/delete/${organizerId}/`, {
+          await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/organizer/delete/${organizerId}/`, {
             headers: {
               Authorization: `Token ${token}`,
             },
@@ -164,7 +164,7 @@ export const useOrganizerStore = create<OrganizerState>()(
         try {
           const token = localStorage.getItem("token");
           await axios.post(
-            `/api/organizer/disqualifyTeam/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/organizer/disqualifyTeam/`,
             { teamid: teamId, organizer_disqualified: organizer_disqualified },
             {
               headers: {
