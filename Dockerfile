@@ -3,6 +3,10 @@ FROM node:18 AS base
 # Set working directory
 WORKDIR /home/node/app/
 
+FROM base AS dev 
+RUN --mount=type=cache,target=/home/node/.npm \
+    npm set cache /home/node/.npm 
+
 # Copy package.json and package-lock.json first to leverage Docker cache
 COPY package*.json ./
 

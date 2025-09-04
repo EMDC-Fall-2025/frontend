@@ -28,6 +28,8 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoadingAuth: true });
         set({ authError: null });
         try {
+          console.log("VITE_BACKEND_URL =", import.meta.env.VITE_BACKEND_URL);
+
           const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/login/`, {
             username: username,
             password: password,

@@ -60,7 +60,7 @@ export const useTeamStore = create<TeamState>()(
         set({ isLoadingTeam: true });
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.get("/api/team/getAllTeams/", {
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/team/getAllTeams/`, {
             headers: {
               Authorization: `Token ${token}`,
             },
