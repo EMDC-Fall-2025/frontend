@@ -1,39 +1,32 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import process from "process";
 import dotenv from "dotenv";
+
+// Load .env.* into **process.env** (node-side only; NOT exposed to browser)
 dotenv.config();
 
+const target = process.env.PROXY_TARGET || "http://django-api:7004"; // fallback for Docker
 
-
-
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
-    watch: {
-      usePolling: true,
-    },
+    watch: { usePolling: true },
     host: "0.0.0.0",
+    hmr: { host: "localhost", port: 7001 }, // if running Vite in Docker
     proxy: {
       "/api": {
-        target: process.env.VITE_BACKEND_URL,
+        target,                // 👈 use PROXY_TARGET, not VITE_BACKEND_URL
         changeOrigin: true,
         secure: false,
+        cookieDomainRewrite: "localhost",
         configure: (proxy, _options) => {
-          proxy.on("error", (err, _req, _res) => {
-            console.log("proxy error", err);
-          });
-          proxy.on("proxyReq", (_proxyReq, req, _res) => {
-            console.log("Sending Request to the Target:", req.method, req.url);
-          });
-          proxy.on("proxyRes", (proxyRes, req, _res) => {
-            console.log(
-              "Received Response from the Target:",
-              proxyRes.statusCode,
-              req.url
-            );
-          });
+          proxy.on("error", (err) => console.log("proxy error", err));
+          proxy.on("proxyReq", (_proxyReq, req) =>
+            console.log("Sending Request to Target:", req.method, req.url)
+          );
+          proxy.on("proxyRes", (proxyRes, req) =>
+            console.log("Received Response:", proxyRes.statusCode, req.url)
+          );
         },
       },
     },

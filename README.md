@@ -10,8 +10,9 @@
 1. Start docker engine
 2. Cd into development-environment folder
 3. Run docker-compose build (if you haven't built the containers before)
-4. Run docker-compose up -d
+4. Run docker-compose up -d / docker compose --env-file .env.docker up -d --build web django-api db
 5. Navigate to localhost:7001 to see your changes
+6. To close docker run: docker compose --env-file .env.docker down. 
 
 # Project Overview:
 

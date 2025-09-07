@@ -1,22 +1,24 @@
-import React, { useState } from "react";
-import { Typography, Button, Box, Tab, Container } from "@mui/material";
-import { TabPanel, TabContext, TabList } from "@mui/lab";
-import { useNavigate } from "react-router-dom";
-import theme from "../theme";
-import AdminContestTable from "../components/Tables/AdminContestTable";
-import OrganizerModal from "../components/Modals/OrganizerModal";
-import ContestModal from "../components/Modals/ContestModal";
-import AdminOrganizerTable from "../components/Tables/AdminOrganizerTable";
+
+import type React from "react"
+import { useState } from "react"
+import { Typography, Button, Box, Tab, Container } from "@mui/material"
+import { TabPanel, TabContext, TabList } from "@mui/lab"
+import { useNavigate } from "react-router-dom"
+import theme from "../theme"
+import AdminContestTable from "../components/Tables/AdminContestTable"
+import OrganizerModal from "../components/Modals/OrganizerModal"
+import ContestModal from "../components/Modals/ContestModal"
+import AdminOrganizerTable from "../components/Tables/AdminOrganizerTable"
 
 export default function Admin() {
-  const [value, setValue] = useState("1");
-  const [contestModal, setContestModal] = useState(false);
-  const [organizerModal, setOrganizerModal] = useState(false);
-  const navigate = useNavigate();
+  const [value, setValue] = useState("1")
+  const [contestModal, setContestModal] = useState(false)
+  const [organizerModal, setOrganizerModal] = useState(false)
+  const navigate = useNavigate()
 
   const handleChange = (_event: React.SyntheticEvent, newValue: string) => {
-    setValue(newValue);
-  };
+    setValue(newValue)
+  }
 
   return (
     <Box>
@@ -106,16 +108,8 @@ export default function Admin() {
           </TabPanel>
         </TabContext>
       </Container>
-      <OrganizerModal
-        open={organizerModal}
-        handleClose={() => setOrganizerModal(false)}
-        mode={"new"}
-      />
-      <ContestModal
-        open={contestModal}
-        handleClose={() => setContestModal(false)}
-        mode={"new"}
-      />
+      <OrganizerModal open={organizerModal} handleClose={() => setOrganizerModal(false)} mode={"new"} />
+      <ContestModal open={contestModal} handleClose={() => setContestModal(false)} mode={"new"} />
     </Box>
-  );
+  )
 }
