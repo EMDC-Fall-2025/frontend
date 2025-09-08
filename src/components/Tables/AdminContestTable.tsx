@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -6,14 +6,22 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Button from "@mui/material/Button";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import {
+  Box,
+  Chip,
+  CircularProgress,
+  Stack,
+  Typography,
+  alpha,
+} from "@mui/material";
 import useContestStore from "../../store/primary_stores/contestStore";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
 import AreYouSureModal from "../Modals/AreYouSureModal";
 import ContestModal from "../Modals/ContestModal";
 import dayjs from "dayjs";
 import useMapContestOrganizerStore from "../../store/map_stores/mapContestToOrganizerStore";
+import CampaignIcon from "@mui/icons-material/Campaign";
+import GroupIcon from "@mui/icons-material/Group";
 
 function createData(
   id: number,
@@ -36,11 +44,13 @@ export default function AdminContestTable() {
     isLoadingContest,
     contestError,
   } = useContestStore();
+
   const {
     fetchOrganizerNamesByContests,
     organizerNamesByContests,
     isLoadingMapContestOrganizer,
   } = useMapContestOrganizerStore();
+
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
   const [contestId, setContestId] = useState(0);
   const [openContestModal, setOpenContestModal] = useState(false);
@@ -52,6 +62,7 @@ export default function AdminContestTable() {
 
   useEffect(() => {
     fetchOrganizerNamesByContests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allContests]);
 
   const rows = allContests.map((contest) =>
@@ -64,8 +75,6 @@ export default function AdminContestTable() {
       organizerNamesByContests[contest.id]
     )
   );
-
-  console.log(organizerNamesByContests);
 
   const handleOpenEditContest = (contest: any) => {
     setContestData({
@@ -86,61 +95,187 @@ export default function AdminContestTable() {
     setOpenAreYouSure(true);
   };
 
-  return isLoadingContest || isLoadingMapContestOrganizer ? (
-    <CircularProgress />
+  const loading = isLoadingContest || isLoadingMapContestOrganizer;
+
+  return loading ? (
+    <Box sx={{ display: "grid", placeItems: "center", py: 10 }}>
+      <CircularProgress />
+    </Box>
   ) : (
-    <TableContainer component={Box}>
+    <TableContainer
+      component={Box}
+      sx={{
+        border: "0px solid",
+        borderColor: "grey.300",
+        borderRadius: 2,
+        overflow: "hidden",
+      }}
+    >
       <Table>
         <TableHead>
-          <TableRow>
+          <TableRow
+            sx={{
+              "& th": {
+                fontWeight: 700,
+                bgcolor: (t) => alpha(t.palette.success.main, 0.04),
+                borderBottomColor: "grey.300",
+              },
+            }}
+          >
             <TableCell>Name</TableCell>
             <TableCell>Date</TableCell>
+            {/* keep Is Open if you still need it; otherwise you can remove these two lines */}
             <TableCell>Is Open</TableCell>
             <TableCell>Organizers</TableCell>
-            <TableCell>Actions</TableCell>
+            <TableCell align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
+
         <TableBody>
           {rows.map((row) => (
-            <TableRow key={row.id}>
-              <>
-                <TableCell>{row.name}</TableCell>
-                <TableCell>{row.date.format("MM-DD-YYYY")}</TableCell>
-                <TableCell>{row.is_open ? "Yes" : "No"}</TableCell>
-                <TableCell>
-                  {row.organizers && row.organizers.length != 0 ? (
-                    row.organizers.map((organizer) => (
-                      <Typography>{organizer}</Typography>
-                    ))
-                  ) : (
-                    <Typography>No Organizers Assigned</Typography>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    onClick={() => handleOpenEditContest(row)}
-                    sx={{ border: "1px solid lightgrey", marginRight: 1 }}
+            <TableRow
+              key={row.id}
+              hover
+              sx={{
+                "& td": { borderBottomColor: "grey.200" },
+              }}
+            >
+              {/* NAME Cell: icon + bold name, with subtle layout matching screenshot */}
+              <TableCell sx={{ py: 2 }}>
+                <Stack direction="row" alignItems="center" spacing={2} minWidth={0}>
+                  <Box
+                    aria-hidden
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "50%",
+                      bgcolor: (t) => alpha(t.palette.success.light, 0.5),
+                      color: "success.dark",
+                      display: "grid",
+                      placeItems: "center",
+                      flexShrink: 0,
+                    }}
                   >
-                    Edit
-                  </Button>
-                  <Button
-                    onClick={() => handleOpenAreYouSure(row.id)}
-                    sx={{ border: "1px solid lightgrey", marginRight: 1 }}
-                  >
-                    Delete
-                  </Button>
+                    <CampaignIcon fontSize="small" />
+                  </Box>
+
+                  <Box minWidth={0}>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{ fontWeight: 700, lineHeight: 1.2 }}
+                      noWrap
+                      title={row.name}
+                    >
+                      {row.name}
+                    </Typography>
+
+                    {/* Small meta line similar to screenshot (date + organizers count) */}
+                    <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+                      <Typography variant="caption" color="text.secondary">
+                        {row.date.format("MM-DD-YYYY")}
+                      </Typography>
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <GroupIcon sx={{ fontSize: 16 }} />
+                        <Typography variant="caption" color="text.secondary">
+                          {row.organizers?.length ?? 0}{" "}
+                          {(row.organizers?.length ?? 0) === 1 ? "organizer" : "organizers"}
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                  </Box>
+                </Stack>
+              </TableCell>
+
+              {/* DATE Cell (kept for your existing columns; can be removed if redundant) */}
+              <TableCell sx={{ whiteSpace: "nowrap" }}>
+                {row.date.format("MM-DD-YYYY")}
+              </TableCell>
+
+              {/* IS OPEN */}
+              <TableCell sx={{ whiteSpace: "nowrap" }}>
+                {row.is_open ? "Yes" : "No"}
+              </TableCell>
+
+              {/* ORGANIZERS Cell -> small chips; graceful empty state */}
+              <TableCell sx={{ maxWidth: 420 }}>
+                {row.organizers && row.organizers.length !== 0 ? (
+                  <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                    {row.organizers.map((org: string, idx: number) => (
+                      <Chip
+                        key={`${row.id}-org-${idx}`}
+                        label={org}
+                        size="small"
+                        sx={{
+                          borderRadius: 1.5,
+                          bgcolor: (t) => alpha(t.palette.success.main, 0.06),
+                          color: "success.dark",
+                        }}
+                      />
+                    ))}
+                  </Stack>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No organizers assigned
+                  </Typography>
+                )}
+              </TableCell>
+
+              {/* ACTIONS -> cleaner buttons (no right-side icon cluster) */}
+              <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                <Stack direction="row" spacing={1.25} justifyContent="flex-end">
                   <Button
                     onClick={() => navigate(`/manage-contest/${row.id}/`)}
-                    sx={{ border: "1px solid lightgrey", marginRight: 1 }}
+                    variant="contained"
+                    size="small"
+                    sx={{
+                      textTransform: "none",
+                      borderRadius: 2,
+                      bgcolor: "success.main",
+                      "&:hover": { bgcolor: "success.dark" },
+                    }}
                   >
                     Manage
                   </Button>
-                </TableCell>
-              </>
+
+                  <Button
+                    onClick={() => handleOpenEditContest(row)}
+                    variant="outlined"
+                    size="small"
+                    sx={{
+                      textTransform: "none",
+                      borderRadius: 2,
+                      borderColor: "grey.400",
+                      color: "text.primary",
+                      "&:hover": { borderColor: "text.primary", bgcolor: "grey.100" },
+                    }}
+                  >
+                    Edit
+                  </Button>
+
+                  <Button
+                    onClick={() => handleOpenAreYouSure(row.id)}
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    sx={{
+                      textTransform: "none",
+                      borderRadius: 2,
+                      borderColor: "error.light",
+                      "&:hover": {
+                        borderColor: "error.main",
+                        bgcolor: "rgba(211,47,47,0.06)",
+                      },
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </Stack>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
       <AreYouSureModal
         open={openAreYouSure}
         handleClose={() => setOpenAreYouSure(false)}
@@ -148,6 +283,7 @@ export default function AdminContestTable() {
         handleSubmit={() => handleDelete(contestId)}
         error={contestError}
       />
+
       <ContestModal
         open={openContestModal}
         handleClose={() => setOpenContestModal(false)}

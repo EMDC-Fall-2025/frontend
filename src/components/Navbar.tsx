@@ -5,13 +5,15 @@ import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/primary_stores/authStore";
-import { Button } from "@mui/material";
+import { Button, Container, Paper } from "@mui/material";
+
 import AreYouSureModal from "./Modals/AreYouSureModal";
+import theme from "../theme";
 
 export default function Nav() {
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
   const { isAuthenticated, role, logout, authError } = useAuthStore();
-  const [logoUrl, setLogoUrl] = useState("");
+  const [logoUrl, setLogoUrl] = useState("/");
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -40,7 +42,7 @@ export default function Nav() {
           setLogoUrl("/coach/");
           break;
         default:
-          break;
+          setLogoUrl("/");
       }
     } else {
       setLogoUrl("/");
@@ -52,60 +54,108 @@ export default function Nav() {
   return (
     <>
       <Box sx={{ flexGrow: 1 }}>
-        <AppBar position="static" sx={{ background: "#ffffff" }}>
-          <Toolbar>
-            <Box component={Link} to={logoUrl}>
-              <img src={logo} style={{ width: "8rem" }} alt="Logo" />
-            </Box>
-            <Box sx={{ display: "flex", alignItems: "center", ml: "auto", gap: 2 }}>
-              {isHomePage && (
-                <Button
-                  variant="contained"
-                  onClick={() => navigate("/contestPage")}
-                  sx={{ 
-                    minWidth: { xs: 'auto', sm: '120px' }, 
-                    fontSize: { xs: '0.75rem', sm: '0.875rem' }, 
-                    whiteSpace: 'nowrap', 
-                    px: { xs: 1, sm: 2 },
-                  }}
+        {/* Sticky keeps it in flow (no overlap), high zIndex stays on top */}
+        <AppBar
+          position="sticky"
+          elevation={0}
+          sx={{
+            background: "transparent",
+            boxShadow: "none",
+            zIndex: (t) => t.zIndex.drawer + 2,
+          }}
+        >
+          <Container maxWidth="xl" sx={{ py: 1 }}>
+            {/* Boxy white bar with soft shadow that reads on white backgrounds */}
+            <Paper
+              elevation={0}
+              sx={{
+                position: "relative",
+                overflow: "visible",
+                px: { xs: 1.5, md: 2.5 },
+                py: { xs: 1, md: 1.25 },
+                borderRadius: 2,
+                backgroundColor: "#fff",
+                border: `1px solid ${theme.palette.grey[200]}`,
+                boxShadow:
+                  "0 2px 6px rgba(0,0,0,0.05), 0 10px 24px rgba(0,0,0,0.06)",
+              }}
+            >
+              <Toolbar disableGutters sx={{ minHeight: { xs: 56, sm: 64 } }}>
+                {/* Logo (left) */}
+                <Box
+                  component={Link}
+                  to={logoUrl}
+                  sx={{ display: "inline-flex", alignItems: "center" }}
                 >
-                  Contest Results
-                </Button>
-              )}
-              {isAuthenticated ? (
-                <Button
-                  variant="contained"
-                  onClick={() => setOpenAreYouSure(true)}
-                  sx={{ 
-                    minWidth: { xs: '80px', sm: '120px' },
-                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                    whiteSpace: 'nowrap', 
-                  }}
-                >
-                  Logout
-                </Button>
-              ) : (
-                <Button
-                  variant="contained"
-                  onClick={() => navigate("/login/")}
-                  sx={{ 
-                    minWidth: { xs: '80px', sm: '120px' },
-                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  Login
-                </Button>
-              )}
-            </Box>
-          </Toolbar>
+                  <Box
+                    component="img"
+                    src={logo}
+                    alt="Logo"
+                    sx={{ width: { xs: "7.5rem", sm: "8.5rem" } }}
+                  />
+                </Box>
+
+                {/* Right actions */}
+                <Box sx={{ display: "flex", alignItems: "center", ml: "auto", gap: 2 }}>
+                  {isHomePage && (
+                    <Button
+                      variant="contained"
+                      onClick={() => navigate("/contestPage")}
+                      sx={{
+                        minWidth: { xs: "auto", sm: 120 },
+                        fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                        whiteSpace: "nowrap",
+                        px: { xs: 1, sm: 2 },
+                        bgcolor: theme.palette.primary.main, // green
+                        "&:hover": { bgcolor: theme.palette.primary.dark },
+                      }}
+                    >
+                      Contest Results
+                    </Button>
+                  )}
+
+                  {isAuthenticated ? (
+                    <Button
+                      variant="contained"
+                      onClick={() => setOpenAreYouSure(true)}
+                      sx={{
+                        minWidth: { xs: 80, sm: 120 },
+                        fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                        whiteSpace: "nowrap",
+                        bgcolor: theme.palette.primary.main, // green
+                        "&:hover": { bgcolor: theme.palette.primary.dark },
+                      }}
+                    >
+                      Logout
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      onClick={() => navigate("/login/")}
+                      sx={{
+                        minWidth: { xs: 80, sm: 120 },
+                        fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                        whiteSpace: "nowrap",
+                        bgcolor: theme.palette.primary.main,
+                        "&:hover": { bgcolor: theme.palette.primary.dark },
+                      }}
+                    >
+                      Login
+                    </Button>
+                  )}
+                </Box>
+              </Toolbar>
+            </Paper>
+          </Container>
         </AppBar>
       </Box>
+
+      {/* Logout confirmation (unchanged) */}
       <AreYouSureModal
         open={openAreYouSure}
         handleClose={() => setOpenAreYouSure(false)}
         title="Are you sure you want to logout?"
-        handleSubmit={() => handleLogout()}
+        handleSubmit={handleLogout}
         error={authError}
       />
     </>

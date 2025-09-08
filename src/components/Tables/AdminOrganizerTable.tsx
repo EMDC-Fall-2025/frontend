@@ -11,13 +11,16 @@ import TableRow from "@mui/material/TableRow";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { OrganizerRow } from "../../types";
-import { Button, CircularProgress, Typography } from "@mui/material";
+import { Button, CircularProgress, Stack, Typography } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import useOrganizerStore from "../../store/primary_stores/organizerStore";
 import { useEffect, useState } from "react";
 import OrganizerModal from "../Modals/OrganizerModal";
 import AreYouSureModal from "../Modals/AreYouSureModal";
 import useMapContestOrganizerStore from "../../store/map_stores/mapContestToOrganizerStore";
 import AssignContestModal from "../Modals/AssignContestModal";
+import GroupIcon from "@mui/icons-material/Group";
+import CampaignIcon from "@mui/icons-material/Campaign";
 
 function createData(
   id: number,
@@ -36,6 +39,7 @@ function Row(props: { row: ReturnType<typeof createData> }) {
   const [organizerId, setOrganizerId] = useState(0);
   const [contestId, setContestId] = useState(0);
   const [openAreYouSureUnassign, setOpenAreYouSureUnassign] = useState(false);
+
   const {
     contestsByOrganizers,
     fetchContestsByOrganizers,
@@ -43,10 +47,7 @@ function Row(props: { row: ReturnType<typeof createData> }) {
     mapContestOrganizerError,
   } = useMapContestOrganizerStore();
 
-  const handleOpenAreYouSureUnassign = (
-    organizerId: number,
-    contestId: number
-  ) => {
+  const handleOpenAreYouSureUnassign = (organizerId: number, contestId: number) => {
     setOrganizerId(organizerId);
     setContestId(contestId);
     setOpenAreYouSureUnassign(true);
@@ -59,52 +60,179 @@ function Row(props: { row: ReturnType<typeof createData> }) {
 
   return (
     <React.Fragment>
-      <TableRow>
-        <TableCell>
+      <TableRow
+        hover
+        sx={{
+          "& td": { borderBottomColor: "grey.200" },
+        }}
+      >
+        <TableCell width={56}>
           <IconButton
             aria-label="expand row"
             size="small"
             onClick={() => setOpen(!open)}
+            sx={{
+              color: open ? "success.main" : "inherit",
+              "&:hover": { bgcolor: (t) => alpha(t.palette.success.main, 0.08) },
+            }}
           >
             {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
           </IconButton>
         </TableCell>
-        <TableCell component="th" scope="row">
-          {`${row.first_name} ${row.last_name}`}
+
+        {/* Name cell — styled content (no structure change) */}
+        <TableCell component="th" scope="row" sx={{ py: 2 }}>
+          <Stack direction="row" alignItems="center" spacing={2} minWidth={0}>
+            <Box
+              aria-hidden
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                bgcolor: (t) => alpha(t.palette.success.light, 0.5),
+                color: "success.dark",
+                display: "grid",
+                placeItems: "center",
+                flexShrink: 0,
+              }}
+            >
+              <GroupIcon fontSize="small" />
+            </Box>
+            <Box minWidth={0}>
+              <Typography
+                variant="subtitle1"
+                sx={{ fontWeight: 700, lineHeight: 1.2 }}
+                noWrap
+                title={`${row.first_name} ${row.last_name}`}
+              >
+                {row.first_name} {row.last_name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Organizer
+              </Typography>
+            </Box>
+          </Stack>
         </TableCell>
-        <TableCell>
-          {row.assignContest}
-          {row.editButton}
-          {row.deleteButton}
+
+        {/* Actions — restyled buttons, same structure */}
+        <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+          <Stack direction="row" spacing={1.25} justifyContent="flex-end">
+            {React.cloneElement(
+  row.assignContest,
+  {
+    variant: "contained",
+    size: "small",
+    sx: {
+      textTransform: "none",
+      borderRadius: 2,
+      bgcolor: "success.main",
+      "&:hover": { bgcolor: "success.dark" },
+      ...(row.assignContest.props.sx || {}),
+    },
+  },
+  "Assign"
+)}
+
+            {React.cloneElement(row.editButton, {
+              variant: "outlined",
+              size: "small",
+              sx: {
+                textTransform: "none",
+                borderRadius: 2,
+                borderColor: "grey.400",
+                color: "text.primary",
+                "&:hover": { borderColor: "text.primary", bgcolor: "grey.100" },
+                ...(row.editButton.props.sx || {}),
+              },
+              children: "Edit",
+            })}
+            {React.cloneElement(row.deleteButton, {
+              variant: "outlined",
+              color: "error",
+              size: "small",
+              sx: {
+                textTransform: "none",
+                borderRadius: 2,
+                borderColor: "error.light",
+                "&:hover": { borderColor: "error.main", bgcolor: "rgba(211,47,47,0.06)" },
+                ...(row.deleteButton.props.sx || {}),
+              },
+              children: "Delete",
+            })}
+          </Stack>
         </TableCell>
       </TableRow>
-      <TableRow>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
+
+      {/* Collapse — keep your nested table, just style it to look minimal */}
+      <TableRow sx={{ display: open ? "table-row" : "none" }}>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={3} sx={{ borderBottom: 0 }}>
           <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ mt: 1, mb: 0 }}>
-              <Table size="small" aria-label="purchases">
+            <Box sx={{ mt: 1, mb: 1, mx: 1.5 }}>
+              <Table
+                size="small"
+                aria-label="purchases"
+                sx={{
+                  // remove inner table feel
+                  "& td, & th": { border: 0, py: 1 },
+                }}
+              >
                 <TableBody>
-                  <Table>
-                    {contestsByOrganizers[row.id]?.length != 0 ? (
-                      contestsByOrganizers[row.id]?.map((contest) => (
-                        <TableRow>
-                          <TableCell>{contest.name}</TableCell>
-                          <TableCell>
+                  <Table
+                    sx={{
+                      "& td, & th": { border: 0, py: 0 },
+                    }}
+                  >
+                    {contestsByOrganizers[row.id]?.length !== 0 ? (
+                      contestsByOrganizers[row.id]?.map((contest: any) => (
+                        <TableRow key={`org-${row.id}-contest-${contest.id}`}>
+                          <TableCell sx={{ pl: 0 }}>
+                            <Stack direction="row" spacing={1.25} alignItems="center">
+                              <Box
+                                aria-hidden
+                                sx={{
+                                  width: 28,
+                                  height: 28,
+                                  borderRadius: "50%",
+                                  bgcolor: (t) => alpha(t.palette.success.main, 0.1),
+                                  color: "success.dark",
+                                  display: "grid",
+                                  placeItems: "center",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <CampaignIcon sx={{ fontSize: 16 }} />
+                              </Box>
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                {contest.name}
+                              </Typography>
+                            </Stack>
+                          </TableCell>
+                          <TableCell align="right" sx={{ pr: 0 }}>
                             <Button
                               variant="outlined"
-                              onClick={() =>
-                                handleOpenAreYouSureUnassign(row.id, contest.id)
-                              }
+                              size="small"
+                              onClick={() => handleOpenAreYouSureUnassign(row.id, contest.id)}
+                              sx={{
+                                textTransform: "none",
+                                borderRadius: 2,
+                                borderColor: "grey.400",
+                                "&:hover": { borderColor: "text.primary", bgcolor: "grey.100" },
+                              }}
                             >
-                              Unassign Contest
+                              Unassign
                             </Button>
                           </TableCell>
                         </TableRow>
                       ))
                     ) : (
-                      <Typography sx={{ m: 2 }}>
-                        No Contests Assigned
-                      </Typography>
+                      <TableRow>
+                        <TableCell sx={{ pl: 0 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            No Contests Assigned
+                          </Typography>
+                        </TableCell>
+                        <TableCell />
+                      </TableRow>
                     )}
                   </Table>
                 </TableBody>
@@ -113,6 +241,7 @@ function Row(props: { row: ReturnType<typeof createData> }) {
           </Collapse>
         </TableCell>
       </TableRow>
+
       <AreYouSureModal
         open={openAreYouSureUnassign}
         handleClose={() => setOpenAreYouSureUnassign(false)}
@@ -125,15 +254,13 @@ function Row(props: { row: ReturnType<typeof createData> }) {
 }
 
 export default function AdminOrganizerTable() {
-  const { allOrganizers, fetchAllOrganizers, deleteOrganizer, organizerError } =
-    useOrganizerStore();
+  const { allOrganizers, fetchAllOrganizers, deleteOrganizer, organizerError } = useOrganizerStore();
   const [openOrganizerModal, setOpenOrganizerModal] = useState(false);
   const [organizerData, setOrganizerData] = useState<any>(null);
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
   const [openAssignContest, setOpenAssignContest] = useState(false);
   const [organizerId, setOrganizerId] = useState(0);
-  const { fetchContestsByOrganizers, isLoadingMapContestOrganizer } =
-    useMapContestOrganizerStore();
+  const { fetchContestsByOrganizers, isLoadingMapContestOrganizer } = useMapContestOrganizerStore();
 
   useEffect(() => {
     fetchAllOrganizers();
@@ -148,24 +275,9 @@ export default function AdminOrganizerTable() {
       organizer.id,
       organizer.first_name,
       organizer.last_name,
-      <Button
-        onClick={() => handleOpenEditOrganizer(organizer)}
-        sx={{ border: "1px solid lightgrey", marginRight: 1 }}
-      >
-        Edit
-      </Button>,
-      <Button
-        onClick={() => handleOpenAreYouSure(organizer.id)}
-        sx={{ border: "1px solid lightgrey", marginRight: 1 }}
-      >
-        Delete
-      </Button>,
-      <Button
-        onClick={() => handleOpenAssignContest(organizer.id)}
-        sx={{ border: "1px solid lightgrey", marginRight: 1 }}
-      >
-        Assign Contest
-      </Button>
+      <Button onClick={() => handleOpenEditOrganizer(organizer)} />,
+      <Button onClick={() => handleOpenAreYouSure(organizer.id)} />,
+      <Button onClick={() => handleOpenAssignContest(organizer.id)} />
     )
   );
 
@@ -200,12 +312,20 @@ export default function AdminOrganizerTable() {
     <TableContainer component={Box}>
       <Table aria-label="collapsible table">
         <TableHead>
-          <TableRow>
-            <TableCell />
+          <TableRow
+            sx={{
+              "& th": {
+                fontWeight: 700,
+                bgcolor: (t) => alpha(t.palette.success.main, 0.04),
+                borderBottomColor: "grey.300",
+              },
+            }}
+          >
+            <TableCell width={56} />
             <TableCell component="th" scope="row">
               Name
             </TableCell>
-            <TableCell>Actions</TableCell>
+            <TableCell align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -214,6 +334,7 @@ export default function AdminOrganizerTable() {
           ))}
         </TableBody>
       </Table>
+
       <OrganizerModal
         open={openOrganizerModal}
         handleClose={() => setOpenOrganizerModal(false)}
