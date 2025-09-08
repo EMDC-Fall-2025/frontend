@@ -63,7 +63,7 @@ useEffect(() => {
       }}
     >
       <CardContent sx={{ py: 3, px: 4 }}>
-        {/* smaller number than before */}
+     
         <Typography
           variant="h4"
           sx={{ fontWeight: 700, color: theme.palette.success.dark, lineHeight: 1, mb: 0.5 }}
@@ -92,7 +92,7 @@ useEffect(() => {
         </Stack>
 
         {/* Only two stat cards: Contests & Organizers */}
-        {/* Stat cards go HERE inside the JSX */}
+      
         <Grid container spacing={2} sx={{ mb: 2 }}>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard value={isLoadingContest ? "—" : allContests.length} label="Contests" />
@@ -102,7 +102,7 @@ useEffect(() => {
           </Grid>
         </Grid>
 
-        {/* Primary actions */}
+  
         <Stack direction="row" spacing={2} sx={{ mb: 2, flexWrap: "wrap" }} useFlexGap>
           <Button
             onClick={() => setContestModal(true)}
@@ -240,7 +240,7 @@ useEffect(() => {
         </TabContext>
       </Container>
 
-      {/* Modals (unchanged) */}
+     
       <OrganizerModal
         open={organizerModal}
         handleClose={() => setOrganizerModal(false)}
