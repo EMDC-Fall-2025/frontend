@@ -82,7 +82,7 @@ useEffect(() => {
     <Box sx={{ pb: 8, backgroundColor: "#fafafa", minHeight: "100vh" }}>
       <Container maxWidth="lg" sx={{ pb: 6 }}>
         {/* Title in green */}
-        <Stack spacing={1} sx={{ mb: 3 }}>
+        <Stack spacing={1} sx={{ mb: 3 , mt: 3}}>
           <Typography variant="h4" sx={{ fontWeight: 800, color: theme.palette.success.main}}>
             Admin Dashboard
           </Typography>

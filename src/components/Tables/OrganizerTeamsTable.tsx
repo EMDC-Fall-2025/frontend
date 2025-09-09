@@ -87,11 +87,16 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
     cluster: number;
   }) {
     return (
-      <Table sx={{ minWidth: 650 }}>
+      <Table
+        sx={{
+          minWidth: 650,
+          "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 }, // font only
+        }}
+      >
         <TableBody>
           {teams?.map((team) => (
             <TableRow key={team.id}>
-              <TableCell component="th" scope="row">
+              <TableCell component="th" scope="row" sx={{ fontWeight: 500 }}>
                 {team.team_name}
               </TableCell>
               {team.judge_disqualified && !team.organizer_disqualified && (
@@ -101,6 +106,13 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
                     onClick={() =>
                       handleOpenAreYouSure(team.team_name, team.id, cluster)
                     }
+                    sx={{
+                      textTransform: "none",
+                      fontWeight: 600,
+                      px: 2.25,
+                      py: 0.75,
+                      borderRadius: 1.5,
+                    }}
                   >
                     Disqualify Team
                   </Button>
@@ -123,6 +135,13 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
                       contestid: contestId,
                     })
                   }
+                  sx={{
+                    textTransform: "none",
+                    fontWeight: 600,
+                    px: 2.25,
+                    py: 0.75,
+                    borderRadius: 1.5,
+                  }}
                 >
                   Edit Team
                 </Button>
@@ -136,11 +155,23 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
 
   return teamsByClusterId ? (
     <TableContainer component={Box}>
-      <Table>
+      <Table
+        sx={{
+          "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 }, // font only
+        }}
+      >
         <TableBody>
           {clusters.map((cluster) => (
             <React.Fragment key={cluster.id}>
-              <TableRow onClick={() => handleToggleRow(cluster.id)}>
+              <TableRow
+                onClick={() => handleToggleRow(cluster.id)}
+                sx={{
+                  bgcolor:
+                    cluster.cluster_name === "All Teams"
+                      ? "#f4fbf6" // light green only for All Teams
+                      : "transparent",
+                }}
+              >
                 <TableCell>
                   <IconButton size="small">
                     {openClusterIds.includes(cluster.id) ? (
@@ -150,7 +181,11 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
                     )}
                   </IconButton>
                 </TableCell>
-                <TableCell component="th" scope="row">
+                <TableCell
+                  component="th"
+                  scope="row"
+                  sx={{ fontWeight: 700 /* bolder label like dashboard */ }}
+                >
                   {cluster.cluster_name}
                 </TableCell>
                 <TableCell align="right">
@@ -160,6 +195,13 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
                       onClick={(e) => {
                         e.stopPropagation();
                         handleOpenClusterModal(cluster);
+                      }}
+                      sx={{
+                        textTransform: "none",
+                        fontWeight: 600,
+                        px: 2.25,
+                        py: 0.75,
+                        borderRadius: 1.5,
                       }}
                     >
                       Edit Cluster

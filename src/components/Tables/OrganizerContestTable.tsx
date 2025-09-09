@@ -166,50 +166,62 @@ export default function OrganizerContestTable(
 
   let rows: any[] = [];
 
-  if (type === "current" && contests) {
-    rows = contests
-      .filter((contest) => !contest.is_tabulated)
-      .map((contest) => {
-        const buttonText = contest.is_open ? "End Contest" : "Start Contest";
-        return createCurrentData(
-          contest.name,
-          <Link
-            component="button"
-            disabled={
-              contest.is_open && !allSubmittedForContests[contest.id] === true
-            }
-            onClick={() => {
-              setSelectedContest(contest);
-              contest.is_open
-                ? setEndAreYouSure(true)
-                : setStartAreYouSure(true);
-            }}
-            sx={{
-              textDecoration: "none",
-              color:
-                contest.is_open && !allSubmittedForContests[contest.id]
-                  ? "grey"
-                  : theme.palette.primary.main,
-              opacity:
-                contest.is_open && !allSubmittedForContests[contest.id]
-                  ? 0.5
-                  : 1,
-            }}
-          >
-            {buttonText}
-          </Link>,
-          <Link
-            component="button"
-            onClick={() => {
-              navigate(`/manage-contest/${contest.id}/`);
-            }}
-            sx={{ textDecoration: "none" }}
-          >
-            Manage Contest
-          </Link>
-        );
-      });
-  }
+  // 1) When building rows for CURRENT contests: make the action links green-themed
+if (type === "current" && contests) {
+  rows = contests
+    .filter((contest) => !contest.is_tabulated)
+    .map((contest) => {
+      const buttonText = contest.is_open ? "End Contest" : "Start Contest";
+      const disabledCond =
+        contest.is_open &&
+  allSubmittedForContests &&
+  allSubmittedForContests[contest.id] !== true;
+
+      return createCurrentData(
+        contest.name,
+        <Link
+          component="button"
+          disabled={disabledCond}
+          onClick={() => {
+            setSelectedContest(contest);
+            contest.is_open ? setEndAreYouSure(true) : setStartAreYouSure(true);
+          }}
+          sx={{
+            textDecoration: "none",
+            fontWeight: 600,
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            color: disabledCond ? "text.disabled" : theme.palette.success.main,
+            opacity: disabledCond ? 0.6 : 1,
+            "&:hover": disabledCond
+              ? {}
+              : { backgroundColor: "rgba(46,125,50,0.06)" }, // success green wash
+          }}
+        >
+          {buttonText}
+        </Link>,
+        <Link
+          component="button"
+          onClick={() => {
+            navigate(`/manage-contest/${contest.id}/`);
+          }}
+          sx={{
+            textDecoration: "none",
+            fontWeight: 500,
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            color: theme.palette.success.main,
+            "&:hover": { backgroundColor: "rgba(46,125,50,0.06)" },
+          }}
+        >
+          Manage Contest
+        </Link>
+      );
+    });
+}
+
 
   if (type === "past" && contests) {
     rows = contests
@@ -254,56 +266,105 @@ export default function OrganizerContestTable(
           </Box>
         ) : rows.length === 0 ? (
           <>
-            {type === "current" && (
-              <Typography variant="body1">No Current Contests</Typography>
-            )}
-            {type === "past" && (
-              <Typography variant="body1">No Past Contests</Typography>
-            )}
+            <Box sx={{ px: 3, py: 4 }}>
+            <Typography variant="body1" color="text.primary">
+              {type === "current" ? "No Current Contests" : "No Past Contests"}
+            </Typography>
+          </Box>
           </>
         ) : (
           <Table sx={{ minWidth: 650 }}>
             <TableHead>
-              <TableRow>
-                <TableCell align="left">Contest Name</TableCell>
-                {type === "current" && (
-                  <>
-                    <TableCell align="left">Start/End Contest</TableCell>
-                    <TableCell align="left">Manage Contest</TableCell>
-                  </>
-                )}
-                {type === "past" && (
-                  <>
-                    <TableCell align="left">Reopen Contest</TableCell>
-                    <TableCell align="left">View Results</TableCell>
-                  </>
-                )}
-              </TableRow>
+              <TableRow
+    sx={{
+      bgcolor: "rgba(46, 125, 50, 0.06)", // light green background
+    }}
+  >
+    <TableCell
+      align="left"
+      sx={{
+        fontWeight: 600,
+      }}
+    >
+      Contest Name
+    </TableCell>
+    {type === "current" && (
+      <>
+        <TableCell
+          align="left"
+          sx={{
+            fontWeight: 600
+          }}
+        >
+          Start/End Contest
+        </TableCell>
+        <TableCell
+          align="left"
+          sx={{
+            fontWeight: 600
+          }}
+        >
+          Manage Contest
+        </TableCell>
+      </>
+    )}
+    {type === "past" && (
+      <>
+        <TableCell
+          align="left"
+          sx={{
+            fontWeight: 600,
+            color: theme.palette.primary.main,
+          }}
+        >
+          Reopen Contest
+        </TableCell>
+        <TableCell
+          align="left"
+          sx={{
+            fontWeight: 600,
+            color: theme.palette.primary.main,
+          }}
+        >
+          View Results
+        </TableCell>
+      </>
+    )}
+  </TableRow>
             </TableHead>
             <TableBody>
-              {rows.map((row, index) => (
-                <TableRow
-                  key={index}
-                  sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-                >
-                  <TableCell align="left" component="th" scope="row">
-                    {row?.contestName}
-                  </TableCell>
-                  {type === "current" && (
-                    <>
-                      <TableCell align="left">{row?.startEndContest}</TableCell>
-                      <TableCell align="left">{row?.manageContest}</TableCell>
-                    </>
-                  )}
-                  {type === "past" && (
-                    <>
-                      <TableCell align="left">{row?.reopenContest}</TableCell>
-                      <TableCell align="left">{row?.contestResults}</TableCell>
-                    </>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
+    {rows.map((row, index) => (
+      <TableRow key={index} sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
+        {/* Contest Name cell below the title: use heading font + bolder weight */}
+        <TableCell
+          align="left"
+          component="th"
+          scope="row"
+          sx={(theme) => ({
+            fontWeight: 500,
+            fontFamily: theme.typography.h1.fontFamily, // match your title font
+            fontSize: "1rem", // slightly larger than body for emphasis
+          })}
+        >
+          {row?.contestName}
+        </TableCell>
+
+        {type === "current" && (
+          <>
+            <TableCell align="left">{row?.startEndContest}</TableCell>
+            <TableCell align="left">{row?.manageContest}</TableCell>
+          </>
+        )}
+
+        {type === "past" && (
+          <>
+            <TableCell align="left">{row?.reopenContest}</TableCell>
+            <TableCell align="left">{row?.contestResults}</TableCell>
+          </>
+        )}
+      </TableRow>
+    ))}
+  </TableBody>
           </Table>
         )}
 

@@ -64,27 +64,43 @@ function JudgeRow(props: { row: ReturnType<typeof createDataJudge> }) {
 
   return (
     <React.Fragment>
-      <TableRow sx={{ mt: 0 }} onClick={() => setOpen(!open)}>
-        <TableCell>
+      <TableRow
+        sx={{
+          mt: 0,
+          "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 },
+          "&:hover": { backgroundColor: "rgba(0,0,0,0.02)" },
+        }}
+        onClick={() => setOpen(!open)}
+      >
+        <TableCell sx={{ width: 56 }}>
           <IconButton size="small">
             {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
           </IconButton>
         </TableCell>
-        <TableCell component="th" scope="row">
+        <TableCell component="th" scope="row" sx={{ fontWeight: 600 }}>
           {row.role}
         </TableCell>
         <TableCell component="th" scope="row">
           {row.name}
         </TableCell>
-        <TableCell scope="row">
+        <TableCell scope="row" sx={{ width: 56 }}>
           {row.isAllSheetsSubmited ? (
-            <CheckIcon sx={{ color: "green" }} />
+            <CheckIcon sx={{ color: "#1e7e34" }} />
           ) : (
-            <CloseIcon sx={{ color: "red" }} />
+            <CloseIcon sx={{ color: "#d32f2f" }} />
           )}
         </TableCell>
         <TableCell align="right">
-          <Container sx={{ paddingBottom: 0, paddingTop: 0, gap: 3 }}>
+          <Container
+            sx={{
+              paddingBottom: 0,
+              paddingTop: 0,
+              p: 0,
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+            }}
+          >
             {row.viewEditScores}
             {row.editJudge}
             {row.deleteJudge}
@@ -94,14 +110,18 @@ function JudgeRow(props: { row: ReturnType<typeof createDataJudge> }) {
       <TableRow>
         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={5}>
           <Collapse in={open} timeout="auto" unmountOnExit>
-            <Table size="small">
+            <Table size="small" sx={{ "& .MuiTableCell-root": { py: 1 } }}>
               <TableBody>
                 <TableRow>
-                  <TableCell>Cluster(s)</TableCell>
+                  <TableCell sx={{ width: 180, color: "text.secondary" }}>
+                    Cluster(s)
+                  </TableCell>
                   <TableCell align="left">{row.cluster}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell>Score Sheets</TableCell>
+                  <TableCell sx={{ width: 180, color: "text.secondary" }}>
+                    Score Sheets
+                  </TableCell>
                   <TableCell align="left">
                     {row.scoreSheets.map((value, index) => (
                       <Typography
@@ -192,6 +212,13 @@ function JudgesTable(props: IJudgesTableProps) {
             phoneNumber: judge.phone_number,
           });
         }}
+        sx={{
+          textTransform: "none",
+          fontWeight: 600,
+          px: 2.25,
+          py: 0.75,
+          borderRadius: 1.5,
+        }}
       >
         Edit Judge
       </Button>,
@@ -203,13 +230,27 @@ function JudgesTable(props: IJudgesTableProps) {
           e.stopPropagation();
           navigate(`/judging/${judge.id}/`);
         }}
-        sx={{ mr: 2 }}
+        sx={{
+          mr: 2,
+          textTransform: "none",
+          fontWeight: 600,
+          px: 2.25,
+          py: 0.75,
+          borderRadius: 1.5,
+        }}
       >
         View/Edit Scores
       </Button>,
       <Button
         variant="outlined"
-        sx={{ ml: 2 }}
+        sx={{
+          ml: 2,
+          textTransform: "none",
+          fontWeight: 600,
+          px: 2.25,
+          py: 0.75,
+          borderRadius: 1.5,
+        }}
         onClick={(e) => {
           e.stopPropagation();
           handleOpenAreYouSure(judge.id);
@@ -223,7 +264,10 @@ function JudgesTable(props: IJudgesTableProps) {
 
   return (
     <TableContainer component={Box}>
-      <Table aria-label="collapsible table">
+      <Table
+        aria-label="collapsible table"
+        sx={{ "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 } }}
+      >
         <TableBody>
           {rows.map((row, index) => (
             <JudgeRow key={index} row={row} />
@@ -282,12 +326,23 @@ export default function OrganizerJudgesTable(
 
   return (
     <TableContainer component={Box}>
-      <Table aria-label="collapsible table">
+      <Table
+        aria-label="collapsible table"
+        sx={{ "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 } }}
+      >
         <TableBody>
           {clusters.map((cluster) => (
             <React.Fragment key={cluster.id}>
-              <TableRow onClick={() => handleToggleRow(cluster.id)}>
-                <TableCell>
+              <TableRow
+                onClick={() => handleToggleRow(cluster.id)}
+                sx={{
+                  bgcolor:
+                    cluster.cluster_name === "All Teams"
+                      ? "#f4fbf6"
+                      : "transparent",
+                }}
+              >
+                <TableCell sx={{ width: 56 }}>
                   <IconButton size="small">
                     {openClusterIds.includes(cluster.id) ? (
                       <KeyboardArrowUpIcon />
@@ -296,7 +351,7 @@ export default function OrganizerJudgesTable(
                     )}
                   </IconButton>
                 </TableCell>
-                <TableCell component="th" scope="row">
+                <TableCell component="th" scope="row" sx={{ fontWeight: 700 }}>
                   {cluster.cluster_name}
                 </TableCell>
                 <TableCell align="right">
@@ -309,6 +364,13 @@ export default function OrganizerJudgesTable(
                           cluster_name: cluster.cluster_name,
                           id: cluster.id,
                         });
+                      }}
+                      sx={{
+                        textTransform: "none",
+                        fontWeight: 600,
+                        px: 2.25,
+                        py: 0.75,
+                        borderRadius: 1.5,
                       }}
                     >
                       Edit Cluster
@@ -330,7 +392,7 @@ export default function OrganizerJudgesTable(
                       judges={judgesByClusterId[cluster.id]}
                       clusters={clusters}
                       contestid={contestid}
-                    ></JudgesTable>
+                    />
                   </Collapse>
                 </TableCell>
               </TableRow>

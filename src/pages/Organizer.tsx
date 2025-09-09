@@ -1,109 +1,189 @@
+// Organizer.tsx
+
 import Box from "@mui/material/Box";
 import Tab from "@mui/material/Tab";
 import TabContext from "@mui/lab/TabContext";
 import TabList from "@mui/lab/TabList";
 import TabPanel from "@mui/lab/TabPanel";
 import { useEffect, useState } from "react";
-import { Container } from "@mui/system";
-import { Typography } from "@mui/material";
+import {
+  Container,
+  Typography,
+  Divider,
+  Stack,
+  Card,
+  CardContent,
+  Grid,
+} from "@mui/material";
 import theme from "../theme";
 import OrganizerContestTable from "../components/Tables/OrganizerContestTable";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import useMapContestOrganizerStore from "../store/map_stores/mapContestToOrganizerStore";
 import useMapScoreSheetStore from "../store/map_stores/mapScoreSheetStore";
 
+// icons
+import CampaignIcon from "@mui/icons-material/Campaign";
+import HistoryIcon from "@mui/icons-material/History";
+
 export default function Organizer() {
   const [value, setValue] = useState("1");
-  const { fetchContestsByOrganizerId, contests } =
-    useMapContestOrganizerStore();
+  const { fetchContestsByOrganizerId, contests } = useMapContestOrganizerStore();
   const { allSheetsSubmittedForContests } = useMapScoreSheetStore();
   const { role } = useAuthStore();
 
   const organizerId = role ? role.user.id : null;
 
   useEffect(() => {
-    const fetchContests = async () => {
-      if (organizerId) {
-        await fetchContestsByOrganizerId(organizerId);
-      }
-    };
-
-    fetchContests();
+    if (organizerId) {
+      fetchContestsByOrganizerId(organizerId);
+    }
   }, [organizerId, fetchContestsByOrganizerId]);
 
   useEffect(() => {
-    const fetchSubmissionStatus = async () => {
-      if (contests.length > 0) {
-        await allSheetsSubmittedForContests(contests);
-      }
-    };
-
-    fetchSubmissionStatus();
+    if (contests.length > 0) {
+      allSheetsSubmittedForContests(contests);
+    }
   }, [contests]);
 
   const handleChange = (_event: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);
   };
+
+  const StatCard = ({ value, label }: { value: number | string; label: string }) => (
+    <Card
+      elevation={0}
+      sx={{
+        borderRadius: 3,
+        border: `1px solid ${theme.palette.grey[300]}`,
+        backgroundColor: "#fff",
+      }}
+    >
+      <CardContent sx={{ py: 3, px: 4 }}>
+        <Typography
+          variant="h4"
+          sx={{ fontWeight: 700, color: theme.palette.primary.main, lineHeight: 1, mb: 0.5 }}
+        >
+          {value}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {label}
+        </Typography>
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <>
-      <Typography variant="h1" sx={{ m: 5 }}>
-        Organizer Dashboard
-      </Typography>
-      <Container
-        sx={{
-          width: "100vw",
-          height: "auto",
-          position: "absolute",
-          padding: 3,
-          bgcolor: `${theme.palette.secondary.light}`,
-          ml: 5,
-          mb: 3,
-          borderRadius: 5,
-        }}
-      >
+    <Box sx={{ pb: 8, backgroundColor: "#fafafa", minHeight: "100vh" }}>
+      <Container maxWidth="lg">
+        {/* Heading */}
+        <Stack spacing={1} sx={{ mt: 4, mb: 3 }}>
+          <Typography
+            variant="h4"
+            sx={{ fontWeight: 800, color: theme.palette.primary.main }}
+          >
+            Organizer Dashboard
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary">
+            {role?.user?.first_name} {role?.user?.last_name}
+          </Typography>
+        </Stack>
+
+        {/* Stat Cards */}
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard value={contests.length} label="Total Contests" />
+          </Grid>
+        </Grid>
+
+        {/* Tab Section */}
         <TabContext value={value}>
+          {/* Tab Header (styled like a white card top) */}
           <Box
             sx={{
-              borderBottom: 1,
-              borderColor: "divider",
-              bgcolor: `${theme.palette.secondary.main}`,
-              borderTopLeftRadius: 5,
-              borderTopRightRadius: 5,
+              border: `1px solid ${theme.palette.grey[300]}`,
+              borderBottom: 0,
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              backgroundColor: "#fff",
+              px: 2,
             }}
           >
             <TabList
               onChange={handleChange}
               sx={{
-                display: "flex",
-                justifyContent: "flex-start",
+                "& .MuiTab-root": {
+                  textTransform: "none",
+                  fontWeight: 600,
+                  minHeight: 56,
+                },
+                "& .MuiTabs-indicator": {
+                  height: 3,
+                  backgroundColor: theme.palette.success.main,
+                },
               }}
             >
-              <Tab label="Current Contests" value="1" />
-              <Tab label="Past Contests" value="2" />
+              <Tab
+                value="1"
+                iconPosition="start"
+                icon={<CampaignIcon />}
+                label="Current Contests"
+              />
+              <Tab
+                value="2"
+                iconPosition="start"
+                icon={<HistoryIcon />}
+                label="Past Contests"
+              />
             </TabList>
           </Box>
+
+          {/* Panel 1: Current Contests */}
           <TabPanel
-            sx={{
-              bgcolor: `${theme.palette.secondary.main}`,
-              borderBottomLeftRadius: 5,
-              borderBottomRightRadius: 5,
-            }}
             value="1"
-          >
-            <OrganizerContestTable type="current" organizers={[]} />
-          </TabPanel>
-          <TabPanel
             sx={{
-              bgcolor: `${theme.palette.secondary.main}`,
-              borderBottomLeftRadius: 5,
-              borderBottomRightRadius: 5,
+              p: 0,
+              border: `1px solid ${theme.palette.grey[300]}`,
+              borderTop: 0,
+              borderBottomLeftRadius: 12,
+              borderBottomRightRadius: 12,
+              backgroundColor: "#fff",
             }}
-            value="2"
           >
-            <OrganizerContestTable type="past" organizers={[]} />
+            <Box sx={{ px: 3, py: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                Contest Management
+              </Typography>
+            </Box>
+            <Divider />
+            <Box sx={{ px: 3, pb: 3 }}>
+              <OrganizerContestTable type="current" organizers={[]} />
+            </Box>
+          </TabPanel>
+
+          {/* Panel 2: Past Contests */}
+          <TabPanel
+            value="2"
+            sx={{
+              p: 0,
+              border: `1px solid ${theme.palette.grey[300]}`,
+              borderTop: 0,
+              borderBottomLeftRadius: 12,
+              borderBottomRightRadius: 12,
+              backgroundColor: "#fff",
+            }}
+          >
+            <Box sx={{ px: 3, py: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                Contest Management
+              </Typography>
+            </Box>
+            <Divider />
+            <Box sx={{ px: 3, pb: 3 }}>
+              <OrganizerContestTable type="past" organizers={[]} />
+            </Box>
           </TabPanel>
         </TabContext>
       </Container>
-    </>
+    </Box>
   );
 }

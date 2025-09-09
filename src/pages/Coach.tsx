@@ -1,23 +1,31 @@
 import * as React from "react";
-import Box from "@mui/material/Box";
-import Collapse from "@mui/material/Collapse";
-import IconButton from "@mui/material/IconButton";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableRow from "@mui/material/TableRow";
-import Typography from "@mui/material/Typography";
-import Paper from "@mui/material/Paper";
+import {
+  Box,
+  Collapse,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableRow,
+  Typography,
+  Paper,
+  Container,
+  Card,
+  CardContent,
+  Grid,
+  Stack,
+  Divider,
+} from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
-import { Container } from "@mui/material";
-import theme from "../theme";
+
+import { useEffect } from "react";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import { useMapCoachToTeamStore } from "../store/map_stores/mapCoachToTeamStore";
-import { useEffect } from "react";
 import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
 import CoachTeamScoresTable from "../components/Tables/CoachTeamScoresTable";
+import theme from "../theme";
 
 export default function Coach() {
   const { role } = useAuthStore();
@@ -27,7 +35,7 @@ export default function Coach() {
 
   useEffect(() => {
     if (role?.user.id) {
-      fetchTeamsByCoachId(role?.user.id);
+      fetchTeamsByCoachId(role.user.id);
     }
     return () => {
       clearTeams();
@@ -48,37 +56,42 @@ export default function Coach() {
       clearContests();
       clearTeams();
     };
-
     window.addEventListener("pagehide", handlePageHide);
-
     return () => {
       window.removeEventListener("pagehide", handlePageHide);
     };
   }, []);
 
-  function createData(
+  const createData = (
     id: number,
-    name: any,
-    contest: any,
+    name: string,
+    contest: string,
     isDisqualified: boolean
-  ) {
-    return {
-      id,
-      name,
-      contest,
-      isDisqualified,
-    };
-  }
+  ) => ({
+    id,
+    name,
+    contest,
+    isDisqualified,
+  });
 
-  function Row(props: { row: ReturnType<typeof createData>; index: number }) {
-    const { row, index } = props;
+  const rows = teams.map((team) =>
+    createData(
+      team.id,
+      team.team_name,
+      contestsForTeams[team.id]?.name || "—",
+      team.organizer_disqualified
+    )
+  );
+
+  const Row = ({ row, index }: { row: ReturnType<typeof createData>; index: number }) => {
     const [open, setOpen] = React.useState(false);
 
     return (
-      <React.Fragment>
+      <>
         <TableRow
-          sx={{ "& > *": { borderBottom: "none" } }}
+          sx={{ "& > *": { borderBottom: "unset" } }}
           onClick={() => setOpen(!open)}
+          hover
         >
           <TableCell>
             <IconButton aria-label="expand row" size="small">
@@ -89,62 +102,100 @@ export default function Coach() {
             {row.name}
           </TableCell>
           <TableCell>{row.contest}</TableCell>
-          {row.isDisqualified && (
-            <TableCell sx={{ color: "red" }}>Disqualified</TableCell>
-          )}
+          <TableCell>
+            {row.isDisqualified ? (
+              <Typography sx={{ color: "red" }}>Disqualified</Typography>
+            ) : (
+              "Active"
+            )}
+          </TableCell>
         </TableRow>
         <TableRow>
           <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
             <Collapse in={open} timeout="auto" unmountOnExit>
-              <Box sx={{ margin: 1 }}>
+              <Box sx={{ m: 2 }}>
                 <CoachTeamScoresTable team={teams[index]} />
               </Box>
             </Collapse>
           </TableCell>
         </TableRow>
-      </React.Fragment>
+      </>
     );
-  }
-  const rows = teams.map((team) =>
-    createData(
-      team.id,
-      team.team_name,
-      contestsForTeams[team.id]?.name,
-      team.organizer_disqualified
-    )
+  };
+
+  const StatCard = ({ value, label }: { value: number | string; label: string }) => (
+    <Card
+      elevation={0}
+      sx={{
+        borderRadius: 3,
+        border: `1px solid ${theme.palette.grey[300]}`,
+        backgroundColor: "#fff",
+      }}
+    >
+      <CardContent sx={{ py: 3, px: 4 }}>
+        <Typography
+          variant="h4"
+          sx={{ fontWeight: 700, color: theme.palette.success.dark, lineHeight: 1, mb: 0.5 }}
+        >
+          {value}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {label}
+        </Typography>
+      </CardContent>
+    </Card>
   );
 
   return (
-    <>
-      <Typography variant="h1" sx={{ ml: "2%", mr: 5, mt: 4, mb: 4 }}>
-        Coach Dashboard
-      </Typography>
-      <Container
-        sx={{
-          width: "90vw",
-          height: "auto",
-          padding: 3,
-          bgcolor: theme.palette.secondary.light,
-          ml: "2%",
-          mr: 1,
-          mb: 3,
-          borderRadius: 5,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <TableContainer component={Paper}>
-          <Table aria-label="collapsible table">
-            <TableBody>
-              {rows.map((row, index) => (
-                <Row key={row.id} row={row} index={index} />
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+    <Box sx={{ pb: 8, backgroundColor: "#fafafa", minHeight: "100vh" }}>
+      <Container maxWidth="lg">
+        <Stack spacing={1} sx={{ mb: 3, mt: 3 }}>
+          <Typography variant="h4" sx={{ fontWeight: 800, color: theme.palette.success.main }}>
+            Coach Dashboard
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary">
+            {role?.user?.first_name} {role?.user?.last_name}
+          </Typography>
+        </Stack>
+
+        {/* Stat Card */}
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard value={teams.length} label="Teams Coached" />
+          </Grid>
+        </Grid>
+
+        {/* Collapsible Table Section */}
+        <Box
+          sx={{
+            border: `1px solid ${theme.palette.grey[300]}`,
+            borderRadius: 3,
+            backgroundColor: "#fff",
+          }}
+        >
+          <Box sx={{ px: 3, py: 2 , backgroundColor:" rgba(46, 125, 50, 0.06)"  }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+              Teams Overview
+            </Typography>
+          </Box>
+          <Divider />
+          <Box sx={{ px: 3, pb: 3 }}>
+            {teams.length > 0 ? (
+              <TableContainer component={Box}>
+                <Table>
+                  <TableBody>
+                    {rows.map((row, index) => (
+                      <Row key={row.id} row={row} index={index} />
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Typography>No teams assigned yet.</Typography>
+            )}
+          </Box>
+        </Box>
       </Container>
-    </>
+    </Box>
   );
 }

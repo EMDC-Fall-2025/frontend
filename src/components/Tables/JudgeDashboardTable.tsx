@@ -179,7 +179,14 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
               onClick={() => {
                 navigate(`/${url}/${judge.id}/${team.id}/`);
               }}
-              sx={{ mb: 1 }}
+              sx={{
+                mb: 1,
+                textTransform: "none",
+                borderRadius: 2,
+                px: 2.25,
+                bgcolor: theme.palette.success.main,
+                "&:hover": { bgcolor: theme.palette.success.dark },
+              }}
             >
               {buttonText}
             </Button>
@@ -188,7 +195,11 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
               variant="contained"
               sx={{
                 mb: 1,
-                bgcolor: "grey",
+                textTransform: "none",
+                borderRadius: 2,
+                px: 2.25,
+                bgcolor: theme.palette.grey[500],
+                "&:hover": { bgcolor: theme.palette.grey[600] },
               }}
               onClick={() =>
                 handleOpenAreYouSure(
@@ -212,14 +223,15 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     <>
       <Container
         sx={{
-          width: "90vw",
+          width: "auto",
           height: "auto",
-          padding: 3,
-          bgcolor: `${theme.palette.secondary.light}`,
+          p: 3,
+          bgcolor:  "#ffffffff",
           ml: "2%",
           mr: 1,
           mb: 3,
-          borderRadius: 5,
+          borderRadius: 3,
+          boxShadow: "0 1px 2px rgba(16,24,40,.06)",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -246,22 +258,62 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
           onClick={handleExpandAll}
           sx={{
             mb: 2,
-            bgcolor: theme.palette.secondary.main,
-            color: theme.palette.primary.main,
-            width: 200,
-            height: 45,
+            textTransform: "none",
+            borderRadius: 2,
+            px: 2.5,
+            bgcolor: theme.palette.success.main,
+            color: theme.palette.common.white,
+            "&:hover": { bgcolor: theme.palette.success.dark },
+            width: 220,
+            height: 44,
           }}
         >
           Expand All Teams
         </Button>
-        <TableContainer component={Paper}>
-          <Table>
+
+        <TableContainer
+          component={Paper}
+          elevation={0}
+          sx={{
+            width: "100%",
+            borderRadius: 3,
+            border: `1px solid ${theme.palette.grey[300]}`,
+            backgroundColor: "#fff",
+            overflow: "hidden", // keep inner content inside rounded card
+          }}
+        >
+          <Table
+            sx={{
+              tableLayout: "fixed",
+              "& .MuiTableCell-root": {
+                fontSize: "0.95rem",
+                py: 1.25,
+              },
+            }}
+          >
             <TableBody>
               {teams.map((team: Team) => (
                 <React.Fragment key={team.id}>
-                  <TableRow onClick={() => handleToggle(team.id)}>
-                    <TableCell>
-                      <IconButton aria-label="expand row" size="small">
+                  <TableRow
+                    onClick={() => handleToggle(team.id)}
+                    sx={{
+                      cursor: "pointer",
+                      "&:hover": {
+                        backgroundColor: "rgba(46,125,50,0.06)", // light green hover
+                      },
+                      borderBottom: `1px solid ${theme.palette.grey[200]}`,
+                    }}
+                  >
+                    <TableCell sx={{ width: 56 }}>
+                      <IconButton
+                        aria-label="expand row"
+                        size="small"
+                        sx={{
+                          color: openRows[team.id]
+                            ? theme.palette.success.main
+                            : "inherit",
+                        }}
+                      >
                         {openRows[team.id] ? (
                           <KeyboardArrowUpIcon />
                         ) : (
@@ -269,81 +321,101 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                         )}
                       </IconButton>
                     </TableCell>
+
                     <TableCell
                       component="th"
                       scope="row"
-                      sx={{ pl: 2, textAlign: "left", mr: 1 }}
+                      sx={(t) => ({
+                        pl: 2,
+                        textAlign: "left",
+                        mr: 1,
+                        fontWeight: 600,
+                        fontFamily: t.typography.h1.fontFamily,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      })}
                     >
                       {team.team_name}
                     </TableCell>
+
                     {team.judge_disqualified && team.organizer_disqualified && (
                       <TableCell
                         component="th"
                         scope="row"
-                        sx={{ pl: 2, textAlign: "left", mr: 1, color: "red" }}
+                        sx={{
+                          pl: 2,
+                          textAlign: "left",
+                          mr: 1,
+                          color: theme.palette.error.main,
+                          fontWeight: 600,
+                        }}
                       >
                         Disqualified
                       </TableCell>
                     )}
                   </TableRow>
+
                   <TableRow>
-                    <TableCell
-                      style={{ paddingBottom: 0, paddingTop: 0 }}
-                      colSpan={6}
-                    >
-                      <Collapse
-                        in={openRows[team.id]}
-                        timeout="auto"
-                        unmountOnExit
-                      >
+                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
+                      <Collapse in={openRows[team.id]} timeout="auto" unmountOnExit>
+                        {/* Inner area stays inside the card with padding & soft bg */}
                         <Box
                           sx={{
-                            margin: 1,
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: 1,
+                            borderTop: `1px dashed ${theme.palette.grey[200]}`,
+                            backgroundColor: theme.palette.grey[50],
+                            px: 2,
+                            py: 2,
                           }}
                         >
-                          {judge?.journal && (
-                            <ScoreSheetButton
-                              team={team}
-                              type={2}
-                              url="journal-score"
-                              buttonText="Journal"
-                            />
-                          )}
-                          {judge?.presentation && contest?.is_open && (
-                            <ScoreSheetButton
-                              team={team}
-                              type={1}
-                              url="presentation-score"
-                              buttonText="Presentation"
-                            />
-                          )}
-                          {judge?.mdo && contest?.is_open && (
-                            <ScoreSheetButton
-                              team={team}
-                              type={3}
-                              url="machine-score"
-                              buttonText="Machine Design and Operation"
-                            />
-                          )}
-                          {judge?.runpenalties && (
-                            <ScoreSheetButton
-                              team={team}
-                              type={4}
-                              url="run-penalties"
-                              buttonText="Run Penalties"
-                            />
-                          )}
-                          {judge?.otherpenalties && (
-                            <ScoreSheetButton
-                              team={team}
-                              type={5}
-                              url="general-penalties"
-                              buttonText="General Penalties"
-                            />
-                          )}
+                          <Box
+                            sx={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: 1,
+                            }}
+                          >
+                            {judge?.journal && (
+                              <ScoreSheetButton
+                                team={team}
+                                type={2}
+                                url="journal-score"
+                                buttonText="Journal"
+                              />
+                            )}
+                            {judge?.presentation && contest?.is_open && (
+                              <ScoreSheetButton
+                                team={team}
+                                type={1}
+                                url="presentation-score"
+                                buttonText="Presentation"
+                              />
+                            )}
+                            {judge?.mdo && contest?.is_open && (
+                              <ScoreSheetButton
+                                team={team}
+                                type={3}
+                                url="machine-score"
+                                buttonText="Machine Design and Operation"
+                              />
+                            )}
+                            {judge?.runpenalties && (
+                              <ScoreSheetButton
+                                team={team}
+                                type={4}
+                                url="run-penalties"
+                                buttonText="Run Penalties"
+                              />
+                            )}
+                            {judge?.otherpenalties && (
+                              <ScoreSheetButton
+                                team={team}
+                                type={5}
+                                url="general-penalties"
+                                buttonText="General Penalties"
+                              />
+                            )}
+                          </Box>
                         </Box>
                       </Collapse>
                     </TableCell>
@@ -354,6 +426,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
           </Table>
         </TableContainer>
       </Container>
+
       <AreYouSureModal
         open={openAreYouSure}
         handleClose={() => setOpenAreYouSure(false)}
