@@ -80,7 +80,6 @@ function Row(props: { row: ReturnType<typeof createData> }) {
           </IconButton>
         </TableCell>
 
-        {/* Name cell — styled content (no structure change) */}
         <TableCell component="th" scope="row" sx={{ py: 2 }}>
           <Stack direction="row" alignItems="center" spacing={2} minWidth={0}>
             <Box
@@ -114,7 +113,7 @@ function Row(props: { row: ReturnType<typeof createData> }) {
           </Stack>
         </TableCell>
 
-        {/* Actions — restyled buttons, same structure */}
+      
         <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
           <Stack direction="row" spacing={1.25} justifyContent="flex-end">
             {React.cloneElement(
@@ -163,7 +162,7 @@ function Row(props: { row: ReturnType<typeof createData> }) {
         </TableCell>
       </TableRow>
 
-      {/* Collapse — keep your nested table, just style it to look minimal */}
+      
       <TableRow sx={{ display: open ? "table-row" : "none" }}>
         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={3} sx={{ borderBottom: 0 }}>
           <Collapse in={open} timeout="auto" unmountOnExit>
@@ -172,7 +171,7 @@ function Row(props: { row: ReturnType<typeof createData> }) {
                 size="small"
                 aria-label="purchases"
                 sx={{
-                  // remove inner table feel
+                
                   "& td, & th": { border: 0, py: 1 },
                 }}
               >
