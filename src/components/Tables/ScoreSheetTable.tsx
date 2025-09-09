@@ -14,6 +14,7 @@ import {
   TextField,
   Button,
   Link,
+  Divider, // optional separator for a cleaner card look
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
@@ -27,14 +28,17 @@ import CloseIcon from "@mui/icons-material/Close";
 import CheckIcon from "@mui/icons-material/Check";
 import AreYouSureModal from "../Modals/AreYouSureModal";
 
+/**
+ * Props that control which sheet to load and how to render it
+ */
 type IScoreSheetTableProps = {
-  sheetType: number;
-  title: string;
-  teamName: string;
-  questions: any[];
-  seperateJrAndSr: boolean;
-  teamId: number | null;
-  judgeId: number | null;
+  sheetType: number;            // which sheet (e.g., presentation = 1)
+  title: string;                // page title
+  teamName: string;             // for the subtitle
+  questions: any[];             // list of question configs for this sheet
+  seperateJrAndSr: boolean;     // whether to show separate Jr/Sr criteria text for question 4
+  teamId: number | null;        // which team is being scored
+  judgeId: number | null;       // which judge is scoring
 };
 
 export default function ScoreSheetTable({
@@ -46,9 +50,10 @@ export default function ScoreSheetTable({
   judgeId,
   seperateJrAndSr,
 }: IScoreSheetTableProps) {
-  const [openRows, setOpenRows] = React.useState<{ [key: number]: boolean }>(
-    {}
-  );
+  // Track which rows are expanded (questionId -> open/closed)
+  const [openRows, setOpenRows] = React.useState<{ [key: number]: boolean }>({});
+
+  // Store hooks for retrieving the score sheet mapping and data
   const { scoreSheetId, fetchScoreSheetId } = useMapScoreSheetStore();
   const {
     scoreSheet,
@@ -58,10 +63,15 @@ export default function ScoreSheetTable({
     editScoreSheet,
     scoreSheetError,
   } = useScoreSheetStore();
+
+  // Confirm-submit modal
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
 
   const navigate = useNavigate();
 
+  /**
+   * Toggle a question row open/closed
+   */
   const handleToggle = (id: number) => {
     setOpenRows((prevState) => ({
       ...prevState,
@@ -69,18 +79,31 @@ export default function ScoreSheetTable({
     }));
   };
 
+  /**
+   * On mount / when team/judge change:
+   * ask server for the corresponding scoreSheetId for this judge+team+sheetType
+   */
   useEffect(() => {
     if (teamId && judgeId) {
       fetchScoreSheetId(judgeId, teamId, sheetType);
     }
   }, [teamId, judgeId, fetchScoreSheetId]);
 
+  /**
+   * When we learn the scoreSheetId:
+   * fetch the full score sheet object containing existing values
+   */
   useEffect(() => {
     if (scoreSheetId) {
       fetchScoreSheetById(scoreSheetId);
     }
   }, [scoreSheetId, fetchScoreSheetById]);
 
+  /**
+   * Local form state: keyed by question.id.
+   * field1..field9 map to questions 1..9.
+   * 1-8 are numeric scores, 9 is free-text comments.
+   */
   const [formData, setFormData] = useState<{
     [key: number]: number | string | undefined;
   }>({
@@ -95,6 +118,10 @@ export default function ScoreSheetTable({
     9: undefined,
   });
 
+  /**
+   * When scoreSheet loads, populate formData from it.
+   * If no sheet yet, clear the form.
+   */
   useEffect(() => {
     if (scoreSheet) {
       setFormData({
@@ -113,6 +140,9 @@ export default function ScoreSheetTable({
     }
   }, [scoreSheet, judgeId, teamId]);
 
+  /**
+   * Update a single question's value in local form state
+   */
   const handleScoreChange = (
     questionId: number,
     value: number | string | undefined
@@ -123,6 +153,9 @@ export default function ScoreSheetTable({
     }));
   };
 
+  /**
+   * Save current formData (draft) without submitting
+   */
   const handleSaveScoreSheet = () => {
     if (scoreSheet) {
       updateScores({
@@ -135,28 +168,32 @@ export default function ScoreSheetTable({
         field6: formData[6],
         field7: formData[7],
         field8: formData[8],
-        field9: formData[9]?.toString(),
+        field9: formData[9]?.toString(), // comments stored as string
       });
     }
   };
 
+  /**
+   * Check if all required score fields (1..8) are filled.
+   * Note: field 9 (comments) is optional, so it’s ignored here.
+   */
   const allFieldsFilled = () => {
     const allFilled = Object.keys(formData).every((key) => {
       const fieldId = Number(key);
-      if (fieldId === 9) {
-        return true;
-      }
-
+      if (fieldId === 9) return true; // skip comments
       const isFilled =
         formData[fieldId] !== undefined &&
         formData[fieldId] !== 0 &&
         formData[fieldId] !== "";
-
       return isFilled;
     });
     return allFilled;
   };
 
+  /**
+   * Find which questions are incomplete (undefined/empty/0)
+   * Used to expand only those rows
+   */
   const getIncompleteRows = () => {
     return questions
       .filter(
@@ -168,6 +205,9 @@ export default function ScoreSheetTable({
       .map((question) => question.id);
   };
 
+  /**
+   * Expand all incomplete rows to prompt the judge to fill them
+   */
   const expandIncompleteRows = () => {
     const incompleteRows = getIncompleteRows();
     const updatedOpenRows = incompleteRows.reduce(
@@ -180,6 +220,9 @@ export default function ScoreSheetTable({
     setOpenRows(updatedOpenRows);
   };
 
+  /**
+   * Collapse every row
+   */
   const handleCollapseAllRows = () => {
     const updatedOpenRows = questions.reduce((acc, question) => {
       acc[question.id] = false; // Collapse each row
@@ -188,6 +231,9 @@ export default function ScoreSheetTable({
     setOpenRows(updatedOpenRows);
   };
 
+  /**
+   * Submit the sheet (finalize). Navigates back after success.
+   */
   const handleSubmit = async () => {
     try {
       if (scoreSheet) {
@@ -207,92 +253,144 @@ export default function ScoreSheetTable({
         });
       }
       setOpenAreYouSure(false);
-      navigate(-1);
+      navigate(-1); // back to previous page
     } catch {}
   };
 
+  // Show a spinner while the sheet is loading
   return isLoadingScoreSheet ? (
     <CircularProgress />
   ) : (
     <>
+      {/* Back link to the judging dashboard */}
       <Link
         onClick={() => navigate(-1)}
-        sx={{ textDecoration: "none" }}
-        style={{ cursor: "pointer" }}
+        sx={{
+          textDecoration: "none",
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          ml: "2%",
+          mt: 2,
+          color: theme.palette.success.main,
+          "&:hover": { color: theme.palette.success.dark },
+        }}
       >
-        <Typography variant="body2" sx={{ m: 2 }}>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
           {"<"} Back to Judging Dashboard{" "}
         </Typography>
       </Link>
-      <Typography variant="h1" sx={{ ml: "2%", mr: 5, mt: 4, mb: 2 }}>
+
+      {/* Page title + team name (subtitle) */}
+      <Typography
+        variant="h4"
+        sx={{
+          ml: "2%",
+          mr: 5,
+          mt: 3,
+          mb: 0.5,
+          fontWeight: 800,
+          color: theme.palette.success.main,
+        }}
+      >
         {title}
       </Typography>
-      <Typography variant="body1" sx={{ ml: "2%", mr: 5, mb: 4 }}>
+      <Typography variant="subtitle2" color="text.secondary" sx={{ ml: "2%", mr: 5, mb: 2 }}>
         {teamName}
       </Typography>
+
+      {/* Main card container for actions + table */}
       <Container
         component="form"
         sx={{
-          width: "90vw",
-          height: "auto",
-          padding: 3,
-          bgcolor: theme.palette.secondary.light,
+          width: "auto",
+          p: 3,
+          bgcolor: "#fff", // previously secondary.light
+          borderRadius: 3,
+          border: `1px solid ${theme.palette.grey[300]}`,
           ml: "2%",
           mr: 1,
           mb: 3,
-          borderRadius: 5,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
         }}
       >
-        <Button
-          variant="contained"
-          onClick={handleSaveScoreSheet}
+        {/* Actions: save, expand incomplete, collapse all */}
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2 }}>
+          <Button
+            variant="contained"
+            onClick={handleSaveScoreSheet}
+            sx={{
+              bgcolor: theme.palette.success.main,
+              "&:hover": { bgcolor: theme.palette.success.dark },
+              color: "#fff",
+              minWidth: 200,
+              height: 44,
+              textTransform: "none",
+              borderRadius: 2,
+            }}
+          >
+            Save
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={expandIncompleteRows}
+            sx={{
+              borderColor: theme.palette.success.main,
+              color: theme.palette.success.main,
+              "&:hover": {
+                borderColor: theme.palette.success.dark,
+                bgcolor: "rgba(46,125,50,0.06)",
+              },
+              minWidth: 200,
+              height: 44,
+              textTransform: "none",
+              borderRadius: 2,
+            }}
+          >
+            Expand Incomplete Rows
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={handleCollapseAllRows}
+            sx={{
+              borderColor: theme.palette.grey[400],
+              color: theme.palette.text.primary,
+              "&:hover": { borderColor: theme.palette.grey[600], bgcolor: theme.palette.grey[50] },
+              minWidth: 200,
+              height: 44,
+              textTransform: "none",
+              borderRadius: 2,
+            }}
+          >
+            Collapse All
+          </Button>
+        </Box>
+
+        <Divider sx={{ mb: 2 }} />
+
+        {/* Scoring table: each question row can be expanded to show criteria + input */}
+        <TableContainer
+          component={Paper}
           sx={{
-            mb: 2,
-            bgcolor: theme.palette.secondary.main,
-            color: theme.palette.primary.main,
-            width: 200,
-            height: 45,
+            borderRadius: 2,
+            border: `1px solid ${theme.palette.grey[200]}`,
+            overflow: "hidden",
           }}
         >
-          Save
-        </Button>
-        <Button
-          variant="contained"
-          onClick={expandIncompleteRows}
-          sx={{
-            mb: 2,
-            bgcolor: theme.palette.secondary.main,
-            color: theme.palette.primary.main,
-            width: 200,
-            height: 45,
-          }}
-        >
-          Expand Incomplete Rows
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleCollapseAllRows}
-          sx={{
-            mb: 2,
-            bgcolor: theme.palette.secondary.main,
-            color: theme.palette.primary.main,
-            width: 200,
-            height: 45,
-          }}
-        >
-          Collapse All
-        </Button>
-        <TableContainer component={Paper}>
-          <Table>
+          <Table
+            sx={{
+              "& .MuiTableRow-root": { transition: "background-color 120ms ease" },
+              "& tr:hover td": {
+                backgroundColor: "rgba(46,125,50,0.04)", // subtle full-row green hover
+              },
+              "& td, & th": { borderColor: theme.palette.grey[200] },
+            }}
+          >
             <TableBody>
               {questions.map((question) => (
                 <React.Fragment key={question.id}>
-                  <TableRow onClick={() => handleToggle(question.id)}>
-                    <TableCell>
+                  {/* Summary row: shows question text and status icon */}
+                  <TableRow onClick={() => handleToggle(question.id)} sx={{ cursor: "pointer" }}>
+                    <TableCell sx={{ width: 56 }}>
                       <IconButton aria-label="expand row" size="small">
                         {openRows[question.id] ? (
                           <KeyboardArrowUpIcon />
@@ -304,200 +402,128 @@ export default function ScoreSheetTable({
                     <TableCell
                       component="th"
                       scope="row"
-                      sx={{ pl: 2, textAlign: "left", mr: 1 }}
+                      sx={{ pl: 2, textAlign: "left", pr: 2, fontWeight: 600 }}
                     >
                       {question.questionText}
                     </TableCell>
-                    <TableCell align="right" scope="row">
-                      {question.id != 9 && (
-                        <>
-                          {formData[question.id] == 0 ? (
-                            <CloseIcon sx={{ color: "red" }} />
-                          ) : (
-                            <CheckIcon sx={{ color: "green" }} />
-                          )}
-                        </>
-                      )}
+                    <TableCell align="right" scope="row" sx={{ width: 56 }}>
+                      {/* For questions 1..8 show a check/close icon; question 9 is comments */}
+                      {question.id != 9 &&
+                        (formData[question.id] == 0 ? (
+                          <CloseIcon sx={{ color: theme.palette.error.main }} />
+                        ) : (
+                          <CheckIcon sx={{ color: theme.palette.success.main }} />
+                        ))}
                     </TableCell>
                   </TableRow>
+
+                  {/* Details row: criteria cards + score input (or comments for Q9) */}
                   <TableRow>
-                    <TableCell
-                      style={{ paddingBottom: 0, paddingTop: 0 }}
-                      colSpan={6}
-                    >
-                      <Collapse
-                        in={openRows[question.id]}
-                        timeout="auto"
-                        unmountOnExit
-                      >
+                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
+                      <Collapse in={openRows[question.id]} timeout="auto" unmountOnExit>
                         <Box
                           sx={{
                             mt: 2,
                             mb: 2,
                             display: "flex",
-                            gap: 3,
-                            flexDirection: {
-                              md: "row",
-                              sm: "column",
-                              xs: "column",
-                            },
+                            gap: 2,
+                            flexDirection: { md: "row", sm: "column", xs: "column" },
                             width: "100%",
-                            alignItems: "center",
+                            alignItems: "stretch",
                             justifyContent: "center",
+                            px: { xs: 1, sm: 2 },
                           }}
                         >
                           {question.id !== 9 ? (
                             <>
+                              {/* Criteria 1 card */}
                               <Box
                                 sx={{
-                                  bgcolor: theme.palette.secondary.light,
-                                  padding: 1,
-                                  borderRadius: 3,
-                                  width: "95%",
-                                  height: "100%",
+                                  bgcolor: theme.palette.grey[50],
+                                  border: `1px solid ${theme.palette.grey[200]}`,
+                                  p: 1.5,
+                                  borderRadius: 2,
+                                  flex: 1,
                                 }}
                               >
                                 {seperateJrAndSr && question.id == 4 ? (
                                   <>
-                                    <Typography
-                                      sx={{
-                                        fontSize: "12pt",
-                                        fontWeight: 800,
-                                        mb: 1,
-                                      }}
-                                    >
+                                    <Typography sx={{ fontSize: 12, fontWeight: 800, mb: 0.5 }}>
                                       Jr. Div.
                                     </Typography>
-                                    <Typography>
-                                      {question.criteria1Junior}
-                                    </Typography>
-                                    <Typography
-                                      sx={{
-                                        fontSize: "12pt",
-                                        fontWeight: 800,
-                                        mb: 1,
-                                        mt: 1,
-                                      }}
-                                    >
+                                    <Typography>{question.criteria1Junior}</Typography>
+                                    <Typography sx={{ fontSize: 12, fontWeight: 800, my: 0.5 }}>
                                       Sr. Div.
                                     </Typography>
-                                    <Typography>
-                                      {question.criteria1Senior}
-                                    </Typography>
+                                    <Typography>{question.criteria1Senior}</Typography>
                                   </>
                                 ) : (
                                   <Typography>{question.criteria1}</Typography>
                                 )}
-                                <Typography
-                                  sx={{
-                                    mt: 1,
-                                    fontWeight: 800,
-                                    fontSize: "12pt",
-                                  }}
-                                >
+                                <Typography sx={{ mt: 1, fontWeight: 800, fontSize: 12 }}>
                                   {question.criteria1Points}
                                 </Typography>
                               </Box>
+
+                              {/* Criteria 2 card */}
                               <Box
                                 sx={{
-                                  bgcolor: theme.palette.secondary.light,
-                                  padding: 1,
-                                  borderRadius: 3,
-                                  width: "95%",
-                                  height: "100%",
+                                  bgcolor: theme.palette.grey[50],
+                                  border: `1px solid ${theme.palette.grey[200]}`,
+                                  p: 1.5,
+                                  borderRadius: 2,
+                                  flex: 1,
                                 }}
                               >
                                 {seperateJrAndSr && question.id == 4 ? (
                                   <>
-                                    <Typography
-                                      sx={{
-                                        fontSize: "12pt",
-                                        fontWeight: 800,
-                                        mb: 1,
-                                      }}
-                                    >
+                                    <Typography sx={{ fontSize: 12, fontWeight: 800, mb: 0.5 }}>
                                       Jr. Div.
                                     </Typography>
-                                    <Typography>
-                                      {question.criteria2Junior}
-                                    </Typography>
-                                    <Typography
-                                      sx={{
-                                        fontSize: "12pt",
-                                        fontWeight: 800,
-                                        mb: 1,
-                                        mt: 1,
-                                      }}
-                                    >
+                                    <Typography>{question.criteria2Junior}</Typography>
+                                    <Typography sx={{ fontSize: 12, fontWeight: 800, my: 0.5 }}>
                                       Sr. Div.
                                     </Typography>
-                                    <Typography>
-                                      {question.criteria2Senior}
-                                    </Typography>
+                                    <Typography>{question.criteria2Senior}</Typography>
                                   </>
                                 ) : (
                                   <Typography>{question.criteria2}</Typography>
                                 )}
-                                <Typography
-                                  sx={{
-                                    mt: 1,
-                                    fontWeight: 800,
-                                    fontSize: "12pt",
-                                  }}
-                                >
+                                <Typography sx={{ mt: 1, fontWeight: 800, fontSize: 12 }}>
                                   {question.criteria2Points}
                                 </Typography>
                               </Box>
+
+                              {/* Criteria 3 card */}
                               <Box
                                 sx={{
-                                  bgcolor: theme.palette.secondary.light,
-                                  padding: 1,
-                                  borderRadius: 3,
-                                  width: "95%",
-                                  height: "100%",
+                                  bgcolor: theme.palette.grey[50],
+                                  border: `1px solid ${theme.palette.grey[200]}`,
+                                  p: 1.5,
+                                  borderRadius: 2,
+                                  flex: 1,
                                 }}
                               >
                                 {seperateJrAndSr && question.id == 4 ? (
                                   <>
-                                    <Typography
-                                      sx={{
-                                        fontSize: "12pt",
-                                        fontWeight: 800,
-                                        mb: 1,
-                                      }}
-                                    >
+                                    <Typography sx={{ fontSize: 12, fontWeight: 800, mb: 0.5 }}>
                                       Jr. Div.
                                     </Typography>
-                                    <Typography>
-                                      {question.criteria3Junior}
-                                    </Typography>
-                                    <Typography
-                                      sx={{
-                                        fontSize: "12pt",
-                                        fontWeight: 800,
-                                        mb: 1,
-                                        mt: 1,
-                                      }}
-                                    >
+                                    <Typography>{question.criteria3Junior}</Typography>
+                                    <Typography sx={{ fontSize: 12, fontWeight: 800, my: 0.5 }}>
                                       Sr. Div.
                                     </Typography>
-                                    <Typography>
-                                      {question.criteria3Senior}
-                                    </Typography>
+                                    <Typography>{question.criteria3Senior}</Typography>
                                   </>
                                 ) : (
                                   <Typography>{question.criteria3}</Typography>
                                 )}
-                                <Typography
-                                  sx={{
-                                    mt: 1,
-                                    fontWeight: 800,
-                                    fontSize: "12pt",
-                                  }}
-                                >
+                                <Typography sx={{ mt: 1, fontWeight: 800, fontSize: 12 }}>
                                   {question.criteria3Points}
                                 </Typography>
                               </Box>
+
+                              {/* Numeric score input for Q1..Q8 */}
                               <TextField
                                 id="outlined-number"
                                 label="Score"
@@ -507,13 +533,15 @@ export default function ScoreSheetTable({
                                     ? formData[question.id]
                                     : ""
                                 }
+                                // avoid accidental value change from mouse wheel
                                 onWheel={(e) => {
                                   const inputElement =
                                     e.target as HTMLInputElement;
                                   inputElement.blur();
                                 }}
                                 onChange={(e) => {
-                                  let value = e.target.value;
+                                  // enforce allowed range: [lowPoints, highPoints] or empty
+                                  let value: any = e.target.value;
 
                                   if (value !== undefined) {
                                     if (value === "") {
@@ -528,6 +556,7 @@ export default function ScoreSheetTable({
                                   handleScoreChange(question.id, value);
                                 }}
                                 onKeyDown={(e) => {
+                                  // block up/down arrows to prevent accidental changes
                                   if (
                                     e.key === "ArrowUp" ||
                                     e.key === "ArrowDown"
@@ -545,10 +574,20 @@ export default function ScoreSheetTable({
                                     step: 0.5,
                                   },
                                 }}
-                                sx={{ minWidth: "75px" }}
+                                helperText={`Allowed: ${question.lowPoints} – ${question.highPoints}`}
+                                sx={{
+                                  minWidth: 120,
+                                  "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+                                    borderColor: theme.palette.success.main,
+                                  },
+                                  "& label.Mui-focused": {
+                                    color: theme.palette.success.main,
+                                  },
+                                }}
                               />
                             </>
                           ) : (
+                            // Free-text comments for Q9
                             <TextField
                               id="outlined-multiline-flexible"
                               label="Enter Comments"
@@ -567,7 +606,15 @@ export default function ScoreSheetTable({
                                     : undefined
                                 )
                               }
-                              sx={{ width: "90%" }}
+                              sx={{
+                                width: "90%",
+                                "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+                                  borderColor: theme.palette.success.main,
+                                },
+                                "& label.Mui-focused": {
+                                  color: theme.palette.success.main,
+                                },
+                              }}
                             />
                           )}
                         </Box>
@@ -579,20 +626,27 @@ export default function ScoreSheetTable({
             </TableBody>
           </Table>
         </TableContainer>
+
+        {/* Final submit (opens confirmation modal). Disabled until all required fields are filled. */}
         <Button
           variant="contained"
           onClick={() => setOpenAreYouSure(true)}
           disabled={!allFieldsFilled()}
           sx={{
             mt: 3,
-            bgcolor: theme.palette.secondary.main,
-            color: theme.palette.primary.main,
-            width: 200,
-            height: 45,
+            bgcolor: theme.palette.success.main,
+            "&:hover": { bgcolor: theme.palette.success.dark },
+            color: "#fff",
+            minWidth: 200,
+            height: 44,
+            textTransform: "none",
+            borderRadius: 2,
           }}
         >
           Submit
         </Button>
+
+        {/* Confirmation modal; shows error if any returned from the store */}
         <AreYouSureModal
           open={openAreYouSure}
           handleClose={() => setOpenAreYouSure(false)}

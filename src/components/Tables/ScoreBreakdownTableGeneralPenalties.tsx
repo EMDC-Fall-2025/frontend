@@ -4,14 +4,25 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Box, CircularProgress, Typography, Paper } from "@mui/material";
 import { useScoreSheetStore } from "../../store/primary_stores/scoreSheetStore";
 import { GeneralPenaltiesScoreSheetFields, ScoreSheetType } from "../../types";
 import { generalPenaltiesQuestions } from "../../data/generalPenaltiesQuestions";
+import theme from "../../theme";
 
+/**
+ * Public Score Breakdown — General Penalties table
+ * - Reads penalty breakdown from the score sheet store (already populated upstream)
+ * - Renders a read-only table of penalties, types, point values, and deducted points
+ * - Styling aligns with Admin/Public cards: white surface, rounded corners, thin gray borders
+ */
 export default function ScoreBreakdownTableGeneralPenalties() {
   const { scoreSheetBreakdown } = useScoreSheetStore();
 
+  /**
+   * Simple row renderer for one penalty line.
+   * NOTE: Logic unchanged — purely presentational.
+   */
   const PenaltiesRow: React.FC<{
     text: string;
     field: string;
@@ -19,17 +30,31 @@ export default function ScoreBreakdownTableGeneralPenalties() {
     penaltyType: string;
   }> = ({ text, field, pointValue, penaltyType }) => {
     return (
-      <TableRow>
-        <TableCell>
-          <Typography>{text}</Typography>
+      <TableRow
+        sx={{
+          "&:hover td": {
+            // subtle full-row hover to match the theme
+            backgroundColor: "rgba(46,125,50,0.04)",
+          },
+        }}
+      >
+        {/* Penalty name */}
+        <TableCell sx={{ py: 1.25 }}>
+          <Typography sx={{ fontWeight: 600 }}>{text}</Typography>
         </TableCell>
-        <TableCell>
-          <Typography>{penaltyType}</Typography>
+
+        {/* Penalty type */}
+        <TableCell sx={{ py: 1.25 }}>
+          <Typography color="text.secondary">{penaltyType}</Typography>
         </TableCell>
-        <TableCell>
+
+        {/* Point value (numeric) */}
+        <TableCell sx={{ py: 1.25, textAlign: "right", whiteSpace: "nowrap" }}>
           <Typography>{pointValue}</Typography>
         </TableCell>
-        <TableCell>
+
+        {/* Points deducted (list from store) */}
+        <TableCell sx={{ py: 1.25 }}>
           {scoreSheetBreakdown &&
             scoreSheetBreakdown[ScoreSheetType.GeneralPenalties][
               GeneralPenaltiesScoreSheetFields[
@@ -41,23 +66,52 @@ export default function ScoreBreakdownTableGeneralPenalties() {
     );
   };
 
+  // Show spinner while breakdown is not available yet
   return scoreSheetBreakdown ? (
     <TableContainer
-      sx={{ m: 5, minWidth: 550, maxWidth: "90vw" }}
-      component={Box}
+      // Card-like surface to match Admin/Public cards
+      component={Paper}
+      sx={{
+        m: 5,
+        maxWidth: "90vw",
+        borderRadius: 3,
+        border: `1px solid ${theme.palette.grey[300]}`,
+        boxShadow: "none",
+        overflow: "hidden",
+      }}
     >
-      <Table>
-        <TableHead>
+      <Table
+        sx={{
+          "& td, & th": { borderColor: theme.palette.grey[200] },
+          tableLayout: "auto",
+        }}
+      >
+        {/* Header row */}
+        <TableHead
+          sx={{
+            backgroundColor: theme.palette.grey[50],
+            "& th": {
+              fontWeight: 700,
+              color: theme.palette.text.primary,
+              whiteSpace: "nowrap",
+            },
+          }}
+        >
           <TableRow>
             <TableCell>Penalty</TableCell>
             <TableCell>Penalty Type</TableCell>
-            <TableCell>Point Value (Per occurrence if applicable)</TableCell>
+            <TableCell sx={{ textAlign: "right" }}>
+              Point Value (Per occurrence if applicable)
+            </TableCell>
             <TableCell>Points Deducted</TableCell>
           </TableRow>
         </TableHead>
+
+        {/* Body rows */}
         <TableBody>
           {generalPenaltiesQuestions.map((penalty) => (
             <PenaltiesRow
+              key={penalty.field} // key for stable rendering (styling-only; no logic change)
               text={penalty.questionText}
               field={penalty.field}
               pointValue={penalty.pointValue}
@@ -68,6 +122,8 @@ export default function ScoreBreakdownTableGeneralPenalties() {
       </Table>
     </TableContainer>
   ) : (
-    <CircularProgress />
+    <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+      <CircularProgress />
+    </Box>
   );
 }
