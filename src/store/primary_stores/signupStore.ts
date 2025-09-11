@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 
 interface SignupState {
   user: null | { id: number; username: string };
@@ -21,7 +21,7 @@ export const useSignupStore = create<SignupState>()(
       signup: async (username, password) => {
         set({ isLoadingSignup: true, authError: null });
         try {
-          const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/signup/`, {
+          const response = await api.post(`/signup/`, {
             username: username,
             password: password,
           });

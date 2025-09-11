@@ -61,7 +61,7 @@ export default function Organizer() {
       <CardContent sx={{ py: 3, px: 4 }}>
         <Typography
           variant="h4"
-          sx={{ fontWeight: 700, color: theme.palette.primary.main, lineHeight: 1, mb: 0.5 }}
+          sx={{ fontWeight: 700, color: theme.palette.success.main, lineHeight: 1, mb: 0.5 }}
         >
           {value}
         </Typography>
@@ -79,7 +79,7 @@ export default function Organizer() {
         <Stack spacing={1} sx={{ mt: 4, mb: 3 }}>
           <Typography
             variant="h4"
-            sx={{ fontWeight: 800, color: theme.palette.primary.main }}
+            sx={{ fontWeight: 800, color: theme.palette.success.main }}
           >
             Organizer Dashboard
           </Typography>
