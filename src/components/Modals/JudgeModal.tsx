@@ -51,6 +51,9 @@ export default function JudgeModal(props: IJudgeModalProps) {
     { label: "Machine Design & Operation", value: "mdoSS" },
     { label: "Run Penalties", value: "runPenSS" },
     { label: "General Penalties", value: "genPenSS" },
+    { label: "Redesign", value: "redesignSS" },
+    //TODO: undetermined if need two score sheets
+    { label: "Championship", value: "championshipSS" },
   ];
 
   const titleOptions = [
@@ -102,16 +105,17 @@ export default function JudgeModal(props: IJudgeModalProps) {
 
   const validateForm = () => {
     const isClusterInvalid = clusterId === -1;
-    const areScoreSheetsInvalid = selectedSheets.length === 0;
-    const areTitlesInvalid = selectedSheets.length === 0;
+    //const areScoreSheetsInvalid = selectedSheets.length === 0;
+    const areTitlesInvalid = selectedTitle === 0;
 
     setErrors({
       cluster: isClusterInvalid,
-      scoreSheets: areScoreSheetsInvalid,
+      //scoreSheets: areScoreSheetsInvalid,
+      scoreSheets: false,
       titles: areTitlesInvalid,
     });
-
-    return !isClusterInvalid && !areScoreSheetsInvalid && !areTitlesInvalid;
+    //&& !areScoreSheetsInvalid
+    return !isClusterInvalid && !areTitlesInvalid;
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -132,14 +136,16 @@ export default function JudgeModal(props: IJudgeModalProps) {
     if (contestid) {
       try {
         const judgeData = {
-          first_name: firstName,
-          last_name: lastName,
-          phone_number: phoneNumber,
+          first_name: firstName || "n/a",
+          last_name: lastName || "n/a",
+          phone_number: phoneNumber || "n/a",
           presentation: selectedSheets.includes("presSS"),
           mdo: selectedSheets.includes("mdoSS"),
           journal: selectedSheets.includes("journalSS"),
           runpenalties: selectedSheets.includes("runPenSS"),
           otherpenalties: selectedSheets.includes("genPenSS"),
+          redesign: selectedSheets.includes("redesignSS"),
+          championship: selectedSheets.includes("championshipSS"),
           username: email,
           password: "password",
           contestid: contestid,
@@ -169,6 +175,8 @@ export default function JudgeModal(props: IJudgeModalProps) {
           journal: selectedSheets.includes("journalSS"),
           runpenalties: selectedSheets.includes("runPenSS"),
           otherpenalties: selectedSheets.includes("genPenSS"),
+          redesign: selectedSheets.includes("redesignSS"),
+          championship: selectedSheets.includes("championshipSS"),
           username: email,
           clusterid: clusterId,
           role: selectedTitle,
@@ -216,7 +224,6 @@ export default function JudgeModal(props: IJudgeModalProps) {
           }}
         >
           <TextField
-            required
             label="First Name"
             variant="outlined"
             sx={{ mt: 1, width: 350 }}
@@ -224,7 +231,6 @@ export default function JudgeModal(props: IJudgeModalProps) {
             onChange={(e) => setFirstName(e.target.value)}
           />
           <TextField
-            required
             label="Last Name"
             variant="outlined"
             sx={{ mt: 3, width: 350 }}
@@ -240,7 +246,6 @@ export default function JudgeModal(props: IJudgeModalProps) {
             onChange={(e) => setEmail(e.target.value)}
           />
           <TextField
-            required
             label="Phone Number"
             variant="outlined"
             sx={{ mt: 3, width: 350 }}

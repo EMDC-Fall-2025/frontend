@@ -77,7 +77,7 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.post(
-            `/api/mapping/contestToOrganizer/create/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/contestToOrganizer/create/`,
             { contestid: contestId, organizerid: organizerId },
             {
               headers: {
@@ -109,7 +109,7 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
         try {
           const token = localStorage.getItem("token");
           await axios.delete(
-            `/api/mapping/contestToOrganizer/delete/${organizerId}/${contestId}/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/contestToOrganizer/delete/${organizerId}/${contestId}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -135,7 +135,7 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/mapping/contestToOrganizer/getByOrganizer/${organizerId}/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/contestToOrganizer/getByOrganizer/${organizerId}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -162,7 +162,7 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/mapping/organizerToContest/getOrganizersByContest/${contestId}/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/organizerToContest/getOrganizersByContest/${contestId}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -189,7 +189,7 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/mapping/contestToOrganizer/getAllContestsPerOrganizer/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/contestToOrganizer/getAllContestsPerOrganizer/`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -217,7 +217,7 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/mapping/contestToOrganizer/getOrganizerNames/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/contestToOrganizer/getOrganizerNames/`,
             {
               headers: {
                 Authorization: `Token ${token}`,

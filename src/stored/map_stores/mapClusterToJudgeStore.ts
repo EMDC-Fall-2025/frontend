@@ -70,7 +70,7 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/mapping/clusterToJudge/getAllJudgesByCluster/${clusterId}/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/clusterToJudge/getAllJudgesByCluster/${clusterId}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -99,7 +99,7 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/mapping/clusterToJudge/getClusterByJudge/${judgeId}/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/clusterToJudge/getClusterByJudge/${judgeId}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -126,7 +126,7 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
           await Promise.all(
             judges.map(async (judge) => {
               const response = await axios.get(
-                `/api/mapping/clusterToJudge/getClusterByJudge/${judge.id}/`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/mapping/clusterToJudge/getClusterByJudge/${judge.id}/`,
                 {
                   headers: {
                     Authorization: `Token ${token}`,
@@ -153,7 +153,7 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.post(
-            `/api/mapping/clusterToJudge/create/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/clusterToJudge/create/`,
             mapData,
             {
               headers: {
@@ -176,7 +176,7 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
         set({ isLoadingMapClusterJudge: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.delete(`/api/mapping/clusterToJudge/delete/${mapId}/`, {
+          await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/mapping/clusterToJudge/delete/${mapId}/`, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",

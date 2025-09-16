@@ -66,7 +66,7 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.post(
-            `/api/mapping/contestToJudge/create/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/contestToJudge/create/`,
             mapData,
             {
               headers: {
@@ -93,7 +93,7 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/mapping/judgeToContest/getAllJudges/${contestId}/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/judgeToContest/getAllJudges/${contestId}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -118,7 +118,7 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/mapping/contestToJudge/getContestByJudge/${judgeId}/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/contestToJudge/getContestByJudge/${judgeId}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -142,7 +142,7 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
         set({ isLoadingMapContestJudge: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.delete(`/api/mapping/contestToJudge/delete/${mapId}/`, {
+          await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/mapping/contestToJudge/delete/${mapId}/`, {
             headers: {
               Authorization: `Token ${token}`,
             },

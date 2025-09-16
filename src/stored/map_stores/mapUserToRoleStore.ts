@@ -54,7 +54,7 @@ const useUserRoleStore = create<MapUserRoleState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/mapping/userToRole/getUserByRole/${relatedId}/${roleType}/`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/mapping/userToRole/getUserByRole/${relatedId}/${roleType}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,

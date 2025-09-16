@@ -106,8 +106,9 @@ export default function ManageContest() {
     fetchTeams();
     return () => {
       clearTeamsByClusterId();
+      clearJudgesByClusterId();
     };
-  }, [clusters, judges]);
+  }, [clusters, getTeamsByClusterId, fetchJudgesByClusterId]);
 
   useEffect(() => {
     const fetchCoaches = async () => {

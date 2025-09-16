@@ -12,6 +12,15 @@ import {
   IconButton,
   CircularProgress,
   Container,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  FormLabel,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
@@ -31,26 +40,36 @@ interface IJudgeDashboardProps {
 
 export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
   const { teams } = props;
+
+  const navigate = useNavigate();
+
   const { judge, clearJudge } = useJudgeStore();
+
   const {
     mappings,
     fetchScoreSheetsByJudge,
     isLoadingMapScoreSheet,
     clearMappings,
   } = useMapScoreSheetStore();
+
   const { getContestByJudgeId, contest } = useMapContestJudgeStore();
+
+  const { editScoreSheetField, scoreSheetError } = useScoreSheetStore();
+
   const [openRows, setOpenRows] = React.useState<{ [key: number]: boolean }>(
     {}
   );
-  const { editScoreSheetField, scoreSheetError } = useScoreSheetStore();
-  const [openAreYouSure, setOpenAreYouSure] = useState(false);
-  // const { submitAllPenalties } = useMapScoreSheetStore();
 
+  const [openAreYouSure, setOpenAreYouSure] = useState(false);
   const [currentScoreSheetId, setCurrentScoreSheetId] = useState(-1);
   const [currentTeam, setCurrentTeam] = useState(-1);
   const [currentSheetType, setCurrentSheetType] = useState(-1);
 
-  const navigate = useNavigate();
+  // NEW: multi-team scoring dialog state
+  const [openMultiDialog, setOpenMultiDialog] = useState(false);
+  const [multiType, setMultiType] = useState<
+    "presentation" | "journal" | "machine-design"
+  >("presentation");
 
   const handleToggle = (teamId: number) => {
     setOpenRows((prevState) => ({
@@ -72,6 +91,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
       fetchScoreSheetsByJudge(judge.id);
       getContestByJudgeId(judge.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [judge]);
 
   useEffect(() => {
@@ -81,11 +101,8 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     };
 
     window.addEventListener("pagehide", handlePageHide);
-
-    return () => {
-      window.removeEventListener("pagehide", handlePageHide);
-    };
-  }, []);
+    return () => window.removeEventListener("pagehide", handlePageHide);
+  }, [clearMappings, clearJudge]);
 
   const getIsSubmitted = (
     judgeId: number,
@@ -94,10 +111,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
   ) => {
     const key = `${teamId}-${judgeId}-${sheetType}`;
     const data = mappings[key] || null;
-    if (data?.scoresheet?.isSubmitted) {
-      return true;
-    }
-    return false;
+    return !!data?.scoresheet?.isSubmitted;
   };
 
   const getTotal = (judgeId: number, teamId: number, sheetType: number) => {
@@ -115,12 +129,27 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     const data = mappings[key] || null;
     return data?.scoresheet?.id;
   };
-  console.log(teams);
+
+  // NEW: open/close multi-team dialog
+  const handleMultiTeamScore = () => setOpenMultiDialog(true);
+  const handleCancelMulti = () => setOpenMultiDialog(false);
+
+  // NEW: confirm multi-team selection → route
+  const handleConfirmMulti = () => {
+    if (!judge || !contest?.id) return;
+
+    // keep slugs consistent with your routes
+    const typePath = multiType === "machine-design" ? "machinedesign" : multiType;
+
+    navigate(`/multi-team-${typePath}-score/${judge.id}/${contest.id}/`);
+    setOpenMultiDialog(false);
+  };
 
   const handleUnsubmitSheet = async () => {
     try {
       await editScoreSheetField(currentScoreSheetId, "isSubmitted", false);
       setOpenAreYouSure(false);
+
       switch (currentSheetType) {
         case 1:
           navigate(`/presentation-score/${judge?.id}/${currentTeam}`);
@@ -137,10 +166,18 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
         case 5:
           navigate(`/general-penalties/${judge?.id}/${currentTeam}`);
           break;
+        case 6:
+          navigate(`/redesign-score/${judge?.id}/${currentTeam}`);
+          break;
+        case 7:
+          navigate(`/championship-score/${judge?.id}/${currentTeam}`);
+          break;
         default:
           break;
       }
-    } catch {}
+    } catch {
+      // noop – error is surfaced by scoreSheetError in the modal
+    }
   };
 
   const handleOpenAreYouSure = (
@@ -156,13 +193,6 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     }
   };
 
-  // async function submitAllPenaltySheets() {
-  //   if (judge?.id) {
-  //     await submitAllPenalties(judge.id);
-  //     await fetchScoreSheetsByJudge(judge.id);
-  //   }
-  // }
-
   function ScoreSheetButton(props: {
     team: Team;
     type: number;
@@ -170,15 +200,14 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     buttonText: string;
   }) {
     const { team, type, url, buttonText } = props;
+
     return (
       judge && (
         <>
           {!getIsSubmitted(judge?.id, team.id, type) ? (
             <Button
               variant="contained"
-              onClick={() => {
-                navigate(`/${url}/${judge.id}/${team.id}/`);
-              }}
+              onClick={() => navigate(`/${url}/${judge.id}/${team.id}/`)}
               sx={{
                 mb: 1,
                 textTransform: "none",
@@ -226,7 +255,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
           width: "auto",
           height: "auto",
           p: 3,
-          bgcolor:  "#ffffffff",
+          bgcolor: "#ffffffff",
           ml: "2%",
           mr: 1,
           mb: 3,
@@ -238,38 +267,43 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
           justifyContent: "center",
         }}
       >
-        {/* {judge?.penalties && (
+        <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", mb: 2 }}>
           <Button
             variant="contained"
-            onClick={() => submitAllPenaltySheets()}
+            onClick={handleExpandAll}
             sx={{
-              mb: 2,
-              bgcolor: theme.palette.secondary.main,
-              color: theme.palette.primary.main,
-              width: 200,
-              height: 45,
+              textTransform: "none",
+              borderRadius: 2,
+              px: 2.5,
+              bgcolor: theme.palette.success.main,
+              color: theme.palette.common.white,
+              "&:hover": { bgcolor: theme.palette.success.dark },
+              width: 220,
+              height: 44,
             }}
           >
-            Submit All Penalties
+            Expand All Teams
           </Button>
-        )} */}
-        <Button
-          variant="contained"
-          onClick={handleExpandAll}
-          sx={{
-            mb: 2,
-            textTransform: "none",
-            borderRadius: 2,
-            px: 2.5,
-            bgcolor: theme.palette.success.main,
-            color: theme.palette.common.white,
-            "&:hover": { bgcolor: theme.palette.success.dark },
-            width: 220,
-            height: 44,
-          }}
-        >
-          Expand All Teams
-        </Button>
+
+          {/* NEW: Score Multiple Teams – styled to match your success button theme */}
+          <Button
+            variant="contained"
+            onClick={handleMultiTeamScore}
+            sx={{
+              textTransform: "none",
+              borderRadius: 2,
+              px: 2.5,
+              bgcolor: theme.palette.success.main,
+              color: theme.palette.common.white,
+              "&:hover": { bgcolor: theme.palette.success.dark },
+              width: 220,
+              height: 44,
+            }}
+            disabled={!contest?.id} // prevent bad route if contest not loaded
+          >
+            Score Multiple Teams
+          </Button>
+        </Box>
 
         <TableContainer
           component={Paper}
@@ -279,16 +313,13 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
             borderRadius: 3,
             border: `1px solid ${theme.palette.grey[300]}`,
             backgroundColor: "#fff",
-            overflow: "hidden", // keep inner content inside rounded card
+            overflow: "hidden",
           }}
         >
           <Table
             sx={{
               tableLayout: "fixed",
-              "& .MuiTableCell-root": {
-                fontSize: "0.95rem",
-                py: 1.25,
-              },
+              "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 },
             }}
           >
             <TableBody>
@@ -298,9 +329,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                     onClick={() => handleToggle(team.id)}
                     sx={{
                       cursor: "pointer",
-                      "&:hover": {
-                        backgroundColor: "rgba(46,125,50,0.06)", // light green hover
-                      },
+                      "&:hover": { backgroundColor: "rgba(46,125,50,0.06)" },
                       borderBottom: `1px solid ${theme.palette.grey[200]}`,
                     }}
                   >
@@ -359,7 +388,6 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                   <TableRow>
                     <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
                       <Collapse in={openRows[team.id]} timeout="auto" unmountOnExit>
-                        {/* Inner area stays inside the card with padding & soft bg */}
                         <Box
                           sx={{
                             borderTop: `1px dashed ${theme.palette.grey[200]}`,
@@ -368,13 +396,8 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                             py: 2,
                           }}
                         >
-                          <Box
-                            sx={{
-                              display: "flex",
-                              flexWrap: "wrap",
-                              gap: 1,
-                            }}
-                          >
+                          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                            {/* keep original gating: journal not tied to contest.is_open in your current UI */}
                             {judge?.journal && (
                               <ScoreSheetButton
                                 team={team}
@@ -383,6 +406,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                                 buttonText="Journal"
                               />
                             )}
+
                             {judge?.presentation && contest?.is_open && (
                               <ScoreSheetButton
                                 team={team}
@@ -391,6 +415,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                                 buttonText="Presentation"
                               />
                             )}
+
                             {judge?.mdo && contest?.is_open && (
                               <ScoreSheetButton
                                 team={team}
@@ -399,6 +424,26 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                                 buttonText="Machine Design and Operation"
                               />
                             )}
+
+                            {/* NEW: Redesign & Championship (follow your feature flags & is_open gating) */}
+                            {judge?.redesign && contest?.is_open && (
+                              <ScoreSheetButton
+                                team={team}
+                                type={6}
+                                url="redesign-score"
+                                buttonText="Redesign"
+                              />
+                            )}
+
+                            {judge?.championship && contest?.is_open && (
+                              <ScoreSheetButton
+                                team={team}
+                                type={7}
+                                url="championship-score"
+                                buttonText="Championship"
+                              />
+                            )}
+
                             {judge?.runpenalties && (
                               <ScoreSheetButton
                                 team={team}
@@ -407,6 +452,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                                 buttonText="Run Penalties"
                               />
                             )}
+
                             {judge?.otherpenalties && (
                               <ScoreSheetButton
                                 team={team}
@@ -427,13 +473,51 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
         </TableContainer>
       </Container>
 
+      {/* existing unsubmit modal */}
       <AreYouSureModal
         open={openAreYouSure}
         handleClose={() => setOpenAreYouSure(false)}
         title="Are you sure you want to unsubmit this score sheet?"
-        handleSubmit={() => handleUnsubmitSheet()}
+        handleSubmit={handleUnsubmitSheet}
         error={scoreSheetError}
       />
+
+      {/* NEW: multi-team dialog (kept simple, matches theme) */}
+      <Dialog open={openMultiDialog} onClose={handleCancelMulti}>
+        <DialogTitle>Score Multiple Teams</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <FormControl component="fieldset" sx={{ mt: 1 }}>
+            <FormLabel component="legend">Select sheet type</FormLabel>
+            <RadioGroup
+              value={multiType}
+              onChange={(e) => setMultiType(e.target.value as any)}
+            >
+              <FormControlLabel value="presentation" control={<Radio />} label="Presentation" />
+              <FormControlLabel value="journal" control={<Radio />} label="Journal" />
+              <FormControlLabel value="machine-design" control={<Radio />} label="Machine Design" />
+            </RadioGroup>
+          </FormControl>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={handleCancelMulti} sx={{ textTransform: "none" }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmMulti}
+            variant="contained"
+            sx={{
+              textTransform: "none",
+              borderRadius: 2,
+              px: 2.25,
+              bgcolor: theme.palette.success.main,
+              "&:hover": { bgcolor: theme.palette.success.dark },
+            }}
+            disabled={!contest?.id}
+          >
+            Go
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }
