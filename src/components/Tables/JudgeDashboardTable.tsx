@@ -131,7 +131,10 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
   };
 
   // NEW: open/close multi-team dialog
-  const handleMultiTeamScore = () => setOpenMultiDialog(true);
+  const handleMultiTeamScore = () => {
+    console.log("Multi-team score button clicked"); // Debug log
+    setOpenMultiDialog(true);
+  };
   const handleCancelMulti = () => setOpenMultiDialog(false);
 
   // NEW: confirm multi-team selection → route
@@ -140,8 +143,10 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
 
     // keep slugs consistent with your routes
     const typePath = multiType === "machine-design" ? "machinedesign" : multiType;
-
-    navigate(`/multi-team-${typePath}-score/${judge.id}/${contest.id}/`);
+    const route = `/multi-team-${typePath}-score/${judge.id}/${contest.id}/`;
+    
+    console.log("Navigating to:", route); // Debug log
+    navigate(route);
     setOpenMultiDialog(false);
   };
 

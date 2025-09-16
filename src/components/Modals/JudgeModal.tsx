@@ -1,3 +1,13 @@
+/**
+ * JudgeModal Component
+ * 
+ * Modal for creating and editing judges with modern theme styling.
+ * Features:
+ * - Clean white background with subtle borders
+ * - Green success theme for buttons
+ * - Consistent typography with bold titles
+ * - Modern form styling with proper spacing
+ */
 import {
   Button,
   Container,
@@ -350,14 +360,18 @@ export default function JudgeModal(props: IJudgeModalProps) {
             )}
           </FormControl>
 
+          {/* Submit button - updated to use modern green success theme */}
           <Button
             type="submit"
             sx={{
               width: 130,
-              height: 35,
-              bgcolor: `${theme.palette.primary.main}`,
-              color: `${theme.palette.secondary.main}`,
+              height: 44,                                    // Consistent height (was 35)
+              bgcolor: theme.palette.success.main,          // Green theme (was primary.main)
+              "&:hover": { bgcolor: theme.palette.success.dark }, // Hover effect
+              color: "#fff",                                // White text (was secondary.main)
               mt: 3,
+              textTransform: "none",                        // No uppercase transformation
+              borderRadius: 2,                              // Modern border radius
             }}
           >
             {buttonText}

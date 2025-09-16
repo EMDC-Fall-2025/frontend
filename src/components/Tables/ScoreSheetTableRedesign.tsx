@@ -1,3 +1,13 @@
+/**
+ * ScoreSheetTableRedesign Component
+ * 
+ * This component has been updated to match the modern theme used throughout the application:
+ * - Container: White background with subtle border instead of colored background
+ * - Buttons: Green success theme instead of secondary theme
+ * - Criteria boxes: Light grey background instead of dark secondary
+ * - Typography: Bold titles for better readability
+ * - Styling: Consistent with other modern components in the app
+ */
 import * as React from "react";
 import {
   Table,
@@ -211,82 +221,109 @@ export default function ScoreSheetTableRedesign({
     <>
       <Link
         onClick={() => navigate(-1)}
-        sx={{ textDecoration: "none" }}
-        style={{ cursor: "pointer" }}
+        sx={{
+          textDecoration: "none",
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          ml: "2%",
+          mt: 2,
+          color: theme.palette.success.main,
+          "&:hover": { color: theme.palette.success.dark },
+        }}
       >
-        <Typography variant="body2" sx={{ m: 2 }}>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
           {"<"} Back to Judging Dashboard{" "}
         </Typography>
       </Link>
-      <Typography variant="h1" sx={{ ml: "2%", mr: 5, mt: 4, mb: 2 }}>
+      {/* Main page title - made bold for better visibility */}
+      <Typography variant="h1" sx={{ ml: "2%", mr: 5, mt: 4, mb: 2, fontWeight: "bold" }}>
         {title}
       </Typography>
-      <Typography variant="body1" sx={{ ml: "2%", mr: 5, mb: 4 }}>
+      {/* Team name subtitle - made bold for consistency */}
+      <Typography variant="body1" sx={{ ml: "2%", mr: 5, mb: 4, fontWeight: "bold" }}>
         {teamName}
       </Typography>
+      {/* Main form container - updated to use modern theme with white background and subtle border */}
       <Container
         component="form"
         sx={{
-          width: "90vw",
-          height: "auto",
-          padding: 3,
-          bgcolor: theme.palette.secondary.light,
+          width: "auto",                                    // Flexible width instead of fixed 90vw
+          p: 3,                                            // Consistent padding
+          bgcolor: "#fff",                                 // Clean white background 
+          borderRadius: 3,                               
+          border: `1px solid ${theme.palette.grey[300]}`, // Subtle border for definition
           ml: "2%",
           mr: 1,
           mb: 3,
-          borderRadius: 5,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <Button
-          variant="contained"
-          onClick={handleSaveScoreSheet}
+        {/* Action buttons container - updated to use modern green theme and better layout */}
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2 }}>
+          {/* Save button - updated to use success theme instead of secondary */}
+          <Button
+            variant="contained"
+            onClick={handleSaveScoreSheet}
+            sx={{
+              bgcolor: theme.palette.success.main,   
+              "&:hover": { bgcolor: theme.palette.success.dark }, // Hover effect
+              color: "#fff",                            
+            }}
+          >
+            Save
+          </Button>
+          {/* Expand incomplete rows button - helps judges find unfilled sections */}
+          <Button
+            variant="contained"
+            onClick={expandIncompleteRows}
+            sx={{
+              bgcolor: theme.palette.success.main,
+              "&:hover": { bgcolor: theme.palette.success.dark },
+              color: "#fff",
+              minWidth: 200,
+              height: 44,
+              textTransform: "none",
+              borderRadius: 2,
+            }}
+          >
+            Expand Incomplete Rows
+          </Button>
+          {/* Collapse all rows button - helps judges organize their view */}
+          <Button
+            variant="contained"
+            onClick={handleCollapseAllRows}
+            sx={{
+              bgcolor: theme.palette.success.main,
+              "&:hover": { bgcolor: theme.palette.success.dark },
+              color: "#fff",
+              minWidth: 200,
+              height: 44,
+              textTransform: "none",
+              borderRadius: 2,
+            }}
+          >
+            Collapse All
+          </Button>
+        </Box>
+        {/* Scoring table container - updated to use Paper with modern styling */}
+        <TableContainer
+          component={Paper}
           sx={{
-            mb: 2,
-            bgcolor: theme.palette.secondary.main,
-            color: theme.palette.primary.main,
-            width: 200,
-            height: 45,
+            borderRadius: 2,                              // Modern border radius
+            border: `1px solid ${theme.palette.grey[200]}`, // Subtle border
+            overflow: "hidden",                           // Clean edges
           }}
         >
-          Save
-        </Button>
-        <Button
-          variant="contained"
-          onClick={expandIncompleteRows}
-          sx={{
-            mb: 2,
-            bgcolor: theme.palette.secondary.main,
-            color: theme.palette.primary.main,
-            width: 200,
-            height: 45,
-          }}
-        >
-          Expand Incomplete Rows
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleCollapseAllRows}
-          sx={{
-            mb: 2,
-            bgcolor: theme.palette.secondary.main,
-            color: theme.palette.primary.main,
-            width: 200,
-            height: 45,
-          }}
-        >
-          Collapse All
-        </Button>
-        <TableContainer component={Paper}>
-          <Table>
+          <Table sx={{ tableLayout: "auto" }}>
             <TableBody>
               {questions.map((question) => (
                 <React.Fragment key={question.id}>
-                  <TableRow onClick={() => handleToggle(question.id)}>
-                    <TableCell>
+                  <TableRow onClick={() => handleToggle(question.id)} sx={{ cursor: "pointer" }}>
+                    <TableCell sx={{ width: 56 }}>
                       <IconButton aria-label="expand row" size="small">
                         {openRows[question.id] ? (
                           <KeyboardArrowUpIcon />
@@ -295,14 +332,15 @@ export default function ScoreSheetTableRedesign({
                         )}
                       </IconButton>
                     </TableCell>
+                    {/* Question text - made bold for better readability */}
                     <TableCell
                       component="th"
                       scope="row"
-                      sx={{ pl: 2, textAlign: "left", mr: 1 }}
+                      sx={{ pl: 2, textAlign: "left", pr: 2, fontWeight: "bold" }}
                     >
                       {question.questionText}
                     </TableCell>
-                    <TableCell align="right" scope="row">
+                    <TableCell align="right" scope="row" sx={{ width: 56 }}>
                       {question.id !== 8 && (
                         <>
                           {formData[question.id] == 0 ? (
@@ -335,13 +373,14 @@ export default function ScoreSheetTableRedesign({
                         >
                           {question.id !== 8 ? (
                             <>
+                              {/* Criteria 1 box - updated to use light grey background instead of dark secondary */}
                               <Box
                                 sx={{
-                                  bgcolor: theme.palette.secondary.light,
-                                  padding: 1,
-                                  borderRadius: 3,
-                                  width: "95%",
-                                  height: "100%",
+                                  bgcolor: theme.palette.grey[50],         // Very light grey (was secondary.light)
+                                  border: `1px solid ${theme.palette.grey[200]}`, // Subtle border for definition
+                                  p: 1.5,                                 // Better padding (was 1)
+                                  borderRadius: 2,                         // Smaller radius (was 3)
+                                  flex: 1,                                 // Better flex layout (was width: 95%)
                                 }}
                               >
                                 <Typography>{question.criteria1}</Typography>
@@ -355,13 +394,14 @@ export default function ScoreSheetTableRedesign({
                                   {question.criteria1Points}
                                 </Typography>
                               </Box>
+                              {/* Criteria 2 box - same styling as criteria 1 for consistency */}
                               <Box
                                 sx={{
-                                  bgcolor: theme.palette.secondary.light,
-                                  padding: 1,
-                                  borderRadius: 3,
-                                  width: "95%",
-                                  height: "100%",
+                                  bgcolor: theme.palette.grey[50],
+                                  border: `1px solid ${theme.palette.grey[200]}`,
+                                  p: 1.5,
+                                  borderRadius: 2,
+                                  flex: 1,
                                 }}
                               >
                                 <Typography>{question.criteria2}</Typography>
@@ -375,13 +415,14 @@ export default function ScoreSheetTableRedesign({
                                   {question.criteria2Points}
                                 </Typography>
                               </Box>
+                              {/* Criteria 3 box - same styling as other criteria for consistency */}
                               <Box
                                 sx={{
-                                  bgcolor: theme.palette.secondary.light,
-                                  padding: 1,
-                                  borderRadius: 3,
-                                  width: "95%",
-                                  height: "100%",
+                                  bgcolor: theme.palette.grey[50],
+                                  border: `1px solid ${theme.palette.grey[200]}`,
+                                  p: 1.5,
+                                  borderRadius: 2,
+                                  flex: 1,
                                 }}
                               >
                                 <Typography>{question.criteria3}</Typography>
@@ -470,16 +511,19 @@ export default function ScoreSheetTableRedesign({
             </TableBody>
           </Table>
         </TableContainer>
+        {/* Final submit button - updated to use success theme and modern styling */}
         <Button
           variant="contained"
           onClick={() => setOpenAreYouSure(true)}
           disabled={!allFieldsFilled()}
           sx={{
             mt: 3,
-            bgcolor: theme.palette.secondary.main,
-            color: theme.palette.primary.main,
-            width: 200,
-            height: 45,
+            bgcolor: theme.palette.success.main,        // Green theme 
+            "&:hover": { bgcolor: theme.palette.success.dark }, // Hover effect
+            color: "#fff",                              // White text 
+            minWidth: 200,                          
+            textTransform: "none",                     // No uppercase transformation
+            borderRadius: 2,                           // Modern border radius
           }}
         >
           Submit

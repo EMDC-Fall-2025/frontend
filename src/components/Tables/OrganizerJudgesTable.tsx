@@ -10,7 +10,7 @@ import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
-import { Button, Container } from "@mui/material";
+import { Button, Container, CircularProgress } from "@mui/material";
 import { useState } from "react";
 import JudgeModal from "../Modals/JudgeModal";
 import { useNavigate } from "react-router-dom";
@@ -80,7 +80,7 @@ function JudgeRow(props: { row: ReturnType<typeof createDataJudge> }) {
         <TableCell component="th" scope="row" sx={{ fontWeight: 600 }}>
           {row.role}
         </TableCell>
-        <TableCell component="th" scope="row">
+        <TableCell component="th" scope="row" sx={{ fontWeight: 500 }}>
           {row.name}
         </TableCell>
         <TableCell scope="row" sx={{ width: 56 }}>
@@ -209,6 +209,8 @@ function JudgesTable(props: IJudgesTableProps) {
             mdoSS: judge.mdo,
             runPenSS: judge.runpenalties,
             genPenSS: judge.otherpenalties,
+            redesignSS: false,
+            championshipSS: false,
             phoneNumber: judge.phone_number,
           });
         }}
@@ -265,8 +267,10 @@ function JudgesTable(props: IJudgesTableProps) {
   return (
     <TableContainer component={Box}>
       <Table
-        aria-label="collapsible table"
-        sx={{ "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 } }}
+        sx={{
+          minWidth: 650,
+          "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 },
+        }}
       >
         <TableBody>
           {rows.map((row, index) => (
@@ -324,11 +328,12 @@ export default function OrganizerJudgesTable(
     }
   };
 
-  return (
+  return judgesByClusterId ? (
     <TableContainer component={Box}>
       <Table
-        aria-label="collapsible table"
-        sx={{ "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 } }}
+        sx={{
+          "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 },
+        }}
       >
         <TableBody>
           {clusters.map((cluster) => (
@@ -351,7 +356,11 @@ export default function OrganizerJudgesTable(
                     )}
                   </IconButton>
                 </TableCell>
-                <TableCell component="th" scope="row" sx={{ fontWeight: 700 }}>
+                <TableCell
+                  component="th"
+                  scope="row"
+                  sx={{ fontWeight: 700 }}
+                >
                   {cluster.cluster_name}
                 </TableCell>
                 <TableCell align="right">
@@ -388,11 +397,13 @@ export default function OrganizerJudgesTable(
                     timeout="auto"
                     unmountOnExit
                   >
-                    <JudgesTable
-                      judges={judgesByClusterId[cluster.id]}
-                      clusters={clusters}
-                      contestid={contestid}
-                    />
+                    {judgesByClusterId[cluster.id] && (
+                      <JudgesTable
+                        judges={judgesByClusterId[cluster.id]}
+                        clusters={clusters}
+                        contestid={contestid}
+                      />
+                    )}
                   </Collapse>
                 </TableCell>
               </TableRow>
@@ -407,5 +418,7 @@ export default function OrganizerJudgesTable(
         clusterData={clusterData}
       />
     </TableContainer>
+  ) : (
+    <CircularProgress />
   );
 }

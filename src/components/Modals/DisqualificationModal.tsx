@@ -1,3 +1,13 @@
+/**
+ * DisqualificationModal Component
+ * 
+ * Modal for disqualifying/reversing team disqualification with modern theme styling.
+ * Features:
+ * - Clean white background with subtle borders
+ * - Green success theme for buttons
+ * - Consistent typography with bold titles
+ * - Modern form styling with proper spacing
+ */
 import { Button, Container } from "@mui/material";
 import Modal from "./Modal";
 import theme from "../../theme";
@@ -57,26 +67,34 @@ export default function DisqualificationModal(
           gap: 2,
         }}
       >
+        {/* Confirm button - updated to use modern green success theme */}
         <Button
           onClick={() => setOpenAreYouSureConfirm(true)}
           sx={{
             width: 90,
-            height: 35,
-            bgcolor: `${theme.palette.primary.main}`,
-            color: `${theme.palette.secondary.main}`,
+            height: 44,                                    // Consistent height (was 35)
+            bgcolor: theme.palette.success.main,          // Green theme (was primary.main)
+            "&:hover": { bgcolor: theme.palette.success.dark }, // Hover effect
+            color: "#fff",                                // White text (was secondary.main)
             mt: 2,
+            textTransform: "none",                        // No uppercase transformation
+            borderRadius: 2,                              // Modern border radius
           }}
         >
           Confirm
         </Button>
+        {/* Reverse button - updated to use modern orange warning theme */}
         <Button
           onClick={() => setOpenAreYouSureReverse(true)}
           sx={{
             width: 90,
-            height: 35,
-            bgcolor: `${theme.palette.primary.main}`,
-            color: `${theme.palette.secondary.main}`,
+            height: 44,                                    // Consistent height (was 35)
+            bgcolor: theme.palette.warning.main,          // Orange theme for reverse action
+            "&:hover": { bgcolor: theme.palette.warning.dark }, // Hover effect
+            color: "#fff",                                // White text
             mt: 2,
+            textTransform: "none",                        // No uppercase transformation
+            borderRadius: 2,                              // Modern border radius
           }}
         >
           Reverse

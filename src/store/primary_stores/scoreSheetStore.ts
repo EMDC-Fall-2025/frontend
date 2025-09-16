@@ -5,6 +5,7 @@ import { ScoreSheet, ScoreSheetDetails } from "../../types";
 
 interface ScoreSheetState {
   scoreSheet: ScoreSheet | null;
+  createdScoreSheets: ScoreSheet[]; // Array to store created score sheets
   isLoadingScoreSheet: boolean;
   scoreSheetError: string | null;
   scoreSheetBreakdown: ScoreSheetDetails;

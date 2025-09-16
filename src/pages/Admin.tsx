@@ -23,10 +23,12 @@ import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import CampaignIcon from "@mui/icons-material/Campaign";
 import GroupIcon from "@mui/icons-material/Group";
+import AssignmentIndIcon from "@mui/icons-material/AssignmentInd";
 
 import theme from "../theme";
 import OrganizerModal from "../components/Modals/OrganizerModal";
 import ContestModal from "../components/Modals/ContestModal";
+import AssignJudgeToContestModal from "../components/Modals/AssignJudgeToContestModal";
 import AdminContestTable from "../components/Tables/AdminContestTable";
 import AdminOrganizerTable from "../components/Tables/AdminOrganizerTable";
 
@@ -34,6 +36,7 @@ export default function Admin() {
   const [value, setValue] = useState("1");
   const [contestModal, setContestModal] = useState(false);
   const [organizerModal, setOrganizerModal] = useState(false);
+  const [assignJudgeModal, setAssignJudgeModal] = useState(false);
   const navigate = useNavigate();
 
   const { allContests, fetchAllContests, isLoadingContest } = useContestStore();
@@ -156,6 +159,25 @@ useEffect(() => {
           >
             Create Award
           </Button>
+
+          <Button
+            onClick={() => setAssignJudgeModal(true)}
+            variant="outlined"
+            startIcon={<AssignmentIndIcon />}
+            sx={{
+              textTransform: "none",
+              borderRadius: 2,
+              px: 2.5,
+              borderColor: theme.palette.success.main,
+              color: theme.palette.success.main,
+              "&:hover": {
+                borderColor: theme.palette.success.dark,
+                backgroundColor: "rgba(46,125,50,0.06)",
+              },
+            }}
+          >
+            Assign Judge to Contest
+          </Button>
         </Stack>
 
         {/* Tabs */}
@@ -247,6 +269,14 @@ useEffect(() => {
         mode={"new"}
       />
       <ContestModal open={contestModal} handleClose={() => setContestModal(false)} mode={"new"} />
+      <AssignJudgeToContestModal
+        open={assignJudgeModal}
+        handleClose={() => setAssignJudgeModal(false)}
+        onSuccess={() => {
+          // Refresh data if needed
+          fetchAllContests();
+        }}
+      />
     </Box>
   );
 }

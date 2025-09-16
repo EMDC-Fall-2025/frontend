@@ -161,8 +161,8 @@ export default function AdminContestTable() {
 
                   <Box minWidth={0}>
                     <Typography
-                      variant="subtitle1"
-                      sx={{ fontWeight: 700, lineHeight: 1.2 }}
+                      variant="h6"
+                      sx={{ fontWeight: 600, lineHeight: 1.2, fontSize: "1rem" }}
                       noWrap
                       title={row.name}
                     >
@@ -226,12 +226,16 @@ export default function AdminContestTable() {
                   <Button
                     onClick={() => navigate(`/manage-contest/${row.id}/`)}
                     variant="contained"
-                    size="small"
+                    size="medium"
                     sx={{
                       textTransform: "none",
                       borderRadius: 2,
                       bgcolor: "success.main",
                       "&:hover": { bgcolor: "success.dark" },
+                      px: 3,
+                      py: 1,
+                      fontSize: "0.9rem",
+                      fontWeight: 550,
                     }}
                   >
                     Manage
@@ -240,13 +244,17 @@ export default function AdminContestTable() {
                   <Button
                     onClick={() => handleOpenEditContest(row)}
                     variant="outlined"
-                    size="small"
+                    size="medium"
                     sx={{
                       textTransform: "none",
                       borderRadius: 2,
                       borderColor: "grey.400",
                       color: "text.primary",
                       "&:hover": { borderColor: "text.primary", bgcolor: "grey.100" },
+                      px: 3,
+                      py: 1,
+                      fontSize: "0.9rem",
+                      fontWeight: 550,
                     }}
                   >
                     Edit
@@ -256,7 +264,7 @@ export default function AdminContestTable() {
                     onClick={() => handleOpenAreYouSure(row.id)}
                     variant="outlined"
                     color="error"
-                    size="small"
+                    size="medium"
                     sx={{
                       textTransform: "none",
                       borderRadius: 2,
@@ -265,6 +273,10 @@ export default function AdminContestTable() {
                         borderColor: "error.main",
                         bgcolor: "rgba(211,47,47,0.06)",
                       },
+                      px: 3,
+                      py: 1,
+                      fontSize: "0.8rem",
+                      fontWeight: 500,
                     }}
                   >
                     Delete

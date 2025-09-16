@@ -120,12 +120,16 @@ function Row(props: { row: ReturnType<typeof createData> }) {
   row.assignContest,
   {
     variant: "contained",
-    size: "small",
+    size: "medium",
     sx: {
       textTransform: "none",
       borderRadius: 2,
       bgcolor: "success.main",
       "&:hover": { bgcolor: "success.dark" },
+      px: 3,
+      py: 1,
+      fontSize: "0.9rem",
+      fontWeight: 550,
       ...(row.assignContest.props.sx || {}),
     },
   },
@@ -134,13 +138,17 @@ function Row(props: { row: ReturnType<typeof createData> }) {
 
             {React.cloneElement(row.editButton, {
               variant: "outlined",
-              size: "small",
+              size: "medium",
               sx: {
                 textTransform: "none",
                 borderRadius: 2,
                 borderColor: "grey.400",
                 color: "text.primary",
                 "&:hover": { borderColor: "text.primary", bgcolor: "grey.100" },
+                px: 3,
+                py: 1,
+                fontSize: "0.9rem",
+                fontWeight: 550,
                 ...(row.editButton.props.sx || {}),
               },
               children: "Edit",
@@ -148,12 +156,16 @@ function Row(props: { row: ReturnType<typeof createData> }) {
             {React.cloneElement(row.deleteButton, {
               variant: "outlined",
               color: "error",
-              size: "small",
+              size: "medium",
               sx: {
                 textTransform: "none",
                 borderRadius: 2,
                 borderColor: "error.light",
                 "&:hover": { borderColor: "error.main", bgcolor: "rgba(211,47,47,0.06)" },
+                px: 3,
+                py: 1,
+                fontSize: "0.8rem",
+                fontWeight: 500,
                 ...(row.deleteButton.props.sx || {}),
               },
               children: "Delete",
@@ -216,6 +228,10 @@ function Row(props: { row: ReturnType<typeof createData> }) {
                                 borderRadius: 2,
                                 borderColor: "grey.400",
                                 "&:hover": { borderColor: "text.primary", bgcolor: "grey.100" },
+                                px: 2.5,
+                                py: 0.75,
+                                fontSize: "0.85rem",
+                                fontWeight: 550,
                               }}
                             >
                               Unassign
