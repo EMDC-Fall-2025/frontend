@@ -31,7 +31,8 @@ interface ScoreSheetState {
     mdo: boolean
   ) => Promise<void>;
   clearScoreSheet: () => void;
-  getScoreSheetBreakdown: (teamId: number) => Promise<void>;
+  getScoreSheetBreakdown: (teamId: number, contestId?: number) => Promise<void>;
+  getPublicScoreSheetBreakdown: (teamId: number, contestId: number) => Promise<void>;
   clearScoreBreakdown: () => void;
   
   // New methods
@@ -96,12 +97,36 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
         }
       },
 
-      getScoreSheetBreakdown: async (teamId: number) => {
+      getScoreSheetBreakdown: async (teamId: number, contestId?: number) => {
         set({ isLoadingScoreSheet: true });
         try {
           const token = localStorage.getItem("token");
+          const url = contestId 
+            ? `/api/scoreSheet/getDetails/${teamId}/?contestid=${contestId}`
+            : `/api/scoreSheet/getDetails/${teamId}/`;
+          const response = await axios.get(url, {
+            headers: {
+              Authorization: `Token ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+          set({ scoreSheetBreakdown: response.data as ScoreSheetDetails });
+          set({ scoreSheetError: null });
+        } catch (scoreSheetError: any) {
+          set({ scoreSheetError: "Failed to fetch score sheet breakdown" });
+          throw new Error("Failed to fetch score sheet breakdown");
+        } finally {
+          set({ isLoadingScoreSheet: false });
+        }
+      },
+
+      getPublicScoreSheetBreakdown: async (teamId: number, contestId: number) => {
+        set({ isLoadingScoreSheet: true });
+        try {
+          const token = localStorage.getItem("token");
+          console.log(`Fetching public score breakdown for team ${teamId}, contest ${contestId}`);
           const response = await axios.get(
-            `/api/scoreSheet/getDetails/${teamId}/`,
+            `/api/scoreSheet/getPublicDetails/${teamId}/?contestid=${contestId}`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -109,11 +134,13 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
               },
             }
           );
+          console.log("Public score breakdown response:", response.data);
           set({ scoreSheetBreakdown: response.data as ScoreSheetDetails });
           set({ scoreSheetError: null });
         } catch (scoreSheetError: any) {
-          set({ scoreSheetError: "Failed to fetch score sheet breakdown" });
-          throw new Error("Failed to fetch score sheet breakdown");
+          console.error("Error fetching public score breakdown:", scoreSheetError);
+          set({ scoreSheetError: `Failed to fetch public score sheet breakdown: ${scoreSheetError.message}` });
+          throw new Error("Failed to fetch public score sheet breakdown");
         } finally {
           set({ isLoadingScoreSheet: false });
         }

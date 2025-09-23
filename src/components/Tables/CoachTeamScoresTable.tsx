@@ -9,10 +9,11 @@ import { Team } from "../../types";
 
 interface ICoachTeamScoresTable {
   team: Team;
+  contestId?: number;
 }
 
 export default function CoachTeamScoresTable(props: ICoachTeamScoresTable) {
-  const { team } = props;
+  const { team, contestId } = props;
   const navigate = useNavigate();
   return (
     <TableContainer component={Box}>
@@ -53,9 +54,9 @@ export default function CoachTeamScoresTable(props: ICoachTeamScoresTable) {
               {team.total_score}
             </TableCell>
             <TableCell align="center">
-              <Button onClick={() => navigate(`/score-breakdown/${team.id}`)}>
-                View Score Breakdown
-              </Button>
+            <Button onClick={() => navigate(`/score-breakdown/${team.id}/${contestId || ''}`)}>
+              View Score Breakdown
+            </Button>
             </TableCell>
           </TableRow>
         </TableBody>

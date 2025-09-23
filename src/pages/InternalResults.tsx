@@ -48,7 +48,7 @@ export default function InternalResults() {
       <Typography variant="h1" sx={{ m: 5 }}>
         Results
       </Typography>
-      <InternalResultsTable />
+      <InternalResultsTable contestId={parsedContestId} />
     </>
   );
 }

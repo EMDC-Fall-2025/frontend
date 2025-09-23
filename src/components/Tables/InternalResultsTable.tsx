@@ -13,7 +13,11 @@ import theme from "../../theme";
 import { useMapContestToTeamStore } from "../../store/map_stores/mapContestToTeamStore";
 import { useNavigate } from "react-router-dom";
 
-export default function InternalResultsTable() {
+interface InternalResultsTableProps {
+  contestId?: number;
+}
+
+export default function InternalResultsTable({ contestId }: InternalResultsTableProps) {
   const { teamsByContest } = useMapContestToTeamStore();
   const navigate = useNavigate();
   function createData(
@@ -50,9 +54,9 @@ export default function InternalResultsTable() {
       team.penalties_score,
       team.total_score,
       team.team_rank,
-      <Button onClick={() => navigate(`/score-breakdown/${team.id}`)}>
-        View Score Breakdown
-      </Button>
+            <Button onClick={() => navigate(`/score-breakdown/${team.id}/${contestId || ''}`)}>
+              View Score Breakdown
+            </Button>
     )
   );
 

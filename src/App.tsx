@@ -30,6 +30,9 @@ import MultiTeamPresentationScore from "./pages/PresentationMultiTeamScore"
 import MultiTeamJournalScore from "./pages/JournalMultiTeamScore";
 import MultiTeamMachineDesignScore from "./pages/MachineDesignMultiTeamScore";
 import ChampionshipScore from "./pages/ChampionshipScore";
+import FeedbackTest from "./pages/FeedbackTest";
+import PublicScoreBreakdown from "./pages/PublicScoreBreakdown";
+import FeedbackDisplay from "./pages/FeedbackDisplay";
 
 function App() {
   const currentLink = useLocation().pathname;
@@ -167,12 +170,15 @@ function App() {
           )}
           {role?.user_type == 4 && <Route path="/coach/" element={<Coach />} />}
           {role?.user_type == 1 && <Route path="/admin/" element={<Admin />} />}
-          {isAuthenticated && (
-            <Route
-              path="/score-breakdown/:teamId"
-              element={<ScoreBreakdown />}
-            />
-          )}
+          {role?.user_type == 1 && <Route path="/feedback-test/" element={<FeedbackTest />} />}
+          <Route path="/public-score-breakdown/:teamId/:contestId" element={<PublicScoreBreakdown />} />
+          <Route path="/feedback/:teamId/:contestId" element={<FeedbackDisplay />} />
+            {isAuthenticated && (
+              <Route
+                path="/score-breakdown/:teamId/:contestId"
+                element={<ScoreBreakdown />}
+              />
+            )}
         </Routes>
       </ThemeProvider>
     </>

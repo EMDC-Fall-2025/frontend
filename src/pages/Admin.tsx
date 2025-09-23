@@ -24,6 +24,7 @@ import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import CampaignIcon from "@mui/icons-material/Campaign";
 import GroupIcon from "@mui/icons-material/Group";
 import AssignmentIndIcon from "@mui/icons-material/AssignmentInd";
+import CommentIcon from "@mui/icons-material/Comment";
 
 import theme from "../theme";
 import OrganizerModal from "../components/Modals/OrganizerModal";
@@ -31,6 +32,8 @@ import ContestModal from "../components/Modals/ContestModal";
 import AssignJudgeToContestModal from "../components/Modals/AssignJudgeToContestModal";
 import AdminContestTable from "../components/Tables/AdminContestTable";
 import AdminOrganizerTable from "../components/Tables/AdminOrganizerTable";
+import FeedbackControlTable from "../components/Tables/FeedbackControlTable";
+import GranularFeedbackControlTable from "../components/Tables/GranularFeedbackControlTable";
 
 export default function Admin() {
   const [value, setValue] = useState("1");
@@ -178,6 +181,25 @@ useEffect(() => {
           >
             Assign Judge to Contest
           </Button>
+
+          <Button
+            onClick={() => navigate("/feedback-test")}
+            variant="outlined"
+            startIcon={<CommentIcon />}
+            sx={{
+              textTransform: "none",
+              borderRadius: 2,
+              px: 2.5,
+              borderColor: theme.palette.success.main,
+              color: theme.palette.success.main,
+              "&:hover": {
+                borderColor: theme.palette.success.dark,
+                backgroundColor: "rgba(46,125,50,0.06)",
+              },
+            }}
+          >
+            Test Feedback Control
+          </Button>
         </Stack>
 
         {/* Tabs */}
@@ -211,6 +233,8 @@ useEffect(() => {
                 value="1"
               />
               <Tab iconPosition="start" icon={<GroupIcon />} label="Manage Organizers" value="2" />
+              <Tab iconPosition="start" icon={<CommentIcon />} label="Feedback Control" value="3" />
+              <Tab iconPosition="start" icon={<CommentIcon />} label="Granular Feedback" value="4" />
             </TabList>
           </Box>
 
@@ -257,6 +281,52 @@ useEffect(() => {
             <Divider />
             <Box sx={{ px: 3, pb: 3 }}>
               <AdminOrganizerTable />
+            </Box>
+          </TabPanel>
+
+          {/* Feedback Control */}
+          <TabPanel
+            value="3"
+            sx={{
+              p: 0,
+              border: `1px solid ${theme.palette.grey[300]}`,
+              borderTop: 0,
+              borderBottomLeftRadius: 12,
+              borderBottomRightRadius: 12,
+              backgroundColor: "#fff",
+            }}
+          >
+            <Box sx={{ px: 3, py: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                Feedback Display Control (Categories)
+              </Typography>
+            </Box>
+            <Divider />
+            <Box sx={{ px: 3, pb: 3 }}>
+              <FeedbackControlTable />
+            </Box>
+          </TabPanel>
+
+          {/* Granular Feedback Control */}
+          <TabPanel
+            value="4"
+            sx={{
+              p: 0,
+              border: `1px solid ${theme.palette.grey[300]}`,
+              borderTop: 0,
+              borderBottomLeftRadius: 12,
+              borderBottomRightRadius: 12,
+              backgroundColor: "#fff",
+            }}
+          >
+            <Box sx={{ px: 3, py: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                Granular Feedback Control (Individual Comments)
+              </Typography>
+            </Box>
+            <Divider />
+            <Box sx={{ px: 3, pb: 3 }}>
+              <GranularFeedbackControlTable />
             </Box>
           </TabPanel>
         </TabContext>

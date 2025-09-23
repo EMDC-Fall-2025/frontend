@@ -118,7 +118,7 @@ export default function ContestScores() {
         }}
       >
         {/* Render the ContestResultsTable component */}
-        <ContestResultsTable rows={rows} />
+        <ContestResultsTable rows={rows} contestId={contestIdNumber} />
       </Container>
     </>
   );

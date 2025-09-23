@@ -10,20 +10,24 @@ import ScoreBreakdownTableGeneralPenalties from "../components/Tables/ScoreBreak
 import ScoreBreakdownTableRunPenalties from "../components/Tables/ScoreBreakdownTableRunPenalties";
 
 export default function PulicScoreBreakdown() {
-  const { teamId } = useParams();
+  const { teamId, contestId } = useParams();
   const parsedTeamId = teamId ? parseInt(teamId, 10) : undefined;
-  const { getScoreSheetBreakdown, isLoadingScoreSheet, clearScoreBreakdown } =
+  const parsedContestId = contestId ? parseInt(contestId, 10) : undefined;
+  const { getPublicScoreSheetBreakdown, getScoreSheetBreakdown, isLoadingScoreSheet, clearScoreBreakdown, scoreSheetBreakdown, scoreSheetError } =
     useScoreSheetStore();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (parsedTeamId) {
-      getScoreSheetBreakdown(parsedTeamId);
-    }
-    return () => {
-      clearScoreBreakdown();
-    };
-  }, [parsedTeamId]);
+      useEffect(() => {
+        if (parsedTeamId && parsedContestId) {
+          // Use the public endpoint with granular filtering
+          console.log("Using public endpoint with granular filtering");
+          getPublicScoreSheetBreakdown(parsedTeamId, parsedContestId);
+        }
+        return () => {
+          clearScoreBreakdown();
+        };
+      }, [parsedTeamId, parsedContestId]);
+
 
   useEffect(() => {
     const handlePageHide = () => {
@@ -55,6 +59,30 @@ export default function PulicScoreBreakdown() {
       <Typography sx={{ ml: 5 }}>
         *For best printing results print landscape
       </Typography>
+      
+      {/* Debug: Show the data structure */}
+      {scoreSheetBreakdown && (
+        <div style={{ margin: "20px", padding: "10px", backgroundColor: "#f0f0f0", borderRadius: "5px" }}>
+          <Typography variant="h6">Debug - Data Received:</Typography>
+          <pre style={{ fontSize: "12px", overflow: "auto", maxHeight: "300px" }}>
+            {JSON.stringify(scoreSheetBreakdown, null, 2)}
+          </pre>
+        </div>
+      )}
+      
+      {scoreSheetError && (
+        <div style={{ margin: "20px", padding: "10px", backgroundColor: "#ffebee", borderRadius: "5px" }}>
+          <Typography variant="h6" color="error">Error:</Typography>
+          <Typography>{scoreSheetError}</Typography>
+        </div>
+      )}
+      
+      {!scoreSheetBreakdown && !isLoadingScoreSheet && !scoreSheetError && (
+        <div style={{ margin: "20px", padding: "10px", backgroundColor: "#ffebee", borderRadius: "5px" }}>
+          <Typography variant="h6" color="error">No data received</Typography>
+          <Typography>Team ID: {parsedTeamId}, Contest ID: {parsedContestId}</Typography>
+        </div>
+      )}
       <Typography variant="h2" sx={{ m: 5 }}>
         Journal
       </Typography>

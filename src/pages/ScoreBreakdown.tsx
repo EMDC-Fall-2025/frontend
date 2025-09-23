@@ -12,21 +12,22 @@ import { useAuthStore } from "../store/primary_stores/authStore";
 import { useNavigate } from "react-router-dom";
 
 export default function ScoreBreakdown() {
-  const { teamId } = useParams();
+  const { teamId, contestId } = useParams();
   const parsedTeamId = teamId ? parseInt(teamId, 10) : undefined;
+  const parsedContestId = contestId ? parseInt(contestId, 10) : undefined;
   const { getScoreSheetBreakdown, isLoadingScoreSheet, clearScoreBreakdown } =
     useScoreSheetStore();
   const { role } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (parsedTeamId) {
-      getScoreSheetBreakdown(parsedTeamId);
+    if (parsedTeamId && parsedContestId) {
+      getScoreSheetBreakdown(parsedTeamId, parsedContestId);
     }
     return () => {
       clearScoreBreakdown();
     };
-  }, [parsedTeamId]);
+  }, [parsedTeamId, parsedContestId]);
 
   useEffect(() => {
     const handlePageHide = () => {
