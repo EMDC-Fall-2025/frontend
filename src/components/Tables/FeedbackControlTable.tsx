@@ -42,7 +42,8 @@ export default function FeedbackControlTable() {
 
   useEffect(() => {
     fetchAllContests();
-    getAllSettings();
+    // Removed automatic fetch of all settings to avoid 403 before selection
+    // getAllSettings();
   }, []);
 
   useEffect(() => {
@@ -199,7 +200,7 @@ export default function FeedbackControlTable() {
         </Card>
 
         {/* Error Display */}
-        {error && (
+        {selectedContestId && error && (
           <Alert severity="error" onClose={clearError}>
             {error}
           </Alert>

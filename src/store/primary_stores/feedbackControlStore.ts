@@ -49,9 +49,18 @@ const useFeedbackControlStore = create<FeedbackControlState>()(
               "Content-Type": "application/json",
             },
           });
-          set({ settings: response.data.settings, isLoading: false });
+          const payload = response.data;
+          const settings = Array.isArray(payload)
+            ? payload
+            : Array.isArray((payload as any)?.settings)
+              ? (payload as any).settings
+              : payload; // fallback if API returns plain array
+          set({ settings: settings as any, isLoading: false });
         } catch (error: any) {
-          set({ error: "Error fetching feedback settings", isLoading: false });
+          const message = error?.response?.status
+            ? `Error fetching feedback settings (HTTP ${error.response.status})`
+            : "Error fetching feedback settings";
+          set({ error: message, isLoading: false });
         }
       },
 
