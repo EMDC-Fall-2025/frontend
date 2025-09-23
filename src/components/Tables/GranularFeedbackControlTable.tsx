@@ -117,11 +117,17 @@ export default function GranularFeedbackControlTable() {
       }
 
       const data = await response.json();
-      const selectedIds = new Set(data.selected_feedback.map((item: SelectedFeedbackItem) => item.scoresheet_id));
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray((data as any)?.selected_feedback)
+          ? (data as any).selected_feedback
+          : [];
+      const selectedIds = new Set(list.map((item: SelectedFeedbackItem) => item.scoresheet_id));
       setSelectedFeedback(selectedIds);
     } catch (error: any) {
       console.error("Error fetching selected feedback:", error);
       // If no selections exist, that's okay - start with empty set
+      setSelectedFeedback(new Set());
     }
   };
 
@@ -178,6 +184,8 @@ export default function GranularFeedbackControlTable() {
       }
 
       setSuccess("Feedback selection updated successfully!");
+      // Re-fetch to ensure UI reflects persisted state
+      await fetchSelectedFeedback();
     } catch (error: any) {
       setError(error.message || "Error updating feedback selection");
     } finally {
