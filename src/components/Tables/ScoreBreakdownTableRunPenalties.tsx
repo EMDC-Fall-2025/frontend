@@ -4,10 +4,11 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Box, CircularProgress, Typography, Paper } from "@mui/material";
 import { useScoreSheetStore } from "../../store/primary_stores/scoreSheetStore";
 import { RunPenaltiesScoreSheetFields, ScoreSheetType } from "../../types";
 import { runPenaltiesQuestions } from "../../data/runPenaltiesQuestions";
+import theme from "../../theme";
 
 export default function ScoreBreakdownTableRunPenalties() {
   const { scoreSheetBreakdown } = useScoreSheetStore();
@@ -23,17 +24,31 @@ export default function ScoreBreakdownTableRunPenalties() {
     penaltyType: string;
   }> = ({ text, field, pointValue, penaltyType }) => {
     return (
-      <TableRow>
-        <TableCell>
-          <Typography>{text}</Typography>
+      <TableRow
+        sx={{
+          "&:hover td": {
+            // subtle full-row hover to match the theme
+            backgroundColor: "rgba(46,125,50,0.04)",
+          },
+        }}
+      >
+        {/* Penalty name */}
+        <TableCell sx={{ py: 1.25, wordWrap: "break-word" }}>
+          <Typography sx={{ fontWeight: 600 }}>{text}</Typography>
         </TableCell>
-        <TableCell>
-          <Typography>{penaltyType}</Typography>
+
+        {/* Penalty type */}
+        <TableCell sx={{ py: 1.25, wordWrap: "break-word" }}>
+          <Typography color="text.secondary">{penaltyType}</Typography>
         </TableCell>
-        <TableCell>
+
+        {/* Point value (numeric) */}
+        <TableCell sx={{ py: 1.25, textAlign: "right", whiteSpace: "nowrap" }}>
           <Typography>{pointValue}</Typography>
         </TableCell>
-        <TableCell>
+
+        {/* Points deducted (list from store) */}
+        <TableCell sx={{ py: 1.25, wordWrap: "break-word" }}>
           {scoreSheetBreakdown &&
             scoreSheetBreakdown[ScoreSheetType.RunPenalties][
               RunPenaltiesScoreSheetFields[
@@ -45,25 +60,55 @@ export default function ScoreBreakdownTableRunPenalties() {
     );
   };
 
+  // Show spinner while breakdown is not available yet
   return scoreSheetBreakdown ? (
     <TableContainer
-      sx={{ m: 5, minWidth: 550, maxWidth: "90vw" }}
-      component={Box}
+      // Card-like surface to match Admin/Public cards
+      component={Paper}
+      sx={{
+        m: 0,
+        maxWidth: "100%",
+        borderRadius: 0,
+        border: "none",
+        boxShadow: "none",
+        overflow: "hidden",
+      }}
     >
-      <Table>
-        <TableHead>
+      <Table
+        sx={{
+          "& td, & th": { borderColor: theme.palette.grey[200] },
+          tableLayout: "fixed",
+          width: "100%",
+        }}
+      >
+        {/* Header row */}
+        <TableHead
+          sx={{
+            backgroundColor: theme.palette.grey[50],
+            "& th": {
+              fontWeight: 700,
+              color: theme.palette.text.primary,
+              whiteSpace: "normal",
+              wordWrap: "break-word",
+            },
+          }}
+        >
           <TableRow>
-            <TableCell>Penalty</TableCell>
-            <TableCell>Penalty Type</TableCell>
-            <TableCell>Point Value (Per occurrence if applicable)</TableCell>
-            <TableCell>
+            <TableCell sx={{ minWidth: "200px" }}>Penalty</TableCell>
+            <TableCell sx={{ minWidth: "150px" }}>Penalty Type</TableCell>
+            <TableCell sx={{ textAlign: "right", minWidth: "200px" }}>
+              Point Value (Per occurrence if applicable)
+            </TableCell>
+            <TableCell sx={{ minWidth: "250px" }}>
               Points Deducted (points shown are averaged for final deduction)
             </TableCell>
           </TableRow>
         </TableHead>
+        {/* Body rows */}
         <TableBody>
           {runPenaltiesQuestionsList.map((penalty) => (
             <PenaltiesRow
+              key={penalty.field} // key for stable rendering
               text={penalty.questionText}
               field={penalty.field}
               pointValue={penalty.pointValue}
@@ -74,6 +119,8 @@ export default function ScoreBreakdownTableRunPenalties() {
       </Table>
     </TableContainer>
   ) : (
-    <CircularProgress />
+    <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+      <CircularProgress />
+    </Box>
   );
 }

@@ -75,10 +75,8 @@ export default function AssignJudgeToContestModal(props: IAssignJudgeToContestMo
   // Local state for judges
   const [allJudges, setAllJudges] = useState<Judge[]>([]);
   
-  // Filter clusters based on selected contest
-  const availableClusters = clusters.filter(cluster => 
-    cluster.contestid === selectedContestId
-  );
+  // Clusters are already filtered by contest ID from the backend
+  const availableClusters = clusters;
   
   // Filter judges to exclude those already assigned to selected contest
   const [judgeContestMappings, setJudgeContestMappings] = useState<{[key: number]: number[]}>({});
@@ -114,7 +112,13 @@ export default function AssignJudgeToContestModal(props: IAssignJudgeToContestMo
   // Load clusters when contest is selected
   useEffect(() => {
     if (selectedContestId !== -1) {
-      fetchClustersByContestId(selectedContestId);
+      console.log('Fetching clusters for contest:', selectedContestId);
+      fetchClustersByContestId(selectedContestId).then(() => {
+        console.log('Clusters fetched:', clusters);
+        console.log('Available clusters:', availableClusters);
+      }).catch((error) => {
+        console.error('Error fetching clusters:', error);
+      });
     }
   }, [selectedContestId, fetchClustersByContestId]);
   
@@ -189,6 +193,8 @@ export default function AssignJudgeToContestModal(props: IAssignJudgeToContestMo
         ...scoreSheets
       };
       
+      console.log('Sending payload:', payload);
+      console.log('Token:', localStorage.getItem("token"));
       const response = await api.post('/mapping/contestToJudge/assign/', payload);
       
       setSuccess(response.data.message || "Judge successfully assigned to contest!");
@@ -308,7 +314,7 @@ export default function AssignJudgeToContestModal(props: IAssignJudgeToContestMo
             </MenuItem>
             {availableClusters.map((cluster) => (
               <MenuItem key={cluster.id} value={cluster.id}>
-                {cluster.name}
+                {cluster.cluster_name}
               </MenuItem>
             ))}
           </Select>

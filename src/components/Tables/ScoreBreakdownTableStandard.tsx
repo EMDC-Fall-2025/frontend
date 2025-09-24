@@ -4,7 +4,8 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { CircularProgress, Typography, Paper } from "@mui/material";
+import theme from "../../theme";
 import { useScoreSheetStore } from "../../store/primary_stores/scoreSheetStore";
 import {
   JournalScoreSheetFields,
@@ -24,13 +25,37 @@ export default function ScoreBreakdownTableStandard(
   const { questions, type } = props;
   const { scoreSheetBreakdown } = useScoreSheetStore();
 
+  // Show spinner while breakdown is not available yet
   return scoreSheetBreakdown ? (
     <TableContainer
-      sx={{ m: 5, minWidth: 550, maxWidth: "90vw" }}
-      component={Box}
+      // Card-like surface to match Admin/Public cards
+      component={Paper}
+      sx={{
+        m: 0,
+        maxWidth: "100%",
+        borderRadius: 0,
+        border: "none",
+        boxShadow: "none",
+        overflow: "hidden",
+      }}
     >
-      <Table>
-        <TableHead>
+      <Table
+        sx={{
+          "& td, & th": { borderColor: theme.palette.grey[200] },
+          tableLayout: "auto",
+        }}
+      >
+        {/* Header row */}
+        <TableHead
+          sx={{
+            backgroundColor: theme.palette.grey[50],
+            "& th": {
+              fontWeight: 700,
+              color: theme.palette.text.primary,
+              whiteSpace: "nowrap",
+            },
+          }}
+        >
           <TableRow>
             <TableCell>Category</TableCell>
             <TableCell>Criteria 1</TableCell>
@@ -43,7 +68,13 @@ export default function ScoreBreakdownTableStandard(
           {questions.map((question) => (
             <TableRow
               key={question.id}
-              sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+              sx={{
+                "&:hover td": {
+                  // subtle full-row hover to match the theme
+                  backgroundColor: "rgba(46,125,50,0.04)",
+                },
+                "&:last-child td, &:last-child th": { border: 0 },
+              }}
             >
               <TableCell component="th" scope="row">
                 {question.questionText}

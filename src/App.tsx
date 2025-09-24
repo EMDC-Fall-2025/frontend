@@ -172,10 +172,16 @@ function App() {
           <Route path="/public-score-breakdown/:teamId/:contestId" element={<PublicScoreBreakdown />} />
           <Route path="/feedback/:teamId/:contestId" element={<FeedbackDisplay />} />
             {isAuthenticated && (
-              <Route
-                path="/score-breakdown/:teamId/:contestId"
-                element={<ScoreBreakdown />}
-              />
+              <>
+                <Route
+                  path="/score-breakdown/:teamId/:contestId"
+                  element={<ScoreBreakdown />}
+                />
+                <Route
+                  path="/score-breakdown/:teamId"
+                  element={<ScoreBreakdown />}
+                />
+              </>
             )}
         </Routes>
       </ThemeProvider>

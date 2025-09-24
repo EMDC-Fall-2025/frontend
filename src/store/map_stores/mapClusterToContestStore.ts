@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { Cluster } from "../../types";
 
 interface MapClusterContestState {
@@ -32,19 +32,13 @@ export const useMapClusterToContestStore = create<MapClusterContestState>()(
       fetchClustersByContestId: async (contestId: number) => {
         set({ isLoadingMapClusterContest: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/clusterToContest/getAllClustersByContest/${contestId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
-          );
+          console.log('Cluster store: Fetching clusters for contest:', contestId);
+          const response = await api.get(`/mapping/clusterToContest/getAllClustersByContest/${contestId}/`);
+          console.log('Cluster store: Response received:', response.data);
           set({ clusters: response.data.Clusters });
           set({ mapClusterContestError: null });
         } catch (mapClusterContestError: any) {
+          console.error('Cluster store: Error fetching clusters:', mapClusterContestError);
           const errorMessage = "Failed to fetch clusters";
           set({ mapClusterContestError: errorMessage });
           throw Error(errorMessage);

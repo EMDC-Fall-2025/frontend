@@ -72,10 +72,10 @@ export default function ScoreBreakdownTableGeneralPenalties() {
       // Card-like surface to match Admin/Public cards
       component={Paper}
       sx={{
-        m: 5,
-        maxWidth: "90vw",
-        borderRadius: 3,
-        border: `1px solid ${theme.palette.grey[300]}`,
+        m: 0,
+        maxWidth: "100%",
+        borderRadius: 0,
+        border: "none",
         boxShadow: "none",
         overflow: "hidden",
       }}
