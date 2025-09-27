@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
   const defaultTarget = inDocker ? "http://django-api:7004" : "http://127.0.0.1:7004";
 
   // Allow override via PROXY_TARGET in .env*
-  const target = env.PROXY_TARGET || process.env.PROXY_TARGET || defaultTarget;
+  const target = env.PROXY_TARGET || defaultTarget;
 
   console.log("[vite] proxy target =", target, "| inDocker =", inDocker);
 

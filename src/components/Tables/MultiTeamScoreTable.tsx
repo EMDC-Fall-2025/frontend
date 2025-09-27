@@ -462,7 +462,9 @@ export default function MultiTeamScoreSheet({
                             {/* Inline completion indicator (red X = missing, green check = filled) */}
                             {formData[team.id] && (
                               <Box sx={{ display: "inline", ml: 1 }}>
-                                {formData[team.id][question.id] === undefined || formData[team.id][question.id] === "" ? (
+                                {formData[team.id][question.id] === undefined || 
+                                 formData[team.id][question.id] === "" || 
+                                 formData[team.id][question.id] === 0 ? (
                                   <CloseIcon fontSize="small" sx={{ color: "red" }} />
                                 ) : (
                                   <CheckIcon fontSize="small" sx={{ color: "green" }} />

@@ -114,6 +114,16 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     return !!data?.scoresheet?.isSubmitted;
   };
 
+  // Check if a scoresheet exists for the given judge, team, and sheet type
+  const hasScoresheet = (
+    judgeId: number,
+    teamId: number,
+    sheetType: number
+  ) => {
+    const key = `${teamId}-${judgeId}-${sheetType}`;
+    return !!mappings[key];
+  };
+
   const getTotal = (judgeId: number, teamId: number, sheetType: number) => {
     const key = `${teamId}-${judgeId}-${sheetType}`;
     const data = mappings[key] || null;
@@ -206,48 +216,51 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
   }) {
     const { team, type, url, buttonText } = props;
 
+    // Only render if scoresheet exists for this judge, team, and type
+    if (!judge || !hasScoresheet(judge.id, team.id, type)) {
+      return null;
+    }
+
     return (
-      judge && (
-        <>
-          {!getIsSubmitted(judge?.id, team.id, type) ? (
-            <Button
-              variant="contained"
-              onClick={() => navigate(`/${url}/${judge.id}/${team.id}/`)}
-              sx={{
-                mb: 1,
-                textTransform: "none",
-                borderRadius: 2,
-                px: 2.25,
-                bgcolor: theme.palette.success.main,
-                "&:hover": { bgcolor: theme.palette.success.dark },
-              }}
-            >
-              {buttonText}
-            </Button>
-          ) : (
-            <Button
-              variant="contained"
-              sx={{
-                mb: 1,
-                textTransform: "none",
-                borderRadius: 2,
-                px: 2.25,
-                bgcolor: theme.palette.grey[500],
-                "&:hover": { bgcolor: theme.palette.grey[600] },
-              }}
-              onClick={() =>
-                handleOpenAreYouSure(
-                  getScoreSheetId(judge?.id, team.id, type),
-                  team.id,
-                  type
-                )
-              }
-            >
-              {buttonText} {getTotal(judge?.id, team.id, type)}
-            </Button>
-          )}
-        </>
-      )
+      <>
+        {!getIsSubmitted(judge?.id, team.id, type) ? (
+          <Button
+            variant="contained"
+            onClick={() => navigate(`/${url}/${judge.id}/${team.id}/`)}
+            sx={{
+              mb: 1,
+              textTransform: "none",
+              borderRadius: 2,
+              px: 2.25,
+              bgcolor: theme.palette.success.main,
+              "&:hover": { bgcolor: theme.palette.success.dark },
+            }}
+          >
+            {buttonText}
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            sx={{
+              mb: 1,
+              textTransform: "none",
+              borderRadius: 2,
+              px: 2.25,
+              bgcolor: theme.palette.grey[500],
+              "&:hover": { bgcolor: theme.palette.grey[600] },
+            }}
+            onClick={() =>
+              handleOpenAreYouSure(
+                getScoreSheetId(judge?.id, team.id, type),
+                team.id,
+                type
+              )
+            }
+          >
+            {buttonText} {getTotal(judge?.id, team.id, type)}
+          </Button>
+        )}
+      </>
     );
   }
 
@@ -402,36 +415,32 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                           }}
                         >
                           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                            {/* keep original gating: journal not tied to contest.is_open in your current UI */}
-                            {judge?.journal && (
-                              <ScoreSheetButton
-                                team={team}
-                                type={2}
-                                url="journal-score"
-                                buttonText="Journal"
-                              />
-                            )}
+                            {/* Journal - not tied to contest.is_open */}
+                            <ScoreSheetButton
+                              team={team}
+                              type={2}
+                              url="journal-score"
+                              buttonText="Journal"
+                            />
 
-                            {judge?.presentation && contest?.is_open && (
-                              <ScoreSheetButton
-                                team={team}
-                                type={1}
-                                url="presentation-score"
-                                buttonText="Presentation"
-                              />
-                            )}
+                            {/* Presentation */}
+                            <ScoreSheetButton
+                              team={team}
+                              type={1}
+                              url="presentation-score"
+                              buttonText="Presentation"
+                            />
 
-                            {judge?.mdo && contest?.is_open && (
-                              <ScoreSheetButton
-                                team={team}
-                                type={3}
-                                url="machine-score"
-                                buttonText="Machine Design and Operation"
-                              />
-                            )}
+                            {/* Machine Design */}
+                            <ScoreSheetButton
+                              team={team}
+                              type={3}
+                              url="machine-score"
+                              buttonText="Machine Design and Operation"
+                            />
 
-                            {/* NEW: Redesign & Championship (follow your feature flags & is_open gating) */}
-                            {judge?.redesign && contest?.is_open && (
+                            {/* Redesign - tied to contest.is_open */}
+                            {contest?.is_open && (
                               <ScoreSheetButton
                                 team={team}
                                 type={6}
@@ -440,7 +449,8 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                               />
                             )}
 
-                            {judge?.championship && contest?.is_open && (
+                            {/* Championship - tied to contest.is_open */}
+                            {contest?.is_open && (
                               <ScoreSheetButton
                                 team={team}
                                 type={7}
@@ -449,23 +459,21 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                               />
                             )}
 
-                            {judge?.runpenalties && (
-                              <ScoreSheetButton
-                                team={team}
-                                type={4}
-                                url="run-penalties"
-                                buttonText="Run Penalties"
-                              />
-                            )}
+                            {/* Run Penalties - not tied to contest.is_open */}
+                            <ScoreSheetButton
+                              team={team}
+                              type={4}
+                              url="run-penalties"
+                              buttonText="Run Penalties"
+                            />
 
-                            {judge?.otherpenalties && (
-                              <ScoreSheetButton
-                                team={team}
-                                type={5}
-                                url="general-penalties"
-                                buttonText="General Penalties"
-                              />
-                            )}
+                            {/* General Penalties - not tied to contest.is_open */}
+                            <ScoreSheetButton
+                              team={team}
+                              type={5}
+                              url="general-penalties"
+                              buttonText="General Penalties"
+                            />
                           </Box>
                         </Box>
                       </Collapse>
