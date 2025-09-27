@@ -38,7 +38,6 @@ interface ScoreSheetState {
   fetchMultipleScoreSheets: (teamIds: number[], judgeId: number, sheetType: number) => Promise<void>;
   updateMultipleScores: (scoreSheets: Partial<ScoreSheet>[]) => Promise<void>;
   submitMultipleScoreSheets: (scoreSheets: Partial<ScoreSheet>[]) => Promise<void>;
-  createScoresheetsForExistingTeams: (clusterId: number) => Promise<void>;
 }
 
 export const useScoreSheetStore = create<ScoreSheetState>()(
@@ -387,33 +386,6 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
         } catch (error) {
           set({ scoreSheetError: "Failed to submit multiple score sheets" });
           console.error("Failed to submit multiple score sheets:", error);
-        } finally {
-          set({ isLoadingScoreSheet: false });
-        }
-      },
-      
-      // Create scoresheets for existing teams in a cluster
-      createScoresheetsForExistingTeams: async (clusterId: number) => {
-        set({ isLoadingScoreSheet: true });
-        try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(
-            `/api/scoreSheet/createForExistingTeams/`,
-            { clusterId },
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              }
-            }
-          );
-          console.log("Created scoresheets for existing teams:", response.data);
-          set({ scoreSheetError: null });
-        } catch (error: any) {
-          const errorMessage = error.response?.data?.error || "Failed to create scoresheets for existing teams";
-          set({ scoreSheetError: errorMessage });
-          console.error("Failed to create scoresheets for existing teams:", error);
-          throw new Error(errorMessage);
         } finally {
           set({ isLoadingScoreSheet: false });
         }
