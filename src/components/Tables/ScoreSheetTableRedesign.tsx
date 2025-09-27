@@ -441,6 +441,9 @@ export default function ScoreSheetTableRedesign({
                                 label="Score"
                                 type="number"
                                 value={
+                                  formData[question.id] !== undefined && 
+                                  formData[question.id] !== null && 
+                                  formData[question.id] !== "" &&
                                   formData[question.id] !== 0
                                     ? formData[question.id]
                                     : ""
@@ -454,11 +457,13 @@ export default function ScoreSheetTableRedesign({
   
                                   if (value !== undefined) {
                                     if (value === "") {
-                                      value = "";
-                                    } else if (value < question.lowPoints) {
-                                      value = "";
-                                    } else if (value > question.highPoints) {
-                                      value = "";
+                                      value = undefined; // Clear the field
+                                    } else if (Number(value) < question.lowPoints) {
+                                      value = undefined; // Clear if below range
+                                    } else if (Number(value) > question.highPoints) {
+                                      value = undefined; // Clear if above range
+                                    } else {
+                                      value = Number(value); // Convert to number if valid
                                     }
                                   }
   

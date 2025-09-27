@@ -160,6 +160,7 @@ export interface ScoreSheet {
   teamId: number;
   id: number;
   sheetType?: number;
+  judgeId?: number;
   isSubmitted?: boolean;
   field1: number | string;
   field2: number | string;

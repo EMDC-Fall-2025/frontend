@@ -80,6 +80,22 @@ export default function MultiTeamScoreSheet({
     );
   }, [teams, multipleScoreSheets]);
 
+  // Show message if no teams have scoresheets available
+  if (multipleScoreSheets && multipleScoreSheets.length === 0) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Box sx={{ textAlign: "center", py: 4 }}>
+          <Typography variant="h6" color="text.secondary">
+            No scoresheets available for this judge and sheet type.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Please ensure scoresheets have been created for the teams in this judge's cluster.
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
+
   // Confirmation modal state for "Submit All"
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
 
@@ -420,7 +436,11 @@ export default function MultiTeamScoreSheet({
                               type="number"
                               size="small"
                               value={
-                                formData[team.id] && formData[team.id][question.id] !== 0
+                                formData[team.id] && 
+                                formData[team.id][question.id] !== undefined && 
+                                formData[team.id][question.id] !== null && 
+                                formData[team.id][question.id] !== "" &&
+                                formData[team.id][question.id] !== 0
                                   ? formData[team.id][question.id]
                                   : ""
                               }
@@ -435,15 +455,17 @@ export default function MultiTeamScoreSheet({
 
                                 if (value !== undefined) {
                                   if (value === "") {
-                                    value = "";
+                                    value = undefined; // Clear the field
                                   } else if (Number(value) < question.lowPoints) {
-                                    value = "";
+                                    value = undefined; // Clear if below range
                                   } else if (Number(value) > question.highPoints) {
-                                    value = "";
+                                    value = undefined; // Clear if above range
+                                  } else {
+                                    value = Number(value); // Convert to number if valid
                                   }
                                 }
 
-                                handleScoreChange(team.id, question.id, value === "" ? undefined : Number(value));
+                                handleScoreChange(team.id, question.id, value);
                               }}
                               // Disable arrow key step to avoid accidental changes
                               onKeyDown={(e) => {
@@ -462,9 +484,10 @@ export default function MultiTeamScoreSheet({
                             {/* Inline completion indicator (red X = missing, green check = filled) */}
                             {formData[team.id] && (
                               <Box sx={{ display: "inline", ml: 1 }}>
-                                {formData[team.id][question.id] === undefined || 
-                                 formData[team.id][question.id] === "" || 
-                                 formData[team.id][question.id] === 0 ? (
+                        {formData[team.id][question.id] === undefined ||
+                         formData[team.id][question.id] === "" ||
+                         formData[team.id][question.id] === 0 ||
+                         formData[team.id][question.id] === null ? (
                                   <CloseIcon fontSize="small" sx={{ color: "red" }} />
                                 ) : (
                                   <CheckIcon fontSize="small" sx={{ color: "green" }} />
