@@ -158,18 +158,22 @@ export default function ScoreSheetTable({
    */
   const handleSaveScoreSheet = () => {
     if (scoreSheet) {
-      updateScores({
+      // Prepare data with proper handling of undefined/null values
+      const scoreData = {
         id: scoreSheet.id,
-        field1: formData[1],
-        field2: formData[2],
-        field3: formData[3],
-        field4: formData[4],
-        field5: formData[5],
-        field6: formData[6],
-        field7: formData[7],
-        field8: formData[8],
-        field9: formData[9]?.toString(), // comments stored as string
-      });
+        field1: formData[1] !== undefined ? formData[1] : null,
+        field2: formData[2] !== undefined ? formData[2] : null,
+        field3: formData[3] !== undefined ? formData[3] : null,
+        field4: formData[4] !== undefined ? formData[4] : null,
+        field5: formData[5] !== undefined ? formData[5] : null,
+        field6: formData[6] !== undefined ? formData[6] : null,
+        field7: formData[7] !== undefined ? formData[7] : null,
+        field8: formData[8] !== undefined ? formData[8] : null,
+        field9: formData[9] !== undefined ? formData[9]?.toString() : null, // comments stored as string
+      };
+      
+      console.log("Saving score sheet with data:", scoreData);
+      updateScores(scoreData);
     }
   };
 
@@ -529,6 +533,9 @@ export default function ScoreSheetTable({
                                 label="Score"
                                 type="number"
                                 value={
+                                  formData[question.id] !== undefined && 
+                                  formData[question.id] !== null && 
+                                  formData[question.id] !== "" &&
                                   formData[question.id] !== 0
                                     ? formData[question.id]
                                     : ""
@@ -545,11 +552,13 @@ export default function ScoreSheetTable({
 
                                   if (value !== undefined) {
                                     if (value === "") {
-                                      value = "";
-                                    } else if (value < question.lowPoints) {
-                                      value = "";
-                                    } else if (value > question.highPoints) {
-                                      value = "";
+                                      value = undefined; // Clear the field
+                                    } else if (Number(value) < question.lowPoints) {
+                                      value = undefined; // Clear if below range
+                                    } else if (Number(value) > question.highPoints) {
+                                      value = undefined; // Clear if above range
+                                    } else {
+                                      value = Number(value); // Convert to number if valid
                                     }
                                   }
 

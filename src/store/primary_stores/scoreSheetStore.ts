@@ -166,6 +166,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
         set({ isLoadingScoreSheet: true });
         try {
           const token = localStorage.getItem("token");
+          console.log("Updating scores with data:", data);
           const response = await axios.post(
             `/api/scoreSheet/edit/updateScores/`,
             data,
@@ -176,11 +177,26 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
               },
             }
           );
-          set({ scoreSheet: response.data.updated_sheet });
-          set({ scoreSheetError: null });
+          console.log("Update scores response:", response.data);
+          
+          if (response.data.updated_sheet) {
+            set({ scoreSheet: response.data.updated_sheet });
+            set({ scoreSheetError: null });
+          } else {
+            console.error("No updated_sheet in response:", response.data);
+            set({ scoreSheetError: "Invalid response from server" });
+            throw new Error("Invalid response from server");
+          }
         } catch (scoreSheetError: any) {
-          set({ scoreSheetError: "Failed to update score sheet" });
-          throw new Error("Failed to update score sheet");
+          console.error("Error updating scores:", scoreSheetError);
+          console.error("Error response data:", scoreSheetError.response?.data);
+          console.error("Error response status:", scoreSheetError.response?.status);
+          const errorMessage = scoreSheetError.response?.data?.error || 
+                              scoreSheetError.response?.data?.detail || 
+                              scoreSheetError.message || 
+                              "Failed to update score sheet";
+          set({ scoreSheetError: errorMessage });
+          throw new Error(errorMessage);
         } finally {
           set({ isLoadingScoreSheet: false });
         }
@@ -305,7 +321,12 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
                 };
               }
               return null;
-            } catch (error) {
+            } catch (error: any) {
+              // Handle 404 errors gracefully - team doesn't have scoresheet for this judge/sheetType
+              if (error.response?.status === 404) {
+                console.log(`No scoresheet found for team ${teamId}, judge ${judgeId}, sheetType ${sheetType}`);
+                return null;
+              }
               console.error(`Error fetching score sheet for team ${teamId}:`, error);
               return null;
             }
