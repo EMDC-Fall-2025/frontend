@@ -42,10 +42,11 @@ export interface IJudgeModalProps {
   contestid?: number;
   clusters?: Cluster[];
   judgeData?: JudgeData;
+  onSuccess?: () => void;
 }
 
 export default function JudgeModal(props: IJudgeModalProps) {
-  const { handleClose, open, mode, judgeData, clusters, contestid } = props;
+  const { handleClose, open, mode, judgeData, clusters, contestid, onSuccess } = props;
   
   // Store hooks for refreshing data
   const { getAllJudgesByContestId } = useContestJudgeStore();
@@ -176,6 +177,15 @@ export default function JudgeModal(props: IJudgeModalProps) {
         // Create judge account and refresh judge list
         await createJudge(judgeData);
         getAllJudgesByContestId(contestid);
+        
+        // Refresh judges for the specific cluster to show the new judge
+        if (clusterId !== -1) {
+          fetchJudgesByClusterId(clusterId);
+        }
+        
+        // Call parent component's success callback
+        onSuccess?.();
+        
         toast.success("Judge created successfully!");
         handleCloseModal();
       } catch (error: any) {

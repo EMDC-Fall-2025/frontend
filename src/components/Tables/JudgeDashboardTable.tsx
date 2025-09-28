@@ -421,9 +421,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                         mr: 1,
                         fontWeight: 600,
                         fontFamily: t.typography.h1.fontFamily,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
+                        minWidth: 300, // Ensure enough space for team name + contest
                       })}
                     >
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -431,7 +429,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                           {team.team_name}
                         </Typography>
                         {teamContestMap[team.id] && (
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, ml: 1 }}>
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, ml: 1, flexShrink: 0 }}>
                             <EmojiEventsIcon 
                               sx={{ 
                                 fontSize: 16, 
@@ -440,13 +438,18 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                               }} 
                             />
                             <Typography 
-                              variant="caption" 
+                              variant="body2" 
                               sx={{ 
                                 color: theme.palette.success.main,
                                 fontWeight: 500,
                                 opacity: 0.8,
-                                fontSize: "0.75rem"
+                                fontSize: "0.875rem",
+                                whiteSpace: "nowrap",
+                                maxWidth: "200px",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis"
                               }}
+                              title={teamContestMap[team.id]} // Show full name on hover
                             >
                               {teamContestMap[team.id]}
                             </Typography>

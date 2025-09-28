@@ -210,7 +210,7 @@ export default function Organizer() {
             </Box>
             <Divider />
             <Box sx={{ px: 3, pb: 3 }}>
-              <ContestOverviewTable />
+              <ContestOverviewTable contests={contests} />
             </Box>
           </TabPanel>
         </TabContext>
