@@ -17,11 +17,10 @@ export interface IAreYouSureModalProps {
   handleClose: () => void;
   title: string;
   handleSubmit: () => void;
-  error: string | null;
 }
 
 export default function AreYouSureModal(props: IAreYouSureModalProps) {
-  const { handleClose, handleSubmit, open, title, error } = props;
+  const { handleClose, handleSubmit, open, title } = props;
 
   const handleSubmitModal = () => {
     handleSubmit();
@@ -29,7 +28,7 @@ export default function AreYouSureModal(props: IAreYouSureModalProps) {
   };
 
   return (
-    <Modal open={open} handleClose={handleClose} title={title} error={error}>
+    <Modal open={open} handleClose={handleClose} title={title}>
       <Container
         sx={{
           alignItems: "center",

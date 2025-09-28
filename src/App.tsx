@@ -30,6 +30,7 @@ import MultiTeamPresentationScore from "./pages/PresentationMultiTeamScore"
 import MultiTeamJournalScore from "./pages/JournalMultiTeamScore";
 import MultiTeamMachineDesignScore from "./pages/MachineDesignMultiTeamScore";
 import ChampionshipScore from "./pages/ChampionshipScore";
+import { Toaster } from "react-hot-toast";
 
 function App() {
   const currentLink = useLocation().pathname;
@@ -174,6 +175,48 @@ function App() {
             />
           )}
         </Routes>
+        <Toaster 
+          position="top-center"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#ffffff',
+              color: '#000000',
+              border: '1px solid #00a353',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0, 163, 83, 0.15)',
+              fontFamily: 'Open Sans, sans-serif',
+              fontSize: '16px',
+              fontWeight: '500',
+            },
+            success: {
+              duration: 3000,
+              style: {
+                background: '#e8eddb',
+                color: '#00a353',
+                border: '1px solid #00a353',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 163, 83, 0.2)',
+                fontFamily: 'Open Sans, sans-serif',
+                fontSize: '14px',
+                fontWeight: '500',
+              },
+            },
+            error: {
+              duration: 5000,
+              style: {
+                background: '#fff5f5',
+                color: '#d32f2f',
+                border: '1px solid #d32f2f',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(211, 47, 47, 0.15)',
+                fontFamily: 'Open Sans, sans-serif',
+                fontSize: '16px',
+                fontWeight: '500',
+              },
+            },
+          }}
+        />
       </ThemeProvider>
     </>
   );

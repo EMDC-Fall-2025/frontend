@@ -35,7 +35,6 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
     contestsByOrganizers,
     createContestOrganizerMapping,
     fetchContestsByOrganizers,
-    mapContestOrganizerError,
   } = useMapContestOrganizerStore();
   const title = "Assign Contest To Organizer";
   const [contestId, setContestId] = useState(0);
@@ -43,7 +42,7 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
 
   useEffect(() => {
     if (contestsByOrganizers[organizerId]) {
-      setAssignedContests(contestsByOrganizers[organizerId]);
+      setAssignedContests(contestsByOrganizers[organizerId] || []);
     }
   }, [organizerId]);
 
@@ -80,7 +79,6 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
       open={open}
       handleClose={handleCloseModal}
       title={title}
-      error={mapContestOrganizerError}
     >
       <form
         onSubmit={onSubmitHandler}

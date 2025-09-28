@@ -26,10 +26,12 @@ import {
 } from "@mui/material";
 import Modal from "./Modal";
 import theme from "../../theme";
+import toast from "react-hot-toast";
 import { useEffect, useState } from "react";
 import useUserRoleStore from "../../store/map_stores/mapUserToRoleStore";
 import { useJudgeStore } from "../../store/primary_stores/judgeStore";
 import useContestJudgeStore from "../../store/map_stores/mapContestToJudgeStore";
+import { useMapClusterJudgeStore } from "../../store/map_stores/mapClusterToJudgeStore";
 import CloseIcon from "@mui/icons-material/Close";
 import { Cluster, JudgeData } from "../../types";
 
@@ -44,14 +46,17 @@ export interface IJudgeModalProps {
 
 export default function JudgeModal(props: IJudgeModalProps) {
   const { handleClose, open, mode, judgeData, clusters, contestid } = props;
+  
+  // Store hooks for refreshing data
+  const { getAllJudgesByContestId } = useContestJudgeStore();
+  const { fetchJudgesByClusterId } = useMapClusterJudgeStore();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [clusterId, setClusterId] = useState<number>(-1);
   const { user, getUserByRole } = useUserRoleStore();
-  const { createJudge, editJudge, judgeError } = useJudgeStore();
-  const { getAllJudgesByContestId } = useContestJudgeStore();
+  const { createJudge, editJudge } = useJudgeStore();
   const [scoreSheetsSelectIsOpen, setScoreSheetsSelectIsOpen] = useState(false);
   const [selectedTitle, setSelectedTitle] = useState(0);
 
@@ -88,16 +93,16 @@ export default function JudgeModal(props: IJudgeModalProps) {
 
   useEffect(() => {
     if (judgeData && user) {
-      setFirstName(judgeData.firstName);
-      setLastName(judgeData.lastName);
-      setEmail(user.username);
-      setClusterId(judgeData.cluster.id);
-      setPhoneNumber(judgeData.phoneNumber);
+      setFirstName(judgeData.firstName || '');
+      setLastName(judgeData.lastName || '');
+      setEmail(user.username || '');
+      setClusterId(judgeData.cluster?.id || -1);
+      setPhoneNumber(judgeData.phoneNumber || '');
       const initialSheets = scoringSheetOptions
         .filter((option) => judgeData[option.value as keyof typeof judgeData])
         .map((option) => option.value);
       setSelectedSheets(initialSheets);
-      setSelectedTitle(judgeData.role);
+      setSelectedTitle(Number(judgeData.role) || 0);
     }
   }, [user, judgeData]);
 
@@ -142,9 +147,14 @@ export default function JudgeModal(props: IJudgeModalProps) {
     }
   };
 
+  /**
+   * Create a new judge account and assign to contest/cluster
+   * Handles form validation, data preparation, and error management
+   */
   const handleCreateJudge = async () => {
     if (contestid) {
       try {
+        // Prepare judge data with form inputs and score sheet assignments
         const judgeData = {
           first_name: firstName || "n/a",
           last_name: lastName || "n/a",
@@ -163,18 +173,53 @@ export default function JudgeModal(props: IJudgeModalProps) {
           role: selectedTitle,
         };
 
+        // Create judge account and refresh judge list
         await createJudge(judgeData);
         getAllJudgesByContestId(contestid);
+        toast.success("Judge created successfully!");
         handleCloseModal();
-      } catch (error) {
-        console.error("Failed to create judge", error);
+      } catch (error: any) {
+        // Handle judge creation errors with user-friendly messages
+        let errorMessage = "";
+        
+        // Extract error message from various possible response structures
+        if (error?.response?.data) {
+          const data = error.response.data;
+          if (typeof data === 'string') {
+            errorMessage = data;
+          } else if (data.error && typeof data.error === 'string') {
+            errorMessage = data.error;
+          } else if (data.detail && typeof data.detail === 'string') {
+            errorMessage = data.detail;
+          } else if (data.message && typeof data.message === 'string') {
+            errorMessage = data.message;
+          } else if (data.errors && typeof data.errors === 'object') {
+            // Handle Django-style error objects
+            errorMessage = JSON.stringify(data.errors);
+          }
+        } else if (error?.message && typeof error.message === 'string') {
+          errorMessage = error.message;
+        }
+        
+        if (errorMessage.toLowerCase().includes("already exists") || 
+            errorMessage.toLowerCase().includes("duplicate") ||
+            errorMessage.toLowerCase().includes("username") && errorMessage.toLowerCase().includes("taken")) {
+          toast.error("Account already exists in the system");
+        } else {
+          toast.error("Failed to create judge. Please try again.");
+        }
       }
     }
   };
 
+  /**
+   * Update existing judge information and score sheet assignments
+   * Preserves judge ID while updating all other fields
+   */
   const handleEditJudge = async () => {
     if (contestid && judgeData) {
       try {
+        // Prepare updated judge data with current form values
         const updatedData = {
           id: judgeData.id,
           first_name: firstName,
@@ -192,11 +237,62 @@ export default function JudgeModal(props: IJudgeModalProps) {
           role: selectedTitle,
         };
 
+        // Update judge
         await editJudge(updatedData);
-        getAllJudgesByContestId(contestid);
+        
+        toast.success("Judge updated successfully!");
         handleCloseModal();
-      } catch (error) {
-        console.error("Failed to edit judge", error);
+        
+        // Refresh the judge list after modal closes to prevent UI conflicts
+        if (contestid) {
+          setTimeout(async () => {
+            try {
+              // Refresh the main judge store
+              await getAllJudgesByContestId(contestid);
+              
+              // Also refresh judges for each cluster to update the cluster-specific data
+              if (clusters && clusters.length > 0) {
+                for (const cluster of clusters) {
+                  try {
+                    await fetchJudgesByClusterId(cluster.id);
+                  } catch (error) {
+                    console.error(`Error refreshing judges for cluster ${cluster.id}:`, error);
+                  }
+                }
+              }
+            } catch (error) {
+              console.error("Error refreshing judges:", error);
+            }
+          }, 100);
+        }
+      } catch (error: any) {
+        // Handle judge update errors with detailed error information
+        console.error("Judge update error:", error);
+        
+        let errorMessage = "";
+        if (error?.response?.data) {
+          const data = error.response.data;
+          if (typeof data === 'string') {
+            errorMessage = data;
+          } else if (data.error && typeof data.error === 'string') {
+            errorMessage = data.error;
+          } else if (data.detail && typeof data.detail === 'string') {
+            errorMessage = data.detail;
+          } else if (data.message && typeof data.message === 'string') {
+            errorMessage = data.message;
+          } else if (data.errors && typeof data.errors === 'object') {
+            errorMessage = JSON.stringify(data.errors);
+          }
+        } else if (error?.message && typeof error.message === 'string') {
+          errorMessage = error.message;
+        }
+        
+        // Show specific error message or generic fallback
+        if (errorMessage) {
+          toast.error(`Failed to update judge: ${errorMessage}`);
+        } else {
+          toast.error("Failed to update judge. Please try again.");
+        }
       }
     }
   };
@@ -220,7 +316,6 @@ export default function JudgeModal(props: IJudgeModalProps) {
       open={open}
       handleClose={handleCloseModal}
       title={title}
-      error={judgeError}
     >
       <Container>
         <form

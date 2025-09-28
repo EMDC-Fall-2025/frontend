@@ -9,18 +9,16 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { ReactNode } from "react";
-import Alert from "@mui/material/Alert";
 
 export interface IModalProps {
   open: boolean;
   handleClose: () => void;
   title: String;
   children?: ReactNode;
-  error: string | null;
 }
 
 export default function Modal(props: IModalProps) {
-  const { open, handleClose, title, children, error } = props;
+  const { open, handleClose, title, children } = props;
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down("xs"));
 
@@ -58,11 +56,6 @@ export default function Modal(props: IModalProps) {
         sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}
       >
         {children}
-        {error && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {error}
-          </Alert>
-        )}
       </DialogContent>
     </Dialog>
   );

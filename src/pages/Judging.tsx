@@ -19,6 +19,7 @@ import useClusterTeamStore from "../store/map_stores/mapClusterToTeamStore";
 import JudgeDashboardTable from "../components/Tables/JudgeDashboardTable";
 import theme from "../theme";
 import { Team } from "../types";
+import axios from "axios";
 
 export default function Judging() {
   const navigate = useNavigate();
@@ -40,7 +41,8 @@ export default function Judging() {
   useEffect(() => {
     if (judgeIdNumber) {
       fetchJudgeById(judgeIdNumber);
-      fetchClusterByJudgeId(judgeIdNumber);
+      // Fetch all clusters for this judge across all contests
+      fetchAllClustersByJudgeId(judgeIdNumber);
     }
   }, [judgeIdNumber]);
 
@@ -55,6 +57,44 @@ export default function Judging() {
       setTeams(teamsByClusterId[cluster.id] || []);
     }
   }, [teamsByClusterId, cluster]);
+
+  // New function to fetch all clusters for a judge
+  const fetchAllClustersByJudgeId = async (judgeId: number) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `/api/mapping/clusterToJudge/getAllClustersByJudge/${judgeId}/`,
+        {
+          headers: {
+            Authorization: `Token ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      
+      if (response.data?.Clusters) {
+        // Fetch teams from all clusters
+        const allTeams: Team[] = [];
+        for (const cluster of response.data.Clusters) {
+          try {
+            await getTeamsByClusterId(cluster.id);
+            // Wait a bit for the teams to be loaded
+            await new Promise(resolve => setTimeout(resolve, 100));
+            if (teamsByClusterId && teamsByClusterId[cluster.id]) {
+              allTeams.push(...teamsByClusterId[cluster.id]);
+            }
+          } catch (error) {
+            console.error(`Error fetching teams for cluster ${cluster.id}:`, error);
+          }
+        }
+        setTeams(allTeams);
+      }
+    } catch (error) {
+      console.error('Error fetching all clusters for judge:', error);
+      // Fallback to original behavior
+      fetchClusterByJudgeId(judgeId);
+    }
+  };
 
   useEffect(() => {
     const handlePageHide = () => {

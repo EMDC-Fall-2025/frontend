@@ -21,9 +21,11 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
+  Typography,
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { useJudgeStore } from "../../store/primary_stores/judgeStore";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -53,6 +55,9 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
   } = useMapScoreSheetStore();
 
   const { getContestByJudgeId, contest } = useMapContestJudgeStore();
+  
+  // State to store contest names for each team
+  const [teamContestMap, setTeamContestMap] = React.useState<{[teamId: number]: string}>({});
 
   const { editScoreSheetField, scoreSheetError } = useScoreSheetStore();
 
@@ -93,6 +98,44 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [judge]);
+
+  // Fetch contest information for each team
+  useEffect(() => {
+    if (teams && teams.length > 0) {
+      const fetchContestForTeams = async () => {
+        const contestMap: {[teamId: number]: string} = {};
+        
+        for (const team of teams) {
+          try {
+            // Get contest for this team
+            const token = localStorage.getItem("token");
+            const response = await fetch(`/api/mapping/contestToTeam/getContestByTeam/${team.id}/`, {
+              headers: {
+                'Authorization': `Token ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            if (response.ok) {
+              const data = await response.json();
+              console.log(`Contest data for team ${team.id}:`, data);
+              if (data.Contest) {
+                contestMap[team.id] = data.Contest.name;
+                console.log(`Set contest name for team ${team.id}: ${data.Contest.name}`);
+              }
+            } else {
+              console.error(`Failed to fetch contest for team ${team.id}:`, response.status);
+            }
+          } catch (error) {
+            console.error(`Error fetching contest for team ${team.id}:`, error);
+          }
+        }
+        
+        setTeamContestMap(contestMap);
+      };
+      
+      fetchContestForTeams();
+    }
+  }, [teams]);
 
   useEffect(() => {
     const handlePageHide = () => {
@@ -383,7 +426,33 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                         textOverflow: "ellipsis",
                       })}
                     >
-                      {team.team_name}
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {team.team_name}
+                        </Typography>
+                        {teamContestMap[team.id] && (
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, ml: 1 }}>
+                            <EmojiEventsIcon 
+                              sx={{ 
+                                fontSize: 16, 
+                                color: theme.palette.success.main,
+                                opacity: 0.8 
+                              }} 
+                            />
+                            <Typography 
+                              variant="caption" 
+                              sx={{ 
+                                color: theme.palette.success.main,
+                                fontWeight: 500,
+                                opacity: 0.8,
+                                fontSize: "0.75rem"
+                              }}
+                            >
+                              {teamContestMap[team.id]}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
                     </TableCell>
 
                     {team.judge_disqualified && team.organizer_disqualified && (

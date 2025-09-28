@@ -100,16 +100,19 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
               },
             }
           );
+          // Update judges and clear error in a single set call to prevent multiple re-renders
           set({
             judges: response.data.Judges,
+            mapContestJudgeError: null,
+            isLoadingMapContestJudge: false,
           });
-          set({ mapContestJudgeError: null });
         } catch (error) {
           const errorMessage = "Error fetching judges by contest ID";
-          set({ mapContestJudgeError: errorMessage });
+          set({ 
+            mapContestJudgeError: errorMessage,
+            isLoadingMapContestJudge: false,
+          });
           throw new Error(errorMessage);
-        } finally {
-          set({ isLoadingMapContestJudge: false });
         }
       },
 

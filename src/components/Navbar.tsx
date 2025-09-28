@@ -64,7 +64,7 @@ export default function Nav() {
             zIndex: (t) => t.zIndex.drawer + 2,
           }}
         >
-          <Container maxWidth="xl" sx={{ py: 1 }}>
+          <Container maxWidth="lg" sx={{ py: 1 }}>
             {/* Boxy white bar with soft shadow that reads on white backgrounds */}
             <Paper
               elevation={0}
@@ -102,12 +102,14 @@ export default function Nav() {
                       variant="contained"
                       onClick={() => navigate("/contestPage")}
                       sx={{
+                        textTransform: "none",
+                        borderRadius: 2,
+                        px: 2.5,
                         minWidth: { xs: "auto", sm: 120 },
                         fontSize: { xs: "0.75rem", sm: "0.875rem" },
                         whiteSpace: "nowrap",
-                        px: { xs: 1, sm: 2 },
-                        bgcolor: theme.palette.primary.main, // green
-                        "&:hover": { bgcolor: theme.palette.primary.dark },
+                        bgcolor: theme.palette.success.main,
+                        "&:hover": { bgcolor: theme.palette.success.dark },
                       }}
                     >
                       Contest Results
@@ -119,11 +121,14 @@ export default function Nav() {
                       variant="contained"
                       onClick={() => setOpenAreYouSure(true)}
                       sx={{
+                        textTransform: "none",
+                        borderRadius: 2,
+                        px: 2.5,
                         minWidth: { xs: 80, sm: 120 },
                         fontSize: { xs: "0.75rem", sm: "0.875rem" },
                         whiteSpace: "nowrap",
-                        bgcolor: theme.palette.primary.main, // green
-                        "&:hover": { bgcolor: theme.palette.primary.dark },
+                        bgcolor: theme.palette.success.main,
+                        "&:hover": { bgcolor: theme.palette.success.dark },
                       }}
                     >
                       Logout
@@ -133,11 +138,14 @@ export default function Nav() {
                       variant="contained"
                       onClick={() => navigate("/login/")}
                       sx={{
+                        textTransform: "none",
+                        borderRadius: 2,
+                        px: 2.5,
                         minWidth: { xs: 80, sm: 120 },
                         fontSize: { xs: "0.75rem", sm: "0.875rem" },
                         whiteSpace: "nowrap",
-                        bgcolor: theme.palette.primary.main,
-                        "&:hover": { bgcolor: theme.palette.primary.dark },
+                        bgcolor: theme.palette.success.main,
+                        "&:hover": { bgcolor: theme.palette.success.dark },
                       }}
                     >
                       Login
