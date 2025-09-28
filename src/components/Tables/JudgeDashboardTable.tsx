@@ -561,7 +561,6 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
         handleClose={() => setOpenAreYouSure(false)}
         title="Are you sure you want to unsubmit this score sheet?"
         handleSubmit={handleUnsubmitSheet}
-        error={scoreSheetError}
       />
 
       {/* NEW: multi-team dialog (kept simple, matches theme) */}
