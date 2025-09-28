@@ -28,14 +28,22 @@ import { useMapCoachToTeamStore } from "../store/map_stores/mapCoachToTeamStore"
 import useMapClusterTeamStore from "../store/map_stores/mapClusterToTeamStore";
 import { useAuthStore } from "../store/primary_stores/authStore";
 
+/**
+ * ManageContest Component
+ * 
+ * Main page for managing contest details including judges, teams, and clusters.
+ * Provides tabbed interface for different management functions.
+ */
 export default function ManageContest() {
   const { contestId } = useParams();
   const parsedContestId = contestId ? parseInt(contestId, 10) : 0;
   
 
+  // Tab state management - persists active tab across page reloads
   const [value, setValue] = useState(
     () => localStorage.getItem("activeTab") || "1"
   );
+  // Modal state management for different creation/editing operations
   const [openJudgeModal, setOpenJudgeModal] = useState(false);
   const [openClusterModal, setOpenClusterModal] = useState(false);
   const [openTeamModal, setOpenTeamModal] = useState(false);
@@ -43,26 +51,31 @@ export default function ManageContest() {
 
   const { role } = useAuthStore();
 
+  // Contest data management
   const { contest, fetchContestById, clearContest, isLoadingContest } =
     useContestStore();
+  // Judge data management for the contest
   const {
     judges,
     getAllJudgesByContestId,
     clearJudges,
     isLoadingMapContestJudge,
   } = useContestJudgeStore();
+  // Cluster data management for the contest
   const {
     clusters,
     fetchClustersByContestId,
     clearClusters,
     isLoadingMapClusterContest,
   } = useMapClusterToContestStore();
+  // Team data management organized by clusters
   const {
     getTeamsByClusterId,
     teamsByClusterId,
     clearTeamsByClusterId,
     isLoadingMapClusterToTeam,
   } = useMapClusterTeamStore();
+  // Judge-cluster mapping for organizing judges by clusters
   const {
     fetchClustersForJudges,
     fetchJudgesByClusterId,
@@ -71,17 +84,21 @@ export default function ManageContest() {
     clearJudgeClusters,
     isLoadingMapClusterJudge,
   } = useMapClusterJudgeStore();
+  // Judge operations and score sheet management
   const {
     checkAllScoreSheetsSubmitted,
     clearSubmissionStatus,
     isLoadingJudge,
   } = useJudgeStore();
+  // Coach data management for teams
   const { fetchCoachesByTeams, clearCoachesByTeams, isLoadingMapCoachToTeam } =
     useMapCoachToTeamStore();
 
+  // Load all contest-related data on component mount
   useEffect(() => {
     const loadContestData = async () => {
       if (parsedContestId) {
+        // Load contest details, judges, and clusters for the specific contest
         await fetchContestById(parsedContestId);
         await getAllJudgesByContestId(parsedContestId);
         await fetchClustersByContestId(parsedContestId);
@@ -89,6 +106,7 @@ export default function ManageContest() {
     };
 
     loadContestData();
+    // Cleanup function to clear all data when component unmounts
     return () => {
       clearContest();
       clearJudges();
@@ -96,9 +114,11 @@ export default function ManageContest() {
     };
   }, [parsedContestId]);
 
+  // Load teams and judges for each cluster when clusters are available
   useEffect(() => {
     const fetchTeams = async () => {
       if (clusters && clusters.length > 0) {
+        // Fetch teams and judges for each cluster
         for (const cluster of clusters) {
           await getTeamsByClusterId(cluster.id);
           await fetchJudgesByClusterId(cluster.id);
@@ -169,13 +189,6 @@ export default function ManageContest() {
     (cluster) => teamsByClusterId[cluster.id]?.length > 0
   );
 
-  // Debug: Log cluster and team data
-  console.log("ManageContest Debug:", {
-    clusters: clusters.length,
-    hasClusters,
-    teamsByClusterId: Object.keys(teamsByClusterId).length,
-    hasTeams
-  });
 
   const handleChange = (_event: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);
@@ -323,8 +336,6 @@ export default function ManageContest() {
     <Button
       variant="outlined"
       onClick={() => {
-        console.log("Assign Judge button clicked");
-        console.log("hasClusters:", hasClusters);
         setOpenAssignJudgeModal(true);
       }}
       disabled={!hasClusters}
@@ -436,6 +447,18 @@ export default function ManageContest() {
       mode="new"
       clusters={clusters}
       contestid={parsedContestId}
+      onSuccess={() => {
+        // Refresh all data after successful judge creation
+        getAllJudgesByContestId(parsedContestId);
+        fetchClustersByContestId(parsedContestId);
+        
+        // Refresh judges for all clusters
+        if (clusters && clusters.length > 0) {
+          clusters.forEach(cluster => {
+            fetchJudgesByClusterId(cluster.id);
+          });
+        }
+      }}
     />
     <ClusterModal
       open={openClusterModal}
@@ -453,17 +476,14 @@ export default function ManageContest() {
     <AssignJudgeToContestModal
       open={openAssignJudgeModal}
       handleClose={() => {
-        console.log("Closing AssignJudge modal");
         setOpenAssignJudgeModal(false);
       }}
       onSuccess={() => {
-        console.log("Judge assignment successful");
         // Refresh judges after successful assignment
         getAllJudgesByContestId(parsedContestId);
         setOpenAssignJudgeModal(false);
       }}
     />
-    {console.log("ManageContest - openAssignJudgeModal:", openAssignJudgeModal)}
   </>
 );
 }
