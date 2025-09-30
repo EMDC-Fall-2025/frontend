@@ -47,6 +47,7 @@ export default function AssignJudgeToContestModal(
   // ----- State Management -----
   // Use stable selectors to prevent unnecessary re-renders
   const contests = useContestStore((s) => s.allContests);
+  const fetchAllContests = useContestStore((s) => s.fetchAllContests);
 
   // ----- Form State Management -----
   // Track user selections for judge, contest, and cluster
@@ -83,6 +84,15 @@ export default function AssignJudgeToContestModal(
   const [assignedJudgeClusterPairs, setAssignedJudgeClusterPairs] = React.useState<Set<string>>(new Set());
   
   const availableClusters = contestClusters;
+  const filteredClusters = React.useMemo(() => {
+    if (selectedJudgeId <= 0 || selectedContestId <= 0) {
+      return availableClusters;
+    }
+    return availableClusters.filter((cluster) => {
+      const pairKey = `${selectedJudgeId}-${selectedContestId}-${cluster.id}`;
+      return !assignedJudgeClusterPairs.has(pairKey);
+    });
+  }, [availableClusters, selectedJudgeId, selectedContestId, assignedJudgeClusterPairs]);
   // Filter out judges who are already assigned to the selected contest AND cluster combination
   const availableJudges = selectedContestId > 0 && selectedClusterId > 0
     ? allJudges.filter(judge => {
@@ -99,9 +109,14 @@ export default function AssignJudgeToContestModal(
     setError(null);
     setSuccess(null);
 
-    // load all judges
     (async () => {
       try {
+        // Ensure contests are loaded for the contest dropdown
+        if (contests.length === 0) {
+          await fetchAllContests();
+        }
+
+        // Load all judges
         const response = await api.get("/judge/getAll/");
         if (!isMounted) return;
         if (response.data?.Judges) {
@@ -111,16 +126,14 @@ export default function AssignJudgeToContestModal(
         }
       } catch (err) {
         if (!isMounted) return;
-        // Handle error loading judges list
-        setError("Failed to load judges");
+        setError("Failed to load required data");
       }
     })();
 
     return () => {
       isMounted = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, fetchAllContests, contests.length]);
 
   // Load clusters when a contest is selected
   React.useEffect(() => {
@@ -156,31 +169,33 @@ export default function AssignJudgeToContestModal(
             setContestClusters([]);
           }
           
-          // Fetch assigned judges for this contest and cluster
+          // Fetch assigned judges by cluster to build precise judge–contest–cluster pairs
           const assignedPairs = new Set<string>();
-          for (const cluster of clustersResponse.data?.Clusters || []) {
-            try {
-              const judgesResponse = await axios.get(
-                `/api/mapping/contestToJudge/getAllJudgesByContestId/${selectedContestId}/`,
-                {
-                  headers: {
-                    Authorization: `Token ${token}`,
-                    "Content-Type": "application/json",
-                  },
+          await Promise.all(
+            (clustersResponse.data?.Clusters || []).map(async (cluster: any) => {
+              try {
+                const judgesByClusterResponse = await axios.get(
+                  `/api/mapping/clusterToJudge/getAllJudgesByCluster/${cluster.id}/`,
+                  {
+                    headers: {
+                      Authorization: `Token ${token}`,
+                      "Content-Type": "application/json",
+                    },
+                  }
+                );
+                if (judgesByClusterResponse.data?.Judges) {
+                  judgesByClusterResponse.data.Judges.forEach((judge: any) => {
+                    const pairKey = `${judge.id}-${selectedContestId}-${cluster.id}`;
+                    assignedPairs.add(pairKey);
+                  });
                 }
-              );
-              if (judgesResponse.data?.Judges) {
-                judgesResponse.data.Judges.forEach((judge: any) => {
-                  const pairKey = `${judge.id}-${selectedContestId}-${cluster.id}`;
-                  assignedPairs.add(pairKey);
-                });
+              } catch (error) {
+                // Ignore individual cluster errors to allow other clusters to proceed
               }
-            } catch (error) {
-              // Handle individual cluster judge fetch errors gracefully
-            }
-          }
-          
-          // Update assigned judge-cluster pairs to prevent duplicate assignments
+            })
+          );
+
+          // Update assigned judge–cluster pairs to prevent duplicate assignments
           setAssignedJudgeClusterPairs(assignedPairs);
         } catch (error) {
           // Handle general data fetching errors
@@ -349,7 +364,7 @@ export default function AssignJudgeToContestModal(
             <MenuItem value={-1}>
               <em>Choose a cluster...</em>
             </MenuItem>
-            {availableClusters.map((cluster) => (
+            {filteredClusters.map((cluster) => (
               <MenuItem key={cluster.id} value={cluster.id}>
                 {cluster.cluster_name}
               </MenuItem>
