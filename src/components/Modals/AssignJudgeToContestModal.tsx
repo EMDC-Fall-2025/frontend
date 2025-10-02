@@ -25,6 +25,7 @@ import {
   Box,
   Typography,
   Alert,
+  IconButton
 } from "@mui/material";
 import Modal from "./Modal";
 import theme from "../../theme";
@@ -32,6 +33,7 @@ import { useContestStore } from "../../store/primary_stores/contestStore";
 import { Judge } from "../../types";
 import { api } from "../../lib/api";
 import axios from "axios";
+import SearchBar from "../SearchBar";
 
 export interface IAssignJudgeToContestModalProps {
   open: boolean;
@@ -77,6 +79,10 @@ export default function AssignJudgeToContestModal(
 
   // ----- Judges -----
   const [allJudges, setAllJudges] = React.useState<Judge[]>([]);
+
+  //state for searching judges
+  const [searchJudge, setSearchJudge] = React.useState("");
+  
 
   // Local state for clusters specific to selected contest
   const [contestClusters, setContestClusters] = React.useState<any[]>([]);
@@ -310,23 +316,32 @@ export default function AssignJudgeToContestModal(
         )}
 
         {/* Judge Selection */}
-        <FormControl fullWidth sx={{ mb: 3 }}>
-          <InputLabel>Select Judge</InputLabel>
-          <Select
-            value={selectedJudgeId}
-            label="Select Judge"
-            onChange={(e) => setSelectedJudgeId(Number(e.target.value))}
-          >
-            <MenuItem value={-1}>
-              <em>Choose a judge...</em>
-            </MenuItem>
-            {availableJudges.map((judge) => (
-              <MenuItem key={judge.id} value={judge.id}>
-                {judge.first_name} {judge.last_name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        {allJudges.length > 0 && (
+    <Box sx={{ mb: 3 }}>
+        <SearchBar 
+            judges={allJudges} 
+            onJudgeSelect={(judge)=> setSelectedJudgeId(judge?.id || -1)}
+        />
+    </Box>
+)}
+        
+        {/* // <FormControl fullWidth sx={{ mb: 3 }}>
+        //   <InputLabel>Select Judge</InputLabel>
+        //   <Select
+        //     value={selectedJudgeId}
+        //     label="Select Judge"
+        //     onChange={(e) => setSelectedJudgeId(Number(e.target.value))}
+        //   >
+        //     <MenuItem value={-1}>
+        //       <em>Choose a judge...</em>
+        //     </MenuItem>
+        //     {availableJudges.map((judge) => (
+        //       <MenuItem key={judge.id} value={judge.id}>
+        //         {judge.first_name} {judge.last_name}
+        //       </MenuItem>
+        //     ))}
+        //   </Select>
+        // </FormControl> */}
 
         {/* Contest Selection */}
         <FormControl fullWidth sx={{ mb: 3 }}>
