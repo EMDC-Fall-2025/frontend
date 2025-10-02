@@ -9,14 +9,14 @@ import {
   Chip,
 } from "@mui/material";
 import axios from "axios";
-import { useContestStore } from "../../store/primary_stores/contestStore";
-import { useMapContestOrganizerStore } from "../../store/map_stores/mapContestToOrganizerStore";
-import { useAuthStore } from "../../store/primary_stores/authStore";
-import theme from "../../theme";
-import { Judge, Contest } from "../../types";
+import { useContestStore } from "../store/primary_stores/contestStore";
+import { useMapContestOrganizerStore } from "../store/map_stores/mapContestToOrganizerStore";
+import { useAuthStore } from "../store/primary_stores/authStore";
+import theme from "../theme";
+import { Judge, Contest } from "../types";
 
 interface ContestOverviewTableProps {
-  contests?: Contest[]; // Optional prop to pass specific contests
+  contests?: Contest[]; 
 }
 
 export default function ContestOverviewTable({ contests: propContests }: ContestOverviewTableProps = {}) {
@@ -139,7 +139,7 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
     );
   }
 
-  // Show message when no contests are available (backend might be down)
+  // Show message when no contests are available
   if (contests.length === 0) {
     return (
       <Box>
@@ -163,7 +163,7 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
           }}
         >
           <Typography variant="body1" color="text.secondary">
-            No contests available. Please check if the backend server is running.
+            No contests available. 
           </Typography>
         </Box>
       </Box>

@@ -31,6 +31,7 @@ import MultiTeamJournalScore from "./pages/JournalMultiTeamScore";
 import MultiTeamMachineDesignScore from "./pages/MachineDesignMultiTeamScore";
 import ChampionshipScore from "./pages/ChampionshipScore";
 import { Toaster } from "react-hot-toast";
+import Ranking from "./components/Tables/Rankings";
 
 function App() {
   const currentLink = useLocation().pathname;
@@ -47,6 +48,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/forgot-password/" element={<ForgotPassword />} />
           <Route path="/contestresults/:contestId" element={<ContestScores />} />
+          <Route path="/rank" element={<Ranking/>}/>
           {isAuthenticated && role?.user_type != 4 && (
             <Route path="/judging/:judgeId/" element={<Judging />} />
           )}
@@ -160,6 +162,7 @@ function App() {
             <Route path="/results/:contestId" element={<InternalResults />} />
           )}
           <Route path="/set-password/" element={<SetPassword />} />
+          
           {isAuthenticated && (
             <Route
               path="/manage-contest/:contestId/"
@@ -174,7 +177,10 @@ function App() {
               element={<ScoreBreakdown />}
             />
           )}
+        
         </Routes>
+        
+        
         <Toaster 
           position="top-center"
           toastOptions={{
