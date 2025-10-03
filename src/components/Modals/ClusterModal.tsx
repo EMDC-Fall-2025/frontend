@@ -14,6 +14,8 @@ import theme from "../../theme";
 import { useEffect, useState } from "react";
 import { useClusterStore } from "../../store/primary_stores/clusterStore";
 import { useMapClusterToContestStore } from "../../store/map_stores/mapClusterToContestStore";
+import toast from "react-hot-toast";
+
 
 export interface IClusterModalProps {
   open: boolean;
@@ -52,9 +54,11 @@ export default function ClusterModal(props: IClusterModalProps) {
           contestid: contestid,
         });
         fetchClustersByContestId(contestid);
+        toast.success("Cluster created successfully!");
         handleCloseModal();
       } catch (error) {
         console.error("Failed to create cluster", error);
+        toast.error("Failed to create cluster");
       }
     }
   };
@@ -65,9 +69,11 @@ export default function ClusterModal(props: IClusterModalProps) {
       try {
         await editCluster({ id: clusterData.id, cluster_name: clusterName });
         fetchClustersByContestId(contestid);
+        toast.success("Cluster updated successfully!");
         handleCloseModal();
       } catch (error) {
         console.error("Failed to edit cluster", error);
+        toast.error("Failed to update cluster");
       }
     }
   };

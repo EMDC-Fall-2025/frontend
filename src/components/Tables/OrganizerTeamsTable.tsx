@@ -9,14 +9,19 @@ import TableContainer from "@mui/material/TableContainer";
 import TableRow from "@mui/material/TableRow";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
-import { Button, CircularProgress } from "@mui/material";
+import { Button, CircularProgress, Typography } from "@mui/material";
 import ClusterModal from "../Modals/ClusterModal";
+import Modal from "../Modals/Modal";
+import theme from "../../theme";
 import { useState } from "react";
 import TeamModal from "../Modals/TeamModal";
 import { useMapCoachToTeamStore } from "../../store/map_stores/mapCoachToTeamStore";
 import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
+import { useClusterStore } from "../../store/primary_stores/clusterStore";
+import { useMapClusterToContestStore } from "../../store/map_stores/mapClusterToContestStore";
 import { Cluster, TeamData } from "../../types";
 import DisqualificationModal from "../Modals/DisqualificationModal";
+import toast from "react-hot-toast";
 
 interface IOrganizerTeamsTableProps {
   clusters: any[];
@@ -36,8 +41,12 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
   const [teamData, setTeamData] = useState<TeamData | undefined>(undefined);
   const { coachesByTeams } = useMapCoachToTeamStore();
   const { teamsByClusterId } = useMapClusterTeamStore();
+  const { deleteCluster } = useClusterStore();
+  const { fetchClustersByContestId } = useMapClusterToContestStore();
   const [openDisqualificationModal, setOpenDisqualificationModal] =
     useState(false);
+  const [openDeleteConfirmModal, setOpenDeleteConfirmModal] = useState(false);
+  const [clusterToDelete, setClusterToDelete] = useState<number | null>(null);
   const [currentTeamName, setCurrentTeamName] = useState("");
   const [currentTeamId, setCurrentTeamId] = useState(0);
   const [currentTeamClusterId, setCurrentTeamClusterId] = useState(0);
@@ -50,10 +59,38 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
     }
   };
 
+  const handleDeleteClick = (clusterId: number) => {
+    setClusterToDelete(clusterId);
+    setOpenDeleteConfirmModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (clusterToDelete) {
+      try {
+        await deleteCluster(clusterToDelete);
+        toast.success('Cluster deleted successfully!');
+        // Refresh clusters list
+        fetchClustersByContestId(contestId);
+        setOpenDeleteConfirmModal(false);
+        setClusterToDelete(null);
+      } catch (error) {
+        toast.error('Failed to delete cluster');
+        console.error('Delete cluster error:', error);
+      }
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setOpenDeleteConfirmModal(false);
+    setClusterToDelete(null);
+  };
+
   const handleOpenClusterModal = (clusterData: Cluster) => {
     setClusterData(clusterData);
     setOpenClusterModal(true);
   };
+
+  
 
   const handleOpenTeamModal = (teamData: TeamData) => {
     setTeamData(teamData);
@@ -208,6 +245,23 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
                     </Button>
                   )}
                 </TableCell>
+                <TableCell align="right">
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleDeleteClick(cluster.id)}
+                    sx={{
+                      color: theme.palette.error.main,
+                      borderColor: theme.palette.error.main,
+                      "&:hover": {
+                        backgroundColor: theme.palette.error.light,
+                        borderColor: theme.palette.error.dark,
+                      },
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </TableCell>
               </TableRow>
               <TableRow>
                 <TableCell
@@ -253,6 +307,41 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
         teamId={currentTeamId}
         clusterId={currentTeamClusterId}
       />
+      
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={openDeleteConfirmModal}
+        handleClose={handleCancelDelete}
+        title="Delete Cluster"
+      >
+        <Box sx={{ p: 2, textAlign: 'center' }}>
+          <Typography variant="body1" sx={{ mb: 3 }}>
+            Are you sure you want to delete this cluster? This action cannot be undone.
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+            <Button
+              variant="outlined"
+              onClick={handleCancelDelete}
+              sx={{
+                borderColor: theme.palette.grey[400],
+                color: theme.palette.grey[600],
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleConfirmDelete}
+              sx={{
+                bgcolor: theme.palette.error.main,
+                "&:hover": { bgcolor: theme.palette.error.dark },
+              }}
+            >
+              Delete
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
     </TableContainer>
   ) : (
     <CircularProgress />

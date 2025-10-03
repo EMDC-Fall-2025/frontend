@@ -223,27 +223,27 @@ export default function Organizer() {
           </TabPanel>
 
           {/* Team Rankings */}
-<TabPanel
-  value="4"
-  sx={{
-    p: 0,
-    border: `1px solid ${theme.palette.grey[300]}`,
-    borderTop: 0,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-    backgroundColor: "#fff",
-  }}
->
-  <Box sx={{ px: 3, py: 2 }}>
-    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-      Team Rankings
-    </Typography>
-  </Box>
-  <Divider />
-  <Box sx={{ px: 3, pb: 3 }}>
-    <Ranking />
-  </Box>
-</TabPanel>
+          <TabPanel
+            value="4"
+            sx={{
+              p: 0,
+              border: `1px solid ${theme.palette.grey[300]}`,
+              borderTop: 0,
+              borderBottomLeftRadius: 12,
+              borderBottomRightRadius: 12,
+              backgroundColor: "#fff",
+            }}
+          >
+            <Box sx={{ px: 3, py: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                Team Rankings
+              </Typography>
+            </Box>
+            <Divider />
+            <Box sx={{ px: 3, pb: 3 }}>
+              <Ranking />
+            </Box>
+          </TabPanel>
         </TabContext>
       </Container>
 

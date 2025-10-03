@@ -299,7 +299,13 @@ export default function JudgeModal(props: IJudgeModalProps) {
         
         // Show specific error message or generic fallback
         if (errorMessage) {
-          toast.error(`Failed to update judge: ${errorMessage}`);
+          //when a cluster is edited with no teams
+    
+          if (errorMessage.includes("No teams found for the specified cluster")) {
+            toast.error("Cannot update judge: The selected cluster has no teams. Please add teams to the cluster first or select a different cluster.");
+          } else {
+            toast.error(`Failed to update judge: ${errorMessage}`);
+          }
         } else {
           toast.error("Failed to update judge. Please try again.");
         }

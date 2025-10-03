@@ -262,7 +262,7 @@ function Row(props: { row: ReturnType<typeof createData> }) {
         handleClose={() => setOpenAreYouSureUnassign(false)}
         title="Are you sure you want to unassign this contest?"
         handleSubmit={() => handleUnassign(organizerId, contestId)}
-        error={mapContestOrganizerError}
+
       />
     </React.Fragment>
   );
@@ -361,7 +361,6 @@ export default function AdminOrganizerTable() {
         handleClose={() => setOpenAreYouSure(false)}
         title="Are you sure you want to delete this organizer?"
         handleSubmit={() => handleDelete(organizerId)}
-        error={organizerError}
       />
       <AssignContestModal
         organizerId={organizerId}

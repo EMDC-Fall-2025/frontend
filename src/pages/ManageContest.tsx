@@ -56,57 +56,54 @@ export default function ManageContest() {
     useContestStore();
   // Judge data management for the contest
   const {
-    judges,
     getAllJudgesByContestId,
-    clearJudges,
-    isLoadingMapContestJudge,
+    clearJudges
   } = useContestJudgeStore();
   // Cluster data management for the contest
   const {
     clusters,
     fetchClustersByContestId,
     clearClusters,
-    isLoadingMapClusterContest,
   } = useMapClusterToContestStore();
   // Team data management organized by clusters
   const {
     getTeamsByClusterId,
     teamsByClusterId,
     clearTeamsByClusterId,
-    isLoadingMapClusterToTeam,
   } = useMapClusterTeamStore();
   // Judge-cluster mapping for organizing judges by clusters
   const {
-    fetchClustersForJudges,
+
     fetchJudgesByClusterId,
     judgesByClusterId,
     clearJudgesByClusterId,
     clearJudgeClusters,
-    isLoadingMapClusterJudge,
   } = useMapClusterJudgeStore();
   // Judge operations and score sheet management
   const {
-    checkAllScoreSheetsSubmitted,
     clearSubmissionStatus,
-    isLoadingJudge,
   } = useJudgeStore();
   // Coach data management for teams
-  const { fetchCoachesByTeams, clearCoachesByTeams, isLoadingMapCoachToTeam } =
+  const { fetchCoachesByTeams, clearCoachesByTeams } =
     useMapCoachToTeamStore();
 
   // Load all contest-related data on component mount
   useEffect(() => {
-    const loadContestData = async () => {
+    const loadAllData = async () => {
       if (parsedContestId) {
-        // Load contest details, judges, and clusters for the specific contest
+        // Load contest details first
         await fetchContestById(parsedContestId);
-        await getAllJudgesByContestId(parsedContestId);
-        await fetchClustersByContestId(parsedContestId);
+        
+        // Then load judges and clusters in parallel
+        await Promise.all([
+          getAllJudgesByContestId(parsedContestId),
+          fetchClustersByContestId(parsedContestId)
+        ]);
       }
     };
 
-    loadContestData();
-    // Cleanup function to clear all data when component unmounts
+    loadAllData();
+    
     return () => {
       clearContest();
       clearJudges();
@@ -114,27 +111,47 @@ export default function ManageContest() {
     };
   }, [parsedContestId]);
 
-  // Load teams and judges for each cluster when clusters are available
+  // Load teams for each cluster when clusters are available
   useEffect(() => {
-    const fetchTeams = async () => {
+    const loadTeams = async () => {
       if (clusters && clusters.length > 0) {
-        // Fetch teams and judges for each cluster
         for (const cluster of clusters) {
           await getTeamsByClusterId(cluster.id);
+        }
+      }
+    };
+
+    if (clusters.length > 0) {
+      loadTeams();
+    }
+    
+    return () => {
+      clearTeamsByClusterId();
+    };
+  }, [clusters.length]);
+
+  // Load judges for each cluster when clusters are available
+  useEffect(() => {
+    const loadJudges = async () => {
+      if (clusters && clusters.length > 0) {
+        for (const cluster of clusters) {
           await fetchJudgesByClusterId(cluster.id);
         }
       }
     };
 
-    fetchTeams();
+    if (clusters.length > 0) {
+      loadJudges();
+    }
+    
     return () => {
-      clearTeamsByClusterId();
       clearJudgesByClusterId();
     };
-  }, [clusters, getTeamsByClusterId, fetchJudgesByClusterId]);
+  }, [clusters.length]);
 
+  // Load coaches when teams are available
   useEffect(() => {
-    const fetchCoaches = async () => {
+    const loadCoaches = async () => {
       if (clusters && clusters.length > 0) {
         for (const cluster of clusters) {
           const teams = teamsByClusterId[cluster.id];
@@ -145,25 +162,19 @@ export default function ManageContest() {
       }
     };
 
-    fetchCoaches();
+    const hasTeams = clusters.some(cluster => 
+      teamsByClusterId[cluster.id]?.length > 0
+    );
+
+    if (hasTeams) {
+      loadCoaches();
+    }
+    
     return () => {
       clearCoachesByTeams();
     };
-  }, [clusters, teamsByClusterId]);
+  }, [clusters.length, Object.keys(teamsByClusterId).length]);
 
-  useEffect(() => {
-    const fetchClustersAndSubmissionStatus = async () => {
-      if (judges.length > 0) {
-        fetchClustersForJudges(judges);
-        checkAllScoreSheetsSubmitted(judges);
-      }
-    };
-    fetchClustersAndSubmissionStatus();
-    return () => {
-      clearSubmissionStatus();
-      clearJudgeClusters();
-    };
-  }, [judges]);
 
   useEffect(() => {
     const handlePageHide = () => {
@@ -196,23 +207,9 @@ export default function ManageContest() {
   };
 
 
-  return isLoadingContest ||
-  isLoadingJudge ||
-  isLoadingMapClusterContest ||
-  isLoadingMapClusterJudge ||
-  isLoadingMapClusterToTeam ||
-  isLoadingMapCoachToTeam ||
-  isLoadingMapContestJudge ? (
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "50vh",
-      }}
-    >
+  return isLoadingContest? (
+    
       <CircularProgress />
-    </Box>
   ) : (
   <>
     {/* Back to Dashboard */}

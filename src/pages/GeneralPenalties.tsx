@@ -44,9 +44,8 @@ export default function GeneralPenalties() {
     isLoadingScoreSheet,
     updateScores,
     editScoreSheet,
-    scoreSheetError,
   } = useScoreSheetStore();
-  const { judgeDisqualifyTeam, judgeError } = useJudgeStore();
+  const { judgeDisqualifyTeam } = useJudgeStore();
   const navigate = useNavigate();
 
   // Parse route ids once for convenience
@@ -449,14 +448,13 @@ export default function GeneralPenalties() {
               handleClose={() => setOpenAreYouSure(false)}
               title="Are you sure you want to submit?"
               handleSubmit={() => handleSubmitPenalties()}
-              error={scoreSheetError}
             />
+
             <AreYouSureModal
               open={openConfirmDisqualification}
               handleClose={() => setOpenConfirmDisqualification(false)}
               title={`Are you sure you want to disqualify ${team?.team_name}?`}
               handleSubmit={() => handleDisqualify()}
-              error={judgeError}
             />
           </Box>
         </Paper>
