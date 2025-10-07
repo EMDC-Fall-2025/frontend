@@ -3,7 +3,7 @@ import  { useEffect, useState } from "react";
 import theme from "../../theme";
 import { TriangleIcon, Trophy} from "lucide-react";
 import { useAuthStore } from "../../store/primary_stores/authStore";
-import useRankingsFacade from "../../store/facades/rankingsStore";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
  
 
@@ -13,21 +13,101 @@ import { useNavigate } from "react-router-dom";
     const navigate = useNavigate();
     const [selectedTeams, setSelectedTeams] = useState<number[]>([])
     const [openCluster, setOpenCluster] = useState<Set<number>>(new Set())
-    const {contests, clusters, loadOrganizerContests, loadRankings } = useRankingsFacade()
+    const { isAuthenticated, role, token } = useAuthStore()
+
+    const [contests, setContests] = useState<any[]>([])
+    const [clusters, setClusters] = useState<any[]>([])
     const [selectedContest, setSelectedContest] = useState<any>(null)
-    const { isAuthenticated, role } = useAuthStore()
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
 
-    // error checks
+    // Load contests for organizer
     useEffect(() => {
-      if (!isAuthenticated) return
-      loadOrganizerContests()
-    }, [isAuthenticated, role, loadOrganizerContests])
+      const fetchContests = async () => {
+        try {
+          setLoading(true)
+          setError(null)
+          if (!isAuthenticated || !token) {
+            setError('Please log in to view rankings')
+            return
+          }
+          const organizerId = role?.user?.id
+          if (!organizerId) {
+            setError('Organizer ID not found')
+            return
+          }
+          const { data } = await axios.get(`/api/mapping/contestToOrganizer/getByOrganizer/${organizerId}/`, {
+            headers: { Authorization: `Token ${token}` }
+          })
+          const contestsData = data?.Contests ?? []
+          setContests(contestsData)
+          if (contestsData.length > 0) setSelectedContest(contestsData[0])
+          else setError('No contests found for this organizer')
+        } catch (e) {
+          setError('Failed to load contests')
+        } finally {
+          setLoading(false)
+        }
+      }
+      if (isAuthenticated) fetchContests()
+    }, [isAuthenticated, role, token])
 
+    // Load clusters and teams for selected contest
     useEffect(() => {
-      if (!selectedContest) return
-      loadRankings(selectedContest.id)
-    }, [selectedContest, loadRankings])
+      const fetchClusters = async () => {
+        if (!selectedContest || !token) return
+        try {
+          setLoading(true)
+          setError(null)
+          const { data: clusterResp } = await axios.get(`/api/mapping/clusterToContest/getAllClustersByContest/${selectedContest.id}/`, {
+            headers: { Authorization: `Token ${token}` }
+          })
+          const clusterData = (clusterResp?.Clusters ?? []).map((c: any) => ({ id: c.id, cluster_name: c.cluster_name ?? c.name, teams: [] }))
+          const withTeams = await Promise.all(
+            clusterData.map(async (cluster: any) => {
+              try {
+                const { data: teamResp } = await axios.get(`/api/mapping/clusterToTeam/getAllTeamsByCluster/${cluster.id}/`, {
+                  headers: { Authorization: `Token ${token}` }
+                })
+                const teams = (teamResp?.Teams ?? []).map((t: any) => ({ id: t.id, team_name: t.team_name ?? t.name, total_score: t.total_score ?? 0 }))
+                const ranked = teams
+                  .sort((a: any, b: any) => (b.total_score ?? 0) - (a.total_score ?? 0))
+                  .map((t: any, i: number) => ({ ...t, cluster_rank: i + 1 }))
+
+                // derive per-team status without changing ranking logic
+                const teamsWithStatus = await Promise.all(
+                  ranked.map(async (t: any) => {
+                    try {
+                      const { data: s } = await axios.get(`/api/mapping/scoreSheet/allSubmittedForTeam/${t.id}/`, {
+                        headers: { Authorization: `Token ${token}` }
+                      })
+                      const total = t.total_score ?? 0
+                      const status = (s?.allSubmitted && total > 0)
+                        ? 'completed'
+                        : ((s?.submittedCount > 0 || total > 0) ? 'in_progress' : 'not_started')
+                      return { ...t, status }
+                    } catch {
+                      return { ...t, status: 'not_started' as const }
+                    }
+                  })
+                )
+
+                return { ...cluster, teams: teamsWithStatus }
+              } catch {
+                return { ...cluster, teams: [] }
+              }
+            })
+          )
+          setClusters(withTeams)
+        } catch (e) {
+          setError('Failed to load contest data')
+        } finally {
+          setLoading(false)
+        }
+      }
+      fetchClusters()
+    }, [selectedContest, token])
 
     // autoselect
     useEffect(() => {
@@ -58,7 +138,7 @@ import { useNavigate } from "react-router-dom";
               Select Contest
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {contests.map((contest) => (
+                  {contests.map((contest) => (
                 <Button
                   key={contest.id}
                   variant={selectedContest?.id === contest.id ? "contained" : "outlined"}
@@ -77,7 +157,7 @@ import { useNavigate } from "react-router-dom";
                     py: 1
                   }}
                 >
-                  {contest.name}
+                  {contest.contest_name|| contest.name}
                 </Button>
               ))}
             </Box>

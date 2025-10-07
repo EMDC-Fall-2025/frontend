@@ -262,7 +262,7 @@ if (type === "current" && contests) {
             alignItems="center"
             height="100%"
           >
-            <CircularProgress />
+            
           </Box>
         ) : rows.length === 0 ? (
           <>

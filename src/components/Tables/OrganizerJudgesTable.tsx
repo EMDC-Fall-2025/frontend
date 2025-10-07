@@ -11,6 +11,7 @@ import Typography from "@mui/material/Typography";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { Button, Container, CircularProgress } from "@mui/material";
+import axios from "axios";
 import { useState } from "react";
 import JudgeModal from "../Modals/JudgeModal";
 import { useNavigate } from "react-router-dom";
@@ -150,7 +151,7 @@ function JudgesTable(props: IJudgesTableProps) {
   const [openJudgeModal, setOpenJudgeModal] = useState(false);
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
   const [judgeData, setJudgeData] = useState<JudgeData | undefined>(undefined);
-  const { submissionStatus } = useJudgeStore();
+  const { submissionStatus, checkAllScoreSheetsSubmitted } = useJudgeStore();
   const [judgeId, setJudgeId] = useState(0);
   const { fetchJudgesByClusterId } = useMapClusterJudgeStore();
 
@@ -158,6 +159,14 @@ function JudgesTable(props: IJudgesTableProps) {
   const { deleteJudge, judgeError } = useJudgeStore();
 
   const titles = ["Lead", "Technical", "General", "Journal"];
+
+  // Ensure we compute the all-submitted status for each judge when data changes
+  React.useEffect(() => {
+    if (judges && judges.length > 0) {
+      checkAllScoreSheetsSubmitted(judges as any);
+    }
+    
+  }, [judges]);
 
   const handleOpenJudgeModal = (judgeData: JudgeData) => {
     setJudgeData(judgeData);
@@ -170,8 +179,17 @@ function JudgesTable(props: IJudgesTableProps) {
   };
 
   const handleDelete = async (judgeId: number) => {
-    await deleteJudge(judgeId);
-    await fetchJudgesByClusterId(judgeClusters[judgeId].id);
+    // Unassign judge from THIS contest only (do not delete judge globally)
+    const token = localStorage.getItem("token");
+    await axios.delete(`/api/mapping/contestToJudge/remove/${judgeId}/${contestid}/`, {
+      headers: { Authorization: `Token ${token}` },
+    });
+    // Refresh judges for all clusters in this contest to reflect removal
+    if (clusters && clusters.length > 0) {
+      for (const c of clusters) {
+        await fetchJudgesByClusterId(c.id);
+      }
+    }
   };
 
   const handleCloseJudgeModal = () => {
