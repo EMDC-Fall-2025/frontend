@@ -14,6 +14,7 @@ import {
   Card,
   CardContent,
   Grid,
+  Button,
 } from "@mui/material";
 import theme from "../theme";
 import OrganizerContestTable from "../components/Tables/OrganizerContestTable";
@@ -27,13 +28,16 @@ import CampaignIcon from "@mui/icons-material/Campaign";
 import HistoryIcon from "@mui/icons-material/History";
 import GavelIcon from "@mui/icons-material/Gavel";
 import Ranking from "../components/Tables/Rankings";
-import { Trophy } from "lucide-react";
+import { AwardIcon, Trophy } from "lucide-react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { AddIcCallOutlined, Event, EventAvailable } from "@mui/icons-material";
 
 export default function Organizer() {
   const [value, setValue] = useState("1");
   const { fetchContestsByOrganizerId, contests } = useMapContestOrganizerStore();
   const { allSheetsSubmittedForContests } = useMapScoreSheetStore();
   const { role } = useAuthStore();
+  const navigate = useNavigate()
 
   const organizerId = role ? role.user.id : null;
 
@@ -98,6 +102,21 @@ export default function Organizer() {
             <StatCard value={contests.length} label="Total Contests" />
           </Grid>
         </Grid>
+        <Button
+          onClick={() => navigate('/organizerAwards/')}
+          variant="contained"
+          startIcon={<AwardIcon />}
+          sx={{
+            textTransform: "none",
+              borderRadius: 2,
+              px: 2.5,
+              mb: 2,
+              bgcolor: theme.palette.success.main,
+              "&:hover": { bgcolor: theme.palette.success.dark },
+            }}
+          >
+            Assign Awards
+          </Button>
 
         {/* Tab Section */}
         <TabContext value={value}>

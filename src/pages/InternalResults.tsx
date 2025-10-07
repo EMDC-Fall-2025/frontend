@@ -12,14 +12,19 @@ export default function InternalResults() {
   const { role } = useAuthStore();
 
   useEffect(() => {
-    const loadContestData = async () => {
-      if (parsedContestId) {
-        await fetchTeamsByContest(parsedContestId);
-      }
+    if (!parsedContestId) return;
+  
+    const load = async () => {
+      await fetchTeamsByContest(parsedContestId);
     };
-
-    loadContestData();
+  
+    load(); // initial
+  
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+  
     return () => {
+      window.removeEventListener("focus", onFocus);
       clearTeamsByContest();
     };
   }, [parsedContestId]);

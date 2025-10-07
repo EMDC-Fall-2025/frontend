@@ -183,31 +183,31 @@ export default function ScoreBreakdownTableStandard(
                   {type === ScoreSheetType.Presentation && (
                     <TableCell>
                       {scoreSheetBreakdown &&
-                        scoreSheetBreakdown[ScoreSheetType.Presentation][
+                        (scoreSheetBreakdown[ScoreSheetType.Presentation][
                           PresentationScoreSheetFields[
                             question.field as keyof typeof PresentationScoreSheetFields
                           ]
-                        ].join(", ")}
+                        ] as any[]).reduce((sum, v) => (Number(sum) || 0) + (Number(v) || 0), 0)}
                     </TableCell>
                   )}
                   {type === ScoreSheetType.Journal && (
                     <TableCell>
                       {scoreSheetBreakdown &&
-                        scoreSheetBreakdown[ScoreSheetType.Journal][
+                        (scoreSheetBreakdown[ScoreSheetType.Journal][
                           JournalScoreSheetFields[
                             question.field as keyof typeof JournalScoreSheetFields
                           ]
-                        ].join(", ")}
+                        ] as any[]).reduce((sum, v) => (Number(sum) || 0) + (Number(v) || 0), 0)}
                     </TableCell>
                   )}
                   {type === ScoreSheetType.MachineDesign && (
                     <TableCell>
                       {scoreSheetBreakdown &&
-                        scoreSheetBreakdown[ScoreSheetType.MachineDesign][
+                        (scoreSheetBreakdown[ScoreSheetType.MachineDesign][
                           MachineDesignScoreSheetFields[
                             question.field as keyof typeof MachineDesignScoreSheetFields
                           ]
-                        ].join(", ")}
+                        ] as any[]).reduce((sum, v) => (Number(sum) || 0) + (Number(v) || 0), 0)}
                     </TableCell>
                   )}
                 </>

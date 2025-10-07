@@ -64,7 +64,7 @@ export default function Nav() {
             zIndex: (t) => t.zIndex.drawer + 2,
           }}
         >
-          <Container maxWidth="lg" sx={{ py: 1 }}>
+          <Container maxWidth={isHomePage ? false : "lg"} disableGutters={isHomePage} sx={{ py: 1 }}>
             {/* Boxy white bar with soft shadow that reads on white backgrounds */}
             <Paper
               elevation={0}

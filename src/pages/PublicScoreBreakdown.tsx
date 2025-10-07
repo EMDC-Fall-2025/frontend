@@ -52,9 +52,7 @@ export default function PulicScoreBreakdown() {
       <Typography variant="h1" sx={{ ml: 5, mt: 5, mr: 5, mb: 2 }}>
         Score Breakdown
       </Typography>
-      <Typography sx={{ ml: 5 }}>
-        *For best printing results print landscape
-      </Typography>
+      
       <Typography variant="h2" sx={{ m: 5 }}>
         Journal
       </Typography>
