@@ -199,7 +199,7 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
           set({
             contestsByOrganizers: response.data,
           });
-          console.log(response.data);
+          // Process response data
           set({ mapContestOrganizerError: null });
         } catch (error) {
           const errorMessage = "Error fetching organizers";

@@ -6,6 +6,7 @@ import theme from "../../theme";
 interface ContestResultsRow {
   id: number;
   team_name: string;
+  school_name: string;
   team_rank: number;
   total_score: number;
   coachName: string;
@@ -24,6 +25,7 @@ export default function ContestResultsTable({ rows }: ContestResultsTableProps) 
         <TableHead>
           <TableRow sx={{ bgcolor: theme.palette.primary.main }}>
             <TableCell sx={{ color: "white", fontWeight: "bold" }}>Team Name</TableCell>
+            <TableCell sx={{ color: "white", fontWeight: "bold" }}>School</TableCell>
             <TableCell sx={{ color: "white", fontWeight: "bold" }}>Coach</TableCell>
             <TableCell sx={{ color: "white", fontWeight: "bold" }}>Rank</TableCell>
             <TableCell sx={{ color: "white", fontWeight: "bold" }}>Score</TableCell>
@@ -34,6 +36,7 @@ export default function ContestResultsTable({ rows }: ContestResultsTableProps) 
           {rows.map((row) => (
             <TableRow key={row.id} sx={{ "&:nth-of-type(odd)": { bgcolor: theme.palette.action.hover } }}>
               <TableCell>{row.team_name}</TableCell>
+              <TableCell>{row.school_name || "N/A"}</TableCell>
               <TableCell>{row.coachName || "N/A"}</TableCell>
               <TableCell>{row.team_rank || 0}</TableCell>
               <TableCell>{row.total_score}</TableCell>

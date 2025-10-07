@@ -4,6 +4,7 @@ import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamSt
 import InternalResultsTable from "../components/Tables/InternalResultsTable";
 import { Link, Typography } from "@mui/material";
 import { useAuthStore } from "../store/primary_stores/authStore";
+import axios from "axios";
 export default function InternalResults() {
   const { contestId } = useParams();
   const parsedContestId = contestId ? parseInt(contestId, 10) : undefined;
@@ -15,7 +16,26 @@ export default function InternalResults() {
     if (!parsedContestId) return;
   
     const load = async () => {
-      await fetchTeamsByContest(parsedContestId);
+      try {
+        // Tabulate scores to ensure they're calculated
+        const token = localStorage.getItem("token");
+        await axios.put(
+          "/api/tabulation/tabulateScores/",
+          { contestid: parsedContestId },
+          {
+            headers: {
+              Authorization: `Token ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        
+        // Fetch the updated teams with calculated scores
+        await fetchTeamsByContest(parsedContestId);
+      } catch (error) {
+        // Still try to fetch teams even if tabulation fails
+        await fetchTeamsByContest(parsedContestId);
+      }
     };
   
     load(); // initial

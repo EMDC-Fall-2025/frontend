@@ -33,7 +33,6 @@ export default function ScoreBreakdownTableGeneralPenalties() {
       <TableRow
         sx={{
           "&:hover td": {
-            // subtle full-row hover to match the theme
             backgroundColor: "rgba(46,125,50,0.04)",
           },
         }}

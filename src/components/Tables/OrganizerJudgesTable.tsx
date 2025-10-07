@@ -19,6 +19,7 @@ import { useMapClusterJudgeStore } from "../../store/map_stores/mapClusterToJudg
 import { useJudgeStore } from "../../store/primary_stores/judgeStore";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckIcon from "@mui/icons-material/Check";
+import toast from "react-hot-toast";
 import ClusterModal from "../Modals/ClusterModal";
 import { Cluster, Judge, JudgeData } from "../../types";
 import AreYouSureModal from "../Modals/AreYouSureModal";
@@ -156,7 +157,7 @@ function JudgesTable(props: IJudgesTableProps) {
   const { fetchJudgesByClusterId } = useMapClusterJudgeStore();
 
   const { judgeClusters } = useMapClusterJudgeStore();
-  const { deleteJudge, judgeError } = useJudgeStore();
+
 
   const titles = ["Lead", "Technical", "General", "Journal"];
 
@@ -179,16 +180,21 @@ function JudgesTable(props: IJudgesTableProps) {
   };
 
   const handleDelete = async (judgeId: number) => {
-    // Unassign judge from THIS contest only (do not delete judge globally)
-    const token = localStorage.getItem("token");
-    await axios.delete(`/api/mapping/contestToJudge/remove/${judgeId}/${contestid}/`, {
-      headers: { Authorization: `Token ${token}` },
-    });
-    // Refresh judges for all clusters in this contest to reflect removal
-    if (clusters && clusters.length > 0) {
-      for (const c of clusters) {
-        await fetchJudgesByClusterId(c.id);
+    try {
+      // Unassign judge from THIS contest only 
+      const token = localStorage.getItem("token");
+      await axios.delete(`/api/mapping/contestToJudge/remove/${judgeId}/${contestid}/`, {
+        headers: { Authorization: `Token ${token}` },
+      });
+      // Refresh judges for all clusters in this contest to reflect removal
+      if (clusters && clusters.length > 0) {
+        for (const c of clusters) {
+          await fetchJudgesByClusterId(c.id);
+        }
       }
+      toast.success("Judge removed from contest successfully!");
+    } catch (error) {
+      toast.error("Failed to remove judge from contest. Please try again.");
     }
   };
 
@@ -309,7 +315,6 @@ function JudgesTable(props: IJudgesTableProps) {
         handleClose={() => setOpenAreYouSure(false)}
         title="Are you sure you want to delete this judge?"
         handleSubmit={() => handleDelete(judgeId)}
-        error={judgeError}
       />
     </TableContainer>
   );

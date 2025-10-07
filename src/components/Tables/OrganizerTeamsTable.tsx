@@ -135,6 +135,11 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
             <TableRow key={team.id}>
               <TableCell component="th" scope="row" sx={{ fontWeight: 500 }}>
                 {team.team_name}
+                {team.school_name && (
+                  <Typography variant="body2" sx={{ color: theme.palette.grey[600], fontSize: '0.875rem' }}>
+                    ({team.school_name})
+                  </Typography>
+                )}
               </TableCell>
               {team.judge_disqualified && !team.organizer_disqualified && (
                 <TableCell>
@@ -165,6 +170,7 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
                     handleOpenTeamModal({
                       id: team.id,
                       team_name: team.team_name,
+                      school_name: team.school_name || "MNSU",
                       clusterid: cluster,
                       username: coachesByTeams[team.id]?.username || "N/A",
                       first_name: coachesByTeams[team.id]?.first_name || "N/A",

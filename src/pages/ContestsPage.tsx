@@ -8,7 +8,6 @@ import ContestTable from "../components/Tables/ContestTable";
 
 
 export default function Contests() {
-  // Zustand store for contests
   const { allContests, fetchAllContests, isLoadingContest } = useContestStore();
 
   const navigate = useNavigate();

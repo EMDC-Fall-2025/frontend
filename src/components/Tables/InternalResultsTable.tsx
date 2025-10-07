@@ -19,6 +19,7 @@ export default function InternalResultsTable() {
   function createData(
     id: number,
     team_name: string,
+    school_name: string,
     journal_score: number,
     presentation_score: number,
     machinedesign_score: number,
@@ -30,6 +31,7 @@ export default function InternalResultsTable() {
     return {
       id,
       team_name,
+      school_name,
       journal_score,
       presentation_score,
       machinedesign_score,
@@ -44,6 +46,7 @@ export default function InternalResultsTable() {
     createData(
       team.id,
       team.team_name,
+      team.school_name || 'MNSU',
       team.journal_score,
       team.presentation_score,
       team.machinedesign_score,
@@ -76,6 +79,7 @@ export default function InternalResultsTable() {
           <TableHead>
             <TableRow>
               <TableCell align="center">Team</TableCell>
+              <TableCell align="center">School</TableCell>
               <TableCell align="center">Journal Score</TableCell>
               <TableCell align="center">Presentation Score</TableCell>
               <TableCell align="center">
@@ -96,6 +100,7 @@ export default function InternalResultsTable() {
                 <TableCell component="th" scope="row" align="center">
                   {row.team_name}
                 </TableCell>
+                <TableCell align="center">{row.school_name}</TableCell>
                 <TableCell align="center">{row.journal_score}</TableCell>
                 <TableCell align="center">{row.presentation_score}</TableCell>
                 <TableCell align="center">{row.machinedesign_score}</TableCell>

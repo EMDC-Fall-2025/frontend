@@ -476,13 +476,13 @@ export default function JudgeModal(props: IJudgeModalProps) {
             type="submit"
             sx={{
               width: 130,
-              height: 44,                                    // Consistent height (was 35)
-              bgcolor: theme.palette.success.main,          // Green theme (was primary.main)
-              "&:hover": { bgcolor: theme.palette.success.dark }, // Hover effect
-              color: "#fff",                                // White text (was secondary.main)
+              height: 44,
+              bgcolor: theme.palette.success.main,
+              "&:hover": { bgcolor: theme.palette.success.dark },
+              color: "#fff",
               mt: 3,
-              textTransform: "none",                        // No uppercase transformation
-              borderRadius: 2,                              // Modern border radius
+              textTransform: "none",
+              borderRadius: 2,
             }}
           >
             {buttonText}

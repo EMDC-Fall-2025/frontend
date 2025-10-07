@@ -5,11 +5,9 @@ import { TriangleIcon, Trophy} from "lucide-react";
 import { useAuthStore } from "../../store/primary_stores/authStore";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
- 
 
-
-
-  const Ranking = () => {
+// Rankings component for displaying team rankings by cluster
+const Ranking = () => {
     const navigate = useNavigate();
     const [selectedTeams, setSelectedTeams] = useState<number[]>([])
     const [openCluster, setOpenCluster] = useState<Set<number>>(new Set())
@@ -20,7 +18,6 @@ import { useNavigate } from "react-router-dom";
     const [selectedContest, setSelectedContest] = useState<any>(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
-
 
     // Load contests for organizer
     useEffect(() => {
@@ -70,7 +67,7 @@ import { useNavigate } from "react-router-dom";
                 const { data: teamResp } = await axios.get(`/api/mapping/clusterToTeam/getAllTeamsByCluster/${cluster.id}/`, {
                   headers: { Authorization: `Token ${token}` }
                 })
-                const teams = (teamResp?.Teams ?? []).map((t: any) => ({ id: t.id, team_name: t.team_name ?? t.name, total_score: t.total_score ?? 0 }))
+                const teams = (teamResp?.Teams ?? []).map((t: any) => ({ id: t.id, team_name: t.team_name ?? t.name, school_name: t.school_name ?? 'N/A', total_score: t.total_score ?? 0 }))
                 const ranked = teams
                   .sort((a: any, b: any) => (b.total_score ?? 0) - (a.total_score ?? 0))
                   .map((t: any, i: number) => ({ ...t, cluster_rank: i + 1 }))
@@ -255,6 +252,7 @@ import { useNavigate } from "react-router-dom";
                 <TableCell />
                 <TableCell>Rank</TableCell>
                 <TableCell>Team Name</TableCell>
+                <TableCell>School</TableCell>
                 <TableCell>Total Score</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell align="right">Actions</TableCell>
@@ -264,7 +262,7 @@ import { useNavigate } from "react-router-dom";
                 {/* asscending for rank */}
                 {(cluster.teams ?? [])
                   .sort((a: any, b: any) => (a.cluster_rank || 0) - (b.cluster_rank || 0))
-                .map((team) => (
+                .map((team: any) => (
                   <TableRow
                     key={team.id}
                     sx={{
@@ -293,6 +291,7 @@ import { useNavigate } from "react-router-dom";
                       </Box>
                     </TableCell>
                     <TableCell>{team.team_name}</TableCell>
+                    <TableCell>{team.school_name }</TableCell>
                     <TableCell
                       sx={{
                         fontWeight: 600,
@@ -344,8 +343,7 @@ import { useNavigate } from "react-router-dom";
           size="large"
           disabled={selectedTeams.length === 0}
           onClick={() => {
-            console.log('Advancing selected teams to championship:', selectedTeams);
-            // Add your championship logic here
+            // TODO: Add championship advancement logic here
           }}
           sx={{
             bgcolor: selectedTeams.length === 0 ? theme.palette.grey[400] : theme.palette.success.main,

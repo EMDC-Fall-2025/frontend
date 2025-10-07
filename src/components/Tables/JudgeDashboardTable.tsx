@@ -117,10 +117,8 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
             });
             if (response.ok) {
               const data = await response.json();
-              console.log(`Contest data for team ${team.id}:`, data);
               if (data.Contest) {
                 contestMap[team.id] = data.Contest.name;
-                console.log(`Set contest name for team ${team.id}: ${data.Contest.name}`);
               }
             } else {
               console.error(`Failed to fetch contest for team ${team.id}:`, response.status);
@@ -185,7 +183,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
 
   // NEW: open/close multi-team dialog
   const handleMultiTeamScore = () => {
-    console.log("Multi-team score button clicked"); // Debug log
+    // Handle multi-team scoring
     setOpenMultiDialog(true);
   };
   const handleCancelMulti = () => setOpenMultiDialog(false);
@@ -198,7 +196,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     const typePath = multiType === "machine-design" ? "machinedesign" : multiType;
     const route = `/multi-team-${typePath}-score/${judge.id}/${contest.id}/`;
     
-    console.log("Navigating to:", route); // Debug log
+    // Navigate to scoring page
     navigate(route);
     setOpenMultiDialog(false);
   };
@@ -427,6 +425,9 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                         <Typography variant="body1" sx={{ fontWeight: 600 }}>
                           {team.team_name}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: theme.palette.grey[600], ml: 1 }}>
+                          ({team.school_name || 'N/A'})
                         </Typography>
                         {teamContestMap[team.id] && (
                           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, ml: 1, flexShrink: 0 }}>

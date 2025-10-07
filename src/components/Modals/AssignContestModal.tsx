@@ -18,6 +18,7 @@ import {
 import Modal from "./Modal";
 import theme from "../../theme";
 import React, { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { Contest } from "../../types";
 import useContestStore from "../../store/primary_stores/contestStore";
 import useMapContestOrganizerStore from "../../store/map_stores/mapContestToOrganizerStore";
@@ -57,9 +58,11 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
       try {
         await createContestOrganizerMapping(organizerId, contestId);
         await fetchContestsByOrganizers();
+        toast.success("Contest assigned to organizer successfully!");
         handleClose();
       } catch (error) {
         console.error("Failed to assign contest: ", error);
+        toast.error("Failed to assign contest. Please try again.");
       }
     }
   };
@@ -116,13 +119,13 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
           type="submit"
           sx={{
             width: 170,
-            height: 44,                                    // Consistent height (was 35)
-            bgcolor: theme.palette.success.main,          // Green theme (was primary.main)
-            "&:hover": { bgcolor: theme.palette.success.dark }, // Hover effect
-            color: "#fff",                                // White text (was secondary.main)
+            height: 44,
+            bgcolor: theme.palette.success.main,          
+            "&:hover": { bgcolor: theme.palette.success.dark },
+            color: "#fff",
             mt: 4,
-            textTransform: "none",                        // No uppercase transformation
-            borderRadius: 2,                              // Modern border radius
+            textTransform: "none",
+            borderRadius: 2,
           }}
         >
           Assign Contest

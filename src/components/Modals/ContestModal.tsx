@@ -12,6 +12,7 @@ import { Button, TextField } from "@mui/material";
 import Modal from "./Modal";
 import theme from "../../theme";
 import React, { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { useContestStore } from "../../store/primary_stores/contestStore";
 import dayjs, { Dayjs } from "dayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -61,9 +62,11 @@ export default function ContestModal(props: IContestModalProps) {
       });
       await fetchAllContests();
       await fetchOrganizerNamesByContests();
+      toast.success("Contest created successfully!");
       handleClose();
     } catch (error) {
       console.error("Failed to create contest: ", error);
+      toast.error("Failed to create contest. Please try again.");
     }
   };
 
@@ -79,9 +82,11 @@ export default function ContestModal(props: IContestModalProps) {
           is_tabulated: false,
         });
         await fetchAllContests();
+        toast.success("Contest updated successfully!");
         handleClose();
       } catch (error) {
         console.error("Failed to edit contest: ", error);
+        toast.error("Failed to update contest. Please try again.");
       }
     }
   };
@@ -126,13 +131,13 @@ export default function ContestModal(props: IContestModalProps) {
           type="submit"
           sx={{
             width: 170,
-            height: 44,                                    // Consistent height (was 35)
-            bgcolor: theme.palette.success.main,          // Green theme (was primary.main)
-            "&:hover": { bgcolor: theme.palette.success.dark }, // Hover effect
-            color: "#fff",                                // White text (was secondary.main)
+            height: 44,
+            bgcolor: theme.palette.success.main,
+            "&:hover": { bgcolor: theme.palette.success.dark },
+            color: "#fff",
             mt: 4,
-            textTransform: "none",                        // No uppercase transformation
-            borderRadius: 2,                              // Modern border radius
+            textTransform: "none",
+            borderRadius: 2,
           }}
         >
           {buttonText}

@@ -161,18 +161,18 @@ export default function ScoreSheetTable({
       // Prepare data with proper handling of undefined/null values
       const scoreData = {
         id: scoreSheet.id,
-        field1: formData[1] !== undefined ? formData[1] : null,
-        field2: formData[2] !== undefined ? formData[2] : null,
-        field3: formData[3] !== undefined ? formData[3] : null,
-        field4: formData[4] !== undefined ? formData[4] : null,
-        field5: formData[5] !== undefined ? formData[5] : null,
-        field6: formData[6] !== undefined ? formData[6] : null,
-        field7: formData[7] !== undefined ? formData[7] : null,
-        field8: formData[8] !== undefined ? formData[8] : null,
-        field9: formData[9] !== undefined ? formData[9]?.toString() : null, // comments stored as string
+        field1: formData[1] !== undefined ? formData[1] : undefined,
+        field2: formData[2] !== undefined ? formData[2] : undefined,
+        field3: formData[3] !== undefined ? formData[3] : undefined,
+        field4: formData[4] !== undefined ? formData[4] : undefined,
+        field5: formData[5] !== undefined ? formData[5] : undefined,
+        field6: formData[6] !== undefined ? formData[6] : undefined,
+        field7: formData[7] !== undefined ? formData[7] : undefined,
+        field8: formData[8] !== undefined ? formData[8] : undefined,
+        field9: formData[9] !== undefined ? formData[9]?.toString() : undefined, // comments stored as string
       };
       
-      console.log("Saving score sheet with data:", scoreData);
+      // Save score sheet data
       updateScores(scoreData);
     }
   };
@@ -384,7 +384,7 @@ export default function ScoreSheetTable({
             sx={{
               "& .MuiTableRow-root": { transition: "background-color 120ms ease" },
               "& tr:hover td": {
-                backgroundColor: "rgba(46,125,50,0.04)", // subtle full-row green hover
+                backgroundColor: "rgba(46,125,50,0.04)",
               },
               "& td, & th": { borderColor: theme.palette.grey[200] },
             }}
@@ -661,7 +661,7 @@ export default function ScoreSheetTable({
           handleClose={() => setOpenAreYouSure(false)}
           title="Are you sure you want to submit?"
           handleSubmit={() => handleSubmit()}
-          error={scoreSheetError}
+      
         ></AreYouSureModal>
       </Container>
     </>
