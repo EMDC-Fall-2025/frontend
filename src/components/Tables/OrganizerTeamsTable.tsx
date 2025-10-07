@@ -67,7 +67,7 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
   const handleConfirmDelete = async () => {
     if (clusterToDelete) {
       try {
-        await deleteCluster(clusterToDelete);
+        await deleteCluster(clusterToDelete); // Delete from backend
         toast.success('Cluster deleted successfully!');
         // Refresh clusters list
         fetchClustersByContestId(contestId);

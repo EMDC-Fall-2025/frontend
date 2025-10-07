@@ -213,7 +213,7 @@ export default function Organizer() {
           >
             <Box sx={{ px: 3, py: 2 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                Contest Overview
+                Overall stats 
               </Typography>
             </Box>
             <Divider />
