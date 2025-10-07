@@ -1,16 +1,17 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Typography from "@mui/material/Typography";
-import { Container } from "@mui/material";
+import { Container, Stack } from "@mui/material";
 import theme from "../theme";
 import { useContestStore } from "../store/primary_stores/contestStore";
-import ContestTable from "../components/Tables/ContestTable"; 
+import ContestTable from "../components/Tables/ContestTable";
+
+
 // FILE OVERVIEW: page for displaying contests
 
 export default function Contests() {
   // Zustand store for contests
   const { allContests, fetchAllContests, isLoadingContest } = useContestStore();
-
   const navigate = useNavigate();
 
   // Get all contests
@@ -18,10 +19,19 @@ export default function Contests() {
     fetchAllContests();
   }, []);
 
-  // function to create data row 
+  // function to create data row
   function createData(id: number, name: string, date: string, is_open: boolean) {
-    return { id, name, date, status: is_open ? "In Progress" : "Finalized" };
+    let status = "";
+    if (is_open) { 
+      status = "In Progress";
+    } 
+    else { 
+      status = "Not Started"
+    }
+    return { id, name, date, status};
   }
+
+
 
   // Navigate to specific contest results
   const handleRowClick = (contestId: number) => {
@@ -29,24 +39,27 @@ export default function Contests() {
   };
 
   // transforms array into rows
-  const rows = allContests.map((contest) => createData(contest.id, contest.name, contest.date, contest.is_open));
-
+  const rows = allContests.map((contest) =>
+    createData(contest.id, contest.name, contest.date, contest.is_open)
+  );
+  
   return (
     <>
-      <Typography variant="h1" sx={{ ml: "2%", mt: 4, mb: 4 }}>
-        Contests
-      </Typography>
+      <Stack spacing={1} sx={{ mt: 4, mb: 3, ml: "2%" }}>
+        <Typography
+          variant="h4"
+          sx={{ fontWeight: 800, color: theme.palette.primary.main }}
+        >
+          Contests
+        </Typography>
+      </Stack>
+
       <Container
         sx={{
-          width: "90vw",
-          padding: 3,
-          bgcolor: theme.palette.secondary.light,
-          ml: "2%",
-          borderRadius: 5,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
+          border: `1px solid ${theme.palette.grey[300]}`,
+          borderRadius: 3,
+          backgroundColor: "#fff",
+          p: 3,
         }}
       >
         {/* ContestTable component */}

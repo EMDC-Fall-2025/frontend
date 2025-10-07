@@ -20,8 +20,7 @@ import InternalResults from "./pages/InternalResults";
 import GeneralPenalties from "./pages/GeneralPenalties";
 import ScoreBreakdown from "./pages/ScoreBreakdown";
 import RunPenalties from "./pages/RunPenalties";
-import ContestPage from "./pages/ContestsPage";
-import ContestScores from "./pages/ContestScores";
+
 import AdminSpecialAwardsPage from "./pages/AdminSpecialAwards";
 import OrganizerSpecialAwards from "./pages/OrganizerSpecialAwards";
 import JudgeSpecialAwards from "./pages/JudgeSpecialAwards";
@@ -30,6 +29,11 @@ import MultiTeamPresentationScore from "./pages/PresentationMultiTeamScore"
 import MultiTeamJournalScore from "./pages/JournalMultiTeamScore";
 import MultiTeamMachineDesignScore from "./pages/MachineDesignMultiTeamScore";
 import ChampionshipScore from "./pages/ChampionshipScore";
+import ContestScores from "./pages/ContestScores";
+import Contests from "./pages/ContestsPage";
+/*import MasterScorePage from "./pages/MasterScorePage";*/
+
+
 
 function App() {
   const currentLink = useLocation().pathname;
@@ -118,7 +122,7 @@ function App() {
           {/* {<Route path="/judgeAwards/" element={<JudgeSpecialAwards />} />}  */}
 
           
-          {<Route path="/contestPage/" element={<ContestPage />} />}
+          {<Route path="/contestPage/" element={<Contests/>} />}
 
           {isAuthenticated && (
             <Route
@@ -154,7 +158,10 @@ function App() {
           {isAuthenticated && <Route path="/logout/" element={<Logout />} />}
           {role?.user_type == 2 && (
             <Route path="/organizer/" element={<Organizer />} />
-          )}
+          )}{/*
+          {role?.user_type == 2 && (
+            <Route path="/master-score/" element={<MasterScorePage />} />
+          )}*/}
           {(role?.user_type == 1 || role?.user_type == 2) && (
             <Route path="/results/:contestId" element={<InternalResults />} />
           )}

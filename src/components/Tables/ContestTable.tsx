@@ -5,9 +5,7 @@ import TableContainer from "@mui/material/TableContainer";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
-// FILE OVERVIEW: table component for contest page
 
-// structure for row
 interface ContestRow {
   id: number;
   name: string;
@@ -15,7 +13,6 @@ interface ContestRow {
   status: string;
 }
 
-// props for table
 interface ContestTableProps {
   rows: ContestRow[];
   isLoading: boolean;
@@ -34,16 +31,27 @@ export default function ContestTable({ rows, isLoading, onRowClick }: ContestTab
               </TableCell>
             </TableRow>
           ) : (
-            // Map over the rows and render each row in the table
             rows.map((row) => (
               <TableRow
                 key={row.id}
                 sx={{ cursor: "pointer" }}
                 onClick={() => onRowClick(row.id)}
               >
-                <TableCell component="th" scope="row">{row.name}</TableCell>
+                <TableCell component="th" scope="row">
+                  {row.name}
+                </TableCell>
                 <TableCell>{row.date}</TableCell>
-                <TableCell sx={{ color: row.status === "In Progress" ? "green" : "red" }}>
+                <TableCell
+                  sx={{
+                    color:
+                    row.status === "Finalized"
+                    ? "Green"
+                    : row.status === "In Progress"
+                    ? "Orange"
+                    : "red",
+                    fontWeight: 600,
+                  }}
+                >
                   {row.status}
                 </TableCell>
               </TableRow>
