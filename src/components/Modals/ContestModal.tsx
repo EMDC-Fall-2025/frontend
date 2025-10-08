@@ -37,7 +37,7 @@ export default function ContestModal(props: IContestModalProps) {
   const [contestName, setContestName] = useState("");
   //const [contestDate, setContestDate] = useState("2024-11-13");
   const contestid = contestData?.contestid;
-  const { createContest, editContest, fetchAllContests, contestError } =
+  const { createContest, editContest, fetchAllContests } =
     useContestStore();
   const { fetchOrganizerNamesByContests } = useMapContestOrganizerStore();
 
@@ -94,7 +94,6 @@ export default function ContestModal(props: IContestModalProps) {
       open={open}
       handleClose={handleClose}
       title={title}
-      error={contestError}
     >
       <form
         onSubmit={handleSubmit}

@@ -18,6 +18,7 @@ import {
 } from "@mui/material";
 import Modal from "./Modal";
 import theme from "../../theme";
+import toast from "react-hot-toast";
 import { useEffect, useState } from "react";
 import { useTeamStore } from "../../store/primary_stores/teamStore";
 import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
@@ -46,14 +47,19 @@ export default function TeamModal(props: ITeamModalProps) {
   const [coachFirstName, setCoachFirstName] = useState("");
   const [coachLastName, setCoachLastName] = useState("");
   const [coachEmail, setCoachEmail] = useState("");
-  const { createTeam, editTeam, teamError } = useTeamStore();
+  const { createTeam, editTeam } = useTeamStore();
   const { getTeamsByClusterId } = useMapClusterTeamStore();
 
   const title = mode === "new" ? "New Team" : "Edit Team";
 
+  /**
+   * Create a new team with coach account and assign to contest/cluster
+   * Initializes all scores to 0 and creates coach login credentials
+   */
   const handleCreateTeam = async () => {
     if (contestId) {
       try {
+        // Create team with initial scores and coach information
         await createTeam({
           team_name: teamName,
           journal_score: 0,
@@ -70,20 +76,56 @@ export default function TeamModal(props: ITeamModalProps) {
           last_name: coachLastName || "n/a",
           contestid: contestId,
         });
+        
+        // Refresh team lists for all clusters in the contest
         if (clusters) {
           for (const cluster of clusters) {
             await getTeamsByClusterId(cluster.id);
           }
         }
+        toast.success("Team created successfully!");
         handleCloseModal();
-      } catch (error) {
-        console.error("Failed to create team", error);
+      } catch (error: any) {
+        // Handle team creation errors with user-friendly messages
+        let errorMessage = "";
+        
+        // Extract error message from various possible response structures
+        if (error?.response?.data) {
+          const data = error.response.data;
+          if (typeof data === 'string') {
+            errorMessage = data;
+          } else if (data.error && typeof data.error === 'string') {
+            errorMessage = data.error;
+          } else if (data.detail && typeof data.detail === 'string') {
+            errorMessage = data.detail;
+          } else if (data.message && typeof data.message === 'string') {
+            errorMessage = data.message;
+          } else if (data.errors && typeof data.errors === 'object') {
+            // Handle Django-style error objects
+            errorMessage = JSON.stringify(data.errors);
+          }
+        } else if (error?.message && typeof error.message === 'string') {
+          errorMessage = error.message;
+        }
+        
+        if (errorMessage.toLowerCase().includes("already exists") || 
+            errorMessage.toLowerCase().includes("duplicate") ||
+            errorMessage.toLowerCase().includes("username") && errorMessage.toLowerCase().includes("taken")) {
+          toast.error("Account already exists in the system");
+        } else {
+          toast.error("Failed to create team. Please try again.");
+        }
       }
     }
   };
 
+  /**
+   * Update existing team information and coach details
+   * Preserves team ID while updating name, cluster, and coach information
+   */
   const handleEditTeam = async () => {
     try {
+      // Update team with current form values
       await editTeam({
         id: teamData?.id ?? 0,
         team_name: teamName,
@@ -94,15 +136,18 @@ export default function TeamModal(props: ITeamModalProps) {
         contestid: contestId ?? 0,
       });
 
+      // Refresh team lists for all clusters to reflect changes
       if (clusters) {
         for (const cluster of clusters) {
           await getTeamsByClusterId(cluster.id);
         }
       }
 
+      toast.success("Team updated successfully!");
       handleCloseModal();
-    } catch (error) {
-      console.error("Failed to edit team", error);
+    } catch (error: any) {
+      // Handle team update errors
+      toast.error("Failed to update team. Please try again.");
     }
   };
 
@@ -141,7 +186,6 @@ export default function TeamModal(props: ITeamModalProps) {
       open={open}
       handleClose={handleCloseModal}
       title={title}
-      error={teamError}
     >
       <form
         onSubmit={handleSubmit}

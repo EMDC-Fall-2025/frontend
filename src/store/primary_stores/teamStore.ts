@@ -86,9 +86,25 @@ export const useTeamStore = create<TeamState>()(
             },
           });
           set({ teamError: null });
-        } catch (teamError) {
-          set({ teamError: "Error creating team" });
-          throw new Error("Error creating team");
+        } catch (teamError: any) {
+          // Convert error to string to prevent React rendering issues
+          let errorMessage = "Error creating team";
+          if (teamError?.response?.data) {
+            const data = teamError.response.data;
+            if (typeof data === 'string') {
+              errorMessage = data;
+            } else if (data.error && typeof data.error === 'string') {
+              errorMessage = data.error;
+            } else if (data.detail && typeof data.detail === 'string') {
+              errorMessage = data.detail;
+            } else if (data.message && typeof data.message === 'string') {
+              errorMessage = data.message;
+            } else {
+              errorMessage = JSON.stringify(data);
+            }
+          }
+          set({ teamError: errorMessage });
+          throw teamError; // Re-throw the original error
         } finally {
           set({ isLoadingTeam: false });
         }
@@ -105,9 +121,25 @@ export const useTeamStore = create<TeamState>()(
             },
           });
           set({ teamError: null });
-        } catch (teamError) {
-          set({ teamError: "Error editing team" });
-          throw new Error("Error editing team");
+        } catch (teamError: any) {
+          // Convert error to string to prevent React rendering issues
+          let errorMessage = "Error editing team";
+          if (teamError?.response?.data) {
+            const data = teamError.response.data;
+            if (typeof data === 'string') {
+              errorMessage = data;
+            } else if (data.error && typeof data.error === 'string') {
+              errorMessage = data.error;
+            } else if (data.detail && typeof data.detail === 'string') {
+              errorMessage = data.detail;
+            } else if (data.message && typeof data.message === 'string') {
+              errorMessage = data.message;
+            } else {
+              errorMessage = JSON.stringify(data);
+            }
+          }
+          set({ teamError: errorMessage });
+          throw teamError; // Re-throw the original error
         } finally {
           set({ isLoadingTeam: false });
         }

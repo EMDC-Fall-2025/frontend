@@ -14,6 +14,7 @@ import theme from "../../theme";
 import React, { useEffect, useState } from "react";
 import { useOrganizerStore } from "../../store/primary_stores/organizerStore";
 import useUserRoleStore from "../../store/map_stores/mapUserToRoleStore";
+import toast from "react-hot-toast";
 
 export interface IOrganizerModalProps {
   open: boolean;
@@ -38,7 +39,7 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
   const organizerid = organizerData?.id;
   const { user, getUserByRole } = useUserRoleStore();
 
-  const { createOrganizer, editOrganizer, fetchAllOrganizers, organizerError } =
+  const { createOrganizer, editOrganizer, fetchAllOrganizers } =
     useOrganizerStore();
 
   useEffect(() => {
@@ -62,26 +63,67 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
     setUsername("");
   };
 
+  /**
+   * Create a new organizer account with admin privileges
+   * Sets default password and creates user role mapping
+   */
   const handleCreateOrganizer = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
+      // Create organizer with provided information and default password
       await createOrganizer({
         first_name: first_name,
         last_name: last_name,
         username: username,
         password: "password",
       });
+      
+      // Refresh organizer list to show new organizer
       await fetchAllOrganizers();
+      toast.success("Organizer created successfully!");
       handleClose();
-    } catch (error) {
-      console.error("Failed to create organizer: ", error);
+    } catch (error: any) {
+      // Handle organizer creation errors with user-friendly messages
+      let errorMessage = "";
+      
+      // Extract error message from various possible response structures
+      if (error?.response?.data) {
+        const data = error.response.data;
+        if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data.error && typeof data.error === 'string') {
+          errorMessage = data.error;
+        } else if (data.detail && typeof data.detail === 'string') {
+          errorMessage = data.detail;
+        } else if (data.message && typeof data.message === 'string') {
+          errorMessage = data.message;
+        } else if (data.errors && typeof data.errors === 'object') {
+          // Handle Django-style error objects
+          errorMessage = JSON.stringify(data.errors);
+        }
+      } else if (error?.message && typeof error.message === 'string') {
+        errorMessage = error.message;
+      }
+      
+      if (errorMessage.toLowerCase().includes("already exists") || 
+          errorMessage.toLowerCase().includes("duplicate") ||
+          errorMessage.toLowerCase().includes("username") && errorMessage.toLowerCase().includes("taken")) {
+        toast.error("Account already exists in the system");
+      } else {
+        toast.error("Failed to create organizer. Please try again.");
+      }
     }
   };
 
+  /**
+   * Update existing organizer information
+   * Preserves organizer ID while updating personal details and credentials
+   */
   const handleEditOrganizer = async (event: React.FormEvent) => {
     event.preventDefault();
     if (organizerid) {
       try {
+        // Update organizer with current form values
         await editOrganizer({
           id: organizerid,
           first_name,
@@ -89,10 +131,14 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
           username,
           password: "password",
         });
+        
+        // Refresh organizer list to show updated information
         await fetchAllOrganizers();
+        toast.success("Organizer updated successfully!");
         handleClose();
-      } catch (error) {
-        console.error("Failed to edit organizer: ", error);
+      } catch (error: any) {
+        // Handle organizer update errors
+        toast.error("Failed to update organizer. Please try again.");
       }
     }
   };
@@ -113,7 +159,6 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
       open={open}
       handleClose={handleCloseModal}
       title={title}
-      error={organizerError}
     >
       <form
         onSubmit={onSubmitHandler}

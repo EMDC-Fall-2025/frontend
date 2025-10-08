@@ -81,10 +81,25 @@ export const useJudgeStore = create<JudgeState>()(
             },
           });
           set({ judgeError: null });
-        } catch (judgeError) {
-          const errorMessage = "Error creating judge:" + judgeError;
+        } catch (judgeError: any) {
+          // Convert error to string to prevent React rendering issues
+          let errorMessage = "Error creating judge";
+          if (judgeError?.response?.data) {
+            const data = judgeError.response.data;
+            if (typeof data === 'string') {
+              errorMessage = data;
+            } else if (data.error && typeof data.error === 'string') {
+              errorMessage = data.error;
+            } else if (data.detail && typeof data.detail === 'string') {
+              errorMessage = data.detail;
+            } else if (data.message && typeof data.message === 'string') {
+              errorMessage = data.message;
+            } else {
+              errorMessage = JSON.stringify(data);
+            }
+          }
           set({ judgeError: errorMessage });
-          throw Error(errorMessage);
+          throw judgeError; // Re-throw the original error
         } finally {
           set({ isLoadingJudge: false });
         }
@@ -104,10 +119,25 @@ export const useJudgeStore = create<JudgeState>()(
             judge: response.data.judge,
           }));
           set({ judgeError: null });
-        } catch (judgeError) {
-          const errorMessage = "Error editing judge:" + judgeError;
+        } catch (judgeError: any) {
+          // Convert error to string to prevent React rendering issues
+          let errorMessage = "Error editing judge";
+          if (judgeError?.response?.data) {
+            const data = judgeError.response.data;
+            if (typeof data === 'string') {
+              errorMessage = data;
+            } else if (data.error && typeof data.error === 'string') {
+              errorMessage = data.error;
+            } else if (data.detail && typeof data.detail === 'string') {
+              errorMessage = data.detail;
+            } else if (data.message && typeof data.message === 'string') {
+              errorMessage = data.message;
+            } else {
+              errorMessage = JSON.stringify(data);
+            }
+          }
           set({ judgeError: errorMessage });
-          throw Error(errorMessage);
+          throw judgeError; // Re-throw the original error
         } finally {
           set({ isLoadingJudge: false });
         }

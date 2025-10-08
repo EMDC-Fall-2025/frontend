@@ -56,7 +56,6 @@ export default function DisqualificationModal(
       open={open}
       handleClose={handleClose}
       title={"Confirm or reverse judge disqualification."}
-      error={mapClusterToTeamError}
     >
       <Container
         sx={{
@@ -105,14 +104,12 @@ export default function DisqualificationModal(
         handleClose={() => setOpenAreYouSureConfirm(false)}
         title={`Are you sure you want to disqualify ${teamName}?`}
         handleSubmit={() => handleConfirm()}
-        error={organizerError}
       />
       <AreYouSureModal
         open={openAreYouSureReverse}
         handleClose={() => setOpenAreYouSureReverse(false)}
         title={`Are you sure you want to reverse judge disqualification?`}
         handleSubmit={() => handleReverse()}
-        error={judgeError}
       />
     </Modal>
   );

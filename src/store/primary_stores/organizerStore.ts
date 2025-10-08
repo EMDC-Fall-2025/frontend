@@ -101,9 +101,25 @@ export const useOrganizerStore = create<OrganizerState>()(
             allOrganizers: [...state.allOrganizers, createdOrganizer],
             organizerError: null,
           }));
-        } catch (error) {
-          set({ organizerError: "Error creating organizer: " + error });
-          throw new Error("Error creating organizer: " + error);
+        } catch (error: any) {
+          // Convert error to string to prevent React rendering issues
+          let errorMessage = "Error creating organizer";
+          if (error?.response?.data) {
+            const data = error.response.data;
+            if (typeof data === 'string') {
+              errorMessage = data;
+            } else if (data.error && typeof data.error === 'string') {
+              errorMessage = data.error;
+            } else if (data.detail && typeof data.detail === 'string') {
+              errorMessage = data.detail;
+            } else if (data.message && typeof data.message === 'string') {
+              errorMessage = data.message;
+            } else {
+              errorMessage = JSON.stringify(data);
+            }
+          }
+          set({ organizerError: errorMessage });
+          throw error; // Re-throw the original error
         } finally {
           set({ isLoadingOrganizer: false });
         }
@@ -125,9 +141,25 @@ export const useOrganizerStore = create<OrganizerState>()(
             ),
             organizerError: null,
           }));
-        } catch (error) {
-          set({ organizerError: "Error editing organizer: " + error });
-          throw new Error("Error editing organizer: " + error);
+        } catch (error: any) {
+          // Convert error to string to prevent React rendering issues
+          let errorMessage = "Error editing organizer";
+          if (error?.response?.data) {
+            const data = error.response.data;
+            if (typeof data === 'string') {
+              errorMessage = data;
+            } else if (data.error && typeof data.error === 'string') {
+              errorMessage = data.error;
+            } else if (data.detail && typeof data.detail === 'string') {
+              errorMessage = data.detail;
+            } else if (data.message && typeof data.message === 'string') {
+              errorMessage = data.message;
+            } else {
+              errorMessage = JSON.stringify(data);
+            }
+          }
+          set({ organizerError: errorMessage });
+          throw error; // Re-throw the original error
         } finally {
           set({ isLoadingOrganizer: false });
         }

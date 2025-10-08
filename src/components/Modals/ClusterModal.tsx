@@ -30,7 +30,7 @@ export default function ClusterModal(props: IClusterModalProps) {
   const { handleClose, open, mode, contestid, clusterData } = props;
   const [clusterName, setClusterName] = useState("");
   const { fetchClustersByContestId } = useMapClusterToContestStore();
-  const { createCluster, editCluster, clusterError } = useClusterStore();
+  const { createCluster, editCluster } = useClusterStore();
 
   useEffect(() => {
     if (clusterData) {
@@ -81,7 +81,6 @@ export default function ClusterModal(props: IClusterModalProps) {
       open={open}
       handleClose={handleClose}
       title={title}
-      error={clusterError}
     >
       <form
         onSubmit={handleSubmit}

@@ -18,6 +18,7 @@ import JudgeModal from "../components/Modals/JudgeModal";
 import OrganizerTeamsTable from "../components/Tables/OrganizerTeamsTable";
 import ClusterModal from "../components/Modals/ClusterModal";
 import TeamModal from "../components/Modals/TeamModal";
+import AssignJudgeToContestModal from "../components/Modals/AssignJudgeToContestModal";
 import { useContestStore } from "../store/primary_stores/contestStore";
 import { useMapClusterToContestStore } from "../store/map_stores/mapClusterToContestStore";
 import useContestJudgeStore from "../store/map_stores/mapContestToJudgeStore";
@@ -30,6 +31,7 @@ import { useAuthStore } from "../store/primary_stores/authStore";
 export default function ManageContest() {
   const { contestId } = useParams();
   const parsedContestId = contestId ? parseInt(contestId, 10) : 0;
+  
 
   const [value, setValue] = useState(
     () => localStorage.getItem("activeTab") || "1"
@@ -37,6 +39,7 @@ export default function ManageContest() {
   const [openJudgeModal, setOpenJudgeModal] = useState(false);
   const [openClusterModal, setOpenClusterModal] = useState(false);
   const [openTeamModal, setOpenTeamModal] = useState(false);
+  const [openAssignJudgeModal, setOpenAssignJudgeModal] = useState(false);
 
   const { role } = useAuthStore();
 
@@ -166,10 +169,19 @@ export default function ManageContest() {
     (cluster) => teamsByClusterId[cluster.id]?.length > 0
   );
 
+  // Debug: Log cluster and team data
+  console.log("ManageContest Debug:", {
+    clusters: clusters.length,
+    hasClusters,
+    teamsByClusterId: Object.keys(teamsByClusterId).length,
+    hasTeams
+  });
+
   const handleChange = (_event: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);
     localStorage.setItem("activeTab", newValue);
   };
+
 
   return isLoadingContest ||
   isLoadingJudge ||
@@ -178,17 +190,17 @@ export default function ManageContest() {
   isLoadingMapClusterToTeam ||
   isLoadingMapCoachToTeam ||
   isLoadingMapContestJudge ? (
-  <Box
-    sx={{
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      height: "50vh",
-    }}
-  >
-    <CircularProgress />
-  </Box>
-) : (
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "50vh",
+      }}
+    >
+      <CircularProgress />
+    </Box>
+  ) : (
   <>
     {/* Back to Dashboard */}
     {role?.user_type === 2 && (
@@ -307,6 +319,34 @@ export default function ManageContest() {
     >
       Create Team
     </Button>
+
+    <Button
+      variant="outlined"
+      onClick={() => {
+        console.log("Assign Judge button clicked");
+        console.log("hasClusters:", hasClusters);
+        setOpenAssignJudgeModal(true);
+      }}
+      disabled={!hasClusters}
+      sx={{
+        textTransform: "none",
+        borderRadius: 2,
+        px: 4.5,
+        fontWeight: 600,
+        borderColor: theme.palette.success.main,
+        color: theme.palette.success.main,
+        "&:hover": {
+          borderColor: theme.palette.success.dark,
+          backgroundColor: "rgba(46,125,50,0.06)",
+        },
+        "&.Mui-disabled": {
+          borderColor: theme.palette.action.disabledBackground,
+          color: theme.palette.action.disabled,
+        },
+      }}
+    >
+      Assign Judge to Contest
+    </Button>
   </Box>
 )}
 
@@ -410,6 +450,21 @@ export default function ManageContest() {
       clusters={clusters}
       contestId={parsedContestId}
     />
+    <AssignJudgeToContestModal
+      open={openAssignJudgeModal}
+      handleClose={() => {
+        console.log("Closing AssignJudge modal");
+        setOpenAssignJudgeModal(false);
+      }}
+      onSuccess={() => {
+        console.log("Judge assignment successful");
+        // Refresh judges after successful assignment
+        getAllJudgesByContestId(parsedContestId);
+        setOpenAssignJudgeModal(false);
+      }}
+    />
+    {console.log("ManageContest - openAssignJudgeModal:", openAssignJudgeModal)}
   </>
 );
 }
+

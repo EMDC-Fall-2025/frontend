@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 import theme from "../theme";
 import OrganizerContestTable from "../components/Tables/OrganizerContestTable";
+import  ContestOverviewTable from "../components/Tables/ContestOverview";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import useMapContestOrganizerStore from "../store/map_stores/mapContestToOrganizerStore";
 import useMapScoreSheetStore from "../store/map_stores/mapScoreSheetStore";
@@ -24,6 +25,7 @@ import useMapScoreSheetStore from "../store/map_stores/mapScoreSheetStore";
 // icons
 import CampaignIcon from "@mui/icons-material/Campaign";
 import HistoryIcon from "@mui/icons-material/History";
+import GavelIcon from "@mui/icons-material/Gavel";
 
 export default function Organizer() {
   const [value, setValue] = useState("1");
@@ -134,6 +136,12 @@ export default function Organizer() {
                 icon={<HistoryIcon />}
                 label="Past Contests"
               />
+              <Tab
+                value="3"
+                iconPosition="start"
+                icon={<GavelIcon />}
+                label="Contest Overview"
+              />
             </TabList>
           </Box>
 
@@ -182,8 +190,32 @@ export default function Organizer() {
               <OrganizerContestTable type="past" organizers={[]} />
             </Box>
           </TabPanel>
+
+          {/* Panel 3: Contest Management */}
+          <TabPanel
+            value="3"
+            sx={{
+              p: 0,
+              border: `1px solid ${theme.palette.grey[300]}`,
+              borderTop: 0,
+              borderBottomLeftRadius: 12,
+              borderBottomRightRadius: 12,
+              backgroundColor: "#fff",
+            }}
+          >
+            <Box sx={{ px: 3, py: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                Contest Overview
+              </Typography>
+            </Box>
+            <Divider />
+            <Box sx={{ px: 3, pb: 3 }}>
+              <ContestOverviewTable />
+            </Box>
+          </TabPanel>
         </TabContext>
       </Container>
+
     </Box>
   );
 }
