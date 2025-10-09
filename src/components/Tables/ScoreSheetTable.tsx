@@ -179,7 +179,7 @@ export default function ScoreSheetTable({
 
   /**
    * Check if all required score fields (1..8) are filled.
-   * Note: field 9 (comments) is optional, so it’s ignored here.
+   * field 9 (comments) is optional
    */
   const allFieldsFilled = () => {
     const allFilled = Object.keys(formData).every((key) => {
@@ -309,7 +309,7 @@ export default function ScoreSheetTable({
         sx={{
           width: "auto",
           p: 3,
-          bgcolor: "#fff", // previously secondary.light
+          bgcolor: "#fff", 
           borderRadius: 3,
           border: `1px solid ${theme.palette.grey[300]}`,
           ml: "2%",

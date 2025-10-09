@@ -44,7 +44,6 @@ function Row(props: { row: ReturnType<typeof createData> }) {
     contestsByOrganizers,
     fetchContestsByOrganizers,
     deleteContestOrganizerMapping,
-    mapContestOrganizerError,
   } = useMapContestOrganizerStore();
 
   const handleOpenAreYouSureUnassign = (organizerId: number, contestId: number) => {
@@ -117,24 +116,24 @@ function Row(props: { row: ReturnType<typeof createData> }) {
         <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
           <Stack direction="row" spacing={1.25} justifyContent="flex-end">
             {React.cloneElement(
-  row.assignContest,
-  {
-    variant: "contained",
-    size: "medium",
-    sx: {
-      textTransform: "none",
-      borderRadius: 2,
-      bgcolor: "success.main",
-      "&:hover": { bgcolor: "success.dark" },
-      px: 3,
-      py: 1,
-      fontSize: "0.9rem",
-      fontWeight: 550,
-      ...(row.assignContest.props.sx || {}),
-    },
-  },
-  "Assign"
-)}
+            row.assignContest,
+            {
+              variant: "contained",
+              size: "medium",
+              sx: {
+                textTransform: "none",
+                borderRadius: 2,
+                bgcolor: "success.main",
+                "&:hover": { bgcolor: "success.dark" },
+                px: 3,
+                py: 1,
+                fontSize: "0.9rem",
+                fontWeight: 550,
+                ...(row.assignContest.props.sx || {}),
+              },
+            },
+            "Assign"
+          )}
 
             {React.cloneElement(row.editButton, {
               variant: "outlined",

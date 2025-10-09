@@ -1,4 +1,4 @@
-import { Button, Box, Checkbox, Collapse, IconButton, Input, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, Chip } from "@mui/material";
+import { Button, Box, Checkbox, Collapse, IconButton, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, Chip } from "@mui/material";
 import  { useEffect, useState } from "react";
 import theme from "../../theme";
 import { TriangleIcon, Trophy} from "lucide-react";

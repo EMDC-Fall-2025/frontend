@@ -68,7 +68,6 @@ export default function JudgeModal(props: IJudgeModalProps) {
     { label: "Run Penalties", value: "runPenSS" },
     { label: "General Penalties", value: "genPenSS" },
     { label: "Redesign", value: "redesignSS" },
-    //TODO: undetermined if need two score sheets
     { label: "Championship", value: "championshipSS" },
   ];
 
@@ -471,7 +470,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
             )}
           </FormControl>
 
-          {/* Submit button - updated to use modern green success theme */}
+          {/* Submit button */}
           <Button
             type="submit"
             sx={{

@@ -33,7 +33,7 @@ export default function ContestResultsTable({ teams, coachNames, teamAwards }: C
           {teams.map((team) => (
             <TableRow key={team.id} sx={{ "&:nth-of-type(odd)": { bgcolor: theme.palette.action.hover } }}>
               <TableCell>{team.team_name}</TableCell>
-              <TableCell>{team.school_name || "MNSU"}</TableCell>
+              <TableCell>{team.school_name || "NA"}</TableCell>
               <TableCell>{coachNames[team.id] || "N/A"}</TableCell>
               <TableCell>{team.team_rank || 0}</TableCell>
               <TableCell>{team.total_score}</TableCell>

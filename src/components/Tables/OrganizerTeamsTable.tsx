@@ -170,7 +170,7 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
                     handleOpenTeamModal({
                       id: team.id,
                       team_name: team.team_name,
-                      school_name: team.school_name || "MNSU",
+                      school_name: team.school_name || "NA",
                       clusterid: cluster,
                       username: coachesByTeams[team.id]?.username || "N/A",
                       first_name: coachesByTeams[team.id]?.first_name || "N/A",

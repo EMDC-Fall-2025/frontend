@@ -9,23 +9,21 @@ import {
   Chip,
 } from "@mui/material";
 import axios from "axios";
-import { useContestStore } from "../store/primary_stores/contestStore";
-import { useMapContestOrganizerStore } from "../store/map_stores/mapContestToOrganizerStore";
-import { useAuthStore } from "../store/primary_stores/authStore";
-import theme from "../theme";
-import { Judge, Contest } from "../types";
+import { useContestStore } from "../../store/primary_stores/contestStore";
+import { useMapContestOrganizerStore } from "../../store/map_stores/mapContestToOrganizerStore";
+import { useAuthStore } from "../../store/primary_stores/authStore";
+import theme from "../../theme";
+import { Judge, Contest } from "../../types";
 
 interface ContestOverviewTableProps {
   contests?: Contest[]; 
 }
 
 export default function ContestOverviewTable({ contests: propContests }: ContestOverviewTableProps = {}) {
-  // Store hooks for data management
   const { allContests, fetchAllContests } = useContestStore();
   const { contests: organizerContests, fetchContestsByOrganizerId } = useMapContestOrganizerStore();
   const { role } = useAuthStore();
 
-  // Local state for managing contest-specific data
   const [contestJudges, setContestJudges] = useState<{[key: number]: Judge[]}>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -46,8 +44,7 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
           await fetchAllContests();
         }
       } catch (error) {
-        console.warn("Backend not available - using mock contest data");
-        // Graceful fallback when backend is unavailable
+        console.warn("Backend not available");
       } finally {
         setIsLoading(false);
       }
@@ -78,7 +75,7 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
             judgesMap[contest.id] = currentJudges;
           } catch (error) {
             console.warn(`Backend not available for contest ${contest.id}`);
-            // Graceful fallback - show empty array when API fails
+            // fall back empty array
             judgesMap[contest.id] = [];
           }
         }
@@ -117,7 +114,7 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
             clustersMap[contest.id] = currentClusters;
           } catch (error) {
             console.warn(`Backend not available for contest ${contest.id}`);
-            // Graceful fallback - show empty array when API fails
+  
             clustersMap[contest.id] = [];
           }
         }
@@ -139,7 +136,6 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
     );
   }
 
-  // Show message when no contests are available
   if (contests.length === 0) {
     return (
       <Box>

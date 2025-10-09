@@ -2,7 +2,7 @@
 /**
  * AssignJudgeToContestModal Component
  *
- * Allows administrators to assign an existing judge to additional contests.
+ * Allows organisers to assign an existing judge to additional contests.
  * This enables the same judge to work on multiple contests simultaneously.
  *
  * Features:
@@ -32,14 +32,13 @@ import theme from "../../theme";
 import toast from "react-hot-toast";
 import { useContestStore } from "../../store/primary_stores/contestStore";
 import { Judge } from "../../types";
-import { api } from "../../lib/api";
 import axios from "axios";
 import SearchBar from "../SearchBar";
 
 export interface IAssignJudgeToContestModalProps {
   open: boolean;
   handleClose: () => void;
-  onSuccess?: () => void; // Callback when assignment is successful
+  onSuccess?: () => void; 
 }
 
 export default function AssignJudgeToContestModal(
@@ -47,13 +46,11 @@ export default function AssignJudgeToContestModal(
 ) {
   const { handleClose, open, onSuccess } = props;
 
-  // ----- State Management -----
-  // Use stable selectors to prevent unnecessary re-renders
+  // all contests fetched
   const contests = useContestStore((s) => s.allContests);
   const fetchAllContests = useContestStore((s) => s.fetchAllContests);
 
   // ----- Form State Management -----
-  // Track user selections for judge, contest, and cluster
   const [selectedJudgeId, setSelectedJudgeId] = React.useState<number>(-1);
   const [selectedContestId, setSelectedContestId] = React.useState<number>(-1);
   const [selectedClusterId, setSelectedClusterId] = React.useState<number>(-1);
@@ -85,9 +82,10 @@ export default function AssignJudgeToContestModal(
 
   // Local state for clusters specific to selected contest
   const [contestClusters, setContestClusters] = React.useState<any[]>([]);
-  // Local state for judges already assigned to the selected contest and cluster combination
+  // Local state for judges 
   const [assignedJudgeClusterPairs, setAssignedJudgeClusterPairs] = React.useState<Set<string>>(new Set());
   
+  //# preventing duplicate assignments
   const availableClusters = contestClusters;
   const filteredClusters = React.useMemo(() => {
     if (selectedJudgeId <= 0 || selectedContestId <= 0) {
@@ -98,9 +96,8 @@ export default function AssignJudgeToContestModal(
       return !assignedJudgeClusterPairs.has(pairKey);
     });
   }, [availableClusters, selectedJudgeId, selectedContestId, assignedJudgeClusterPairs]);
-  // Note: availableJudges filtering is now handled by SearchBar component
 
-  // Load contests & judges each time the modal opens
+  // # Load contests & judges each time the modal opens
   React.useEffect(() => {
     if (!open) return;
 
@@ -116,7 +113,16 @@ export default function AssignJudgeToContestModal(
         }
 
         // Load all judges
-        const response = await api.get("/judge/getAll/");
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          "/api/judge/getAll/",
+          {
+            headers: {
+              Authorization: `Token ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
         if (!isMounted) return;
         if (response.data?.Judges) {
           setAllJudges(response.data.Judges);
@@ -136,9 +142,9 @@ export default function AssignJudgeToContestModal(
 
   // Load clusters when a contest is selected
   React.useEffect(() => {
-    // Handle contest selection and load associated clusters
+    // cluster validation
     if (selectedContestId === -1 || selectedContestId <= 0) {
-      // Clear clusters if no valid contest is selected
+    
       setContestClusters([]);
       return;
     }
@@ -150,7 +156,7 @@ export default function AssignJudgeToContestModal(
         try {
           const token = localStorage.getItem("token");
           
-          // Fetch clusters for the selected contest
+          // #Fetch clusters for the selected contest
           const clustersResponse = await axios.get(
             `/api/mapping/clusterToContest/getAllClustersByContest/${selectedContestId}/`,
             {
@@ -206,7 +212,7 @@ export default function AssignJudgeToContestModal(
       // Mark this contest as loaded to prevent duplicate requests
       loadedContestIdRef.current = selectedContestId;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [selectedContestId]);
 
   /**
@@ -260,7 +266,6 @@ export default function AssignJudgeToContestModal(
 
       setSuccess(response?.data?.message || "Judge successfully assigned to contest!");
 
-      // optional external refresh
       onSuccess?.();
 
       // Reset form

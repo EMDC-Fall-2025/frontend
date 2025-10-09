@@ -14,15 +14,10 @@ import theme from "../../theme";
  * Public Score Breakdown — General Penalties table
  * - Reads penalty breakdown from the score sheet store (already populated upstream)
  * - Renders a read-only table of penalties, types, point values, and deducted points
- * - Styling aligns with Admin/Public cards: white surface, rounded corners, thin gray borders
  */
 export default function ScoreBreakdownTableGeneralPenalties() {
   const { scoreSheetBreakdown } = useScoreSheetStore();
 
-  /**
-   * Simple row renderer for one penalty line.
-   * NOTE: Logic unchanged — purely presentational.
-   */
   const PenaltiesRow: React.FC<{
     text: string;
     field: string;
@@ -65,10 +60,9 @@ export default function ScoreBreakdownTableGeneralPenalties() {
     );
   };
 
-  // Show spinner while breakdown is not available yet
+
   return scoreSheetBreakdown ? (
     <TableContainer
-      // Card-like surface to match Admin/Public cards
       component={Paper}
       sx={{
         m: 5,
@@ -110,7 +104,7 @@ export default function ScoreBreakdownTableGeneralPenalties() {
         <TableBody>
           {generalPenaltiesQuestions.map((penalty) => (
             <PenaltiesRow
-              key={penalty.field} // key for stable rendering (styling-only; no logic change)
+              key={penalty.field}
               text={penalty.questionText}
               field={penalty.field}
               pointValue={penalty.pointValue}

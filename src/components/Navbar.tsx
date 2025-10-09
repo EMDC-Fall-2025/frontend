@@ -12,7 +12,7 @@ import theme from "../theme";
 
 export default function Nav() {
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
-  const { isAuthenticated, role, logout, authError } = useAuthStore();
+  const { isAuthenticated, role, logout } = useAuthStore();
   const [logoUrl, setLogoUrl] = useState("/");
   const navigate = useNavigate();
   const location = useLocation();
@@ -54,7 +54,6 @@ export default function Nav() {
   return (
     <>
       <Box sx={{ flexGrow: 1 }}>
-        {/* Sticky keeps it in flow (no overlap), high zIndex stays on top */}
         <AppBar
           position="sticky"
           elevation={0}
@@ -65,7 +64,6 @@ export default function Nav() {
           }}
         >
           <Container maxWidth={isHomePage ? false : "lg"} disableGutters={isHomePage} sx={{ py: 1 }}>
-            {/* Boxy white bar with soft shadow that reads on white backgrounds */}
             <Paper
               elevation={0}
               sx={{
@@ -158,13 +156,12 @@ export default function Nav() {
         </AppBar>
       </Box>
 
-      {/* Logout confirmation (unchanged) */}
+      {/* Logout confirmation*/}
       <AreYouSureModal
         open={openAreYouSure}
         handleClose={() => setOpenAreYouSure(false)}
         title="Are you sure you want to logout?"
         handleSubmit={handleLogout}
-        error={authError}
       />
     </>
   );

@@ -41,8 +41,7 @@ export default function AdminContestTable() {
     fetchAllContests,
     allContests,
     deleteContest,
-    isLoadingContest,
-    contestError,
+    isLoadingContest
   } = useContestStore();
 
   const {
@@ -62,7 +61,6 @@ export default function AdminContestTable() {
 
   useEffect(() => {
     fetchOrganizerNamesByContests();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allContests]);
 
   const rows = allContests.map((contest) =>
@@ -140,7 +138,7 @@ export default function AdminContestTable() {
                 "& td": { borderBottomColor: "grey.200" },
               }}
             >
-              {/* NAME Cell: icon + bold name, with subtle layout matching screenshot */}
+      
               <TableCell sx={{ py: 2 }}>
                 <Stack direction="row" alignItems="center" spacing={2} minWidth={0}>
                   <Box
@@ -169,7 +167,7 @@ export default function AdminContestTable() {
                       {row.name}
                     </Typography>
 
-                    {/* Small meta line similar to screenshot (date + organizers count) */}
+                
                     <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
                       <Typography variant="caption" color="text.secondary">
                         {row.date.format("MM-DD-YYYY")}
@@ -186,7 +184,7 @@ export default function AdminContestTable() {
                 </Stack>
               </TableCell>
 
-              {/* DATE Cell (kept for your existing columns; can be removed if redundant) */}
+              {/* DATE*/}
               <TableCell sx={{ whiteSpace: "nowrap" }}>
                 {row.date.format("MM-DD-YYYY")}
               </TableCell>
@@ -196,7 +194,7 @@ export default function AdminContestTable() {
                 {row.is_open ? "Yes" : "No"}
               </TableCell>
 
-              {/* ORGANIZERS Cell -> small chips; graceful empty state */}
+              {/* ORGANIZERS*/}
               <TableCell sx={{ maxWidth: 420 }}>
                 {row.organizers && row.organizers.length !== 0 ? (
                   <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
@@ -220,7 +218,7 @@ export default function AdminContestTable() {
                 )}
               </TableCell>
 
-              {/* ACTIONS -> cleaner buttons (no right-side icon cluster) */}
+  
               <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
                 <Stack direction="row" spacing={1.25} justifyContent="flex-end">
                   <Button
@@ -293,7 +291,6 @@ export default function AdminContestTable() {
         handleClose={() => setOpenAreYouSure(false)}
         title="Are you sure you want to delete this contest?"
         handleSubmit={() => handleDelete(contestId)}
-        error={contestError}
       />
 
       <ContestModal

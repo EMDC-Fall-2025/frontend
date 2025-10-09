@@ -13,7 +13,6 @@ export default function ContestScores() {
   const { contestId } = useParams<{ contestId: string }>();
   const contestIdNumber = contestId ? parseInt(contestId, 10) : null;
 
-  // Zustand store for teams participating in the contest
   const {
     teamsByContest,
     fetchTeamsByContest,
@@ -21,7 +20,6 @@ export default function ContestScores() {
     clearContests,
   } = useMapContestToTeamStore();
 
-  // Zustand stores for awards and coaches
   const { awards, AwardsByTeamTable } = useSpecialAwardStore();
   const { coachesByTeams, fetchCoachesByTeams } = useMapCoachToTeamStore();
 
@@ -86,6 +84,7 @@ export default function ContestScores() {
   const rows = teamsByContest.map((team) => ({
     id: team.id,
     team_name: team.team_name,
+    school_name: (team as any).school_name || "",
     team_rank: team.team_rank || 0,
     total_score: team.total_score,
     coachName: coachNames[team.id] || "N/A",

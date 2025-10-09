@@ -1,12 +1,7 @@
 /**
  * ClusterModal Component
  * 
- * Modal for creating and editing clusters with modern theme styling.
- * Features:
- * - Clean white background with subtle borders
- * - Green success theme for buttons
- * - Consistent typography with bold titles
- * - Modern form styling with proper spacing
+ * Modal for creating and editing clusters. 
  */
 import { Button, TextField } from "@mui/material";
 import Modal from "./Modal";

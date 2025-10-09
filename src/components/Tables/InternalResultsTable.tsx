@@ -46,7 +46,7 @@ export default function InternalResultsTable() {
     createData(
       team.id,
       team.team_name,
-      team.school_name || 'MNSU',
+      team.school_name || 'NA',
       team.journal_score,
       team.presentation_score,
       team.machinedesign_score,

@@ -1,4 +1,3 @@
-// ScoreSheetTableRedesign Component
 import * as React from "react";
 import {
   Table,
@@ -54,8 +53,7 @@ export default function ScoreSheetTableRedesign({
     fetchScoreSheetById,
     isLoadingScoreSheet,
     updateScores,
-    editScoreSheet,
-    scoreSheetError,
+    editScoreSheet
   } = useScoreSheetStore();
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
 
@@ -212,109 +210,82 @@ export default function ScoreSheetTableRedesign({
     <>
       <Link
         onClick={() => navigate(-1)}
-        sx={{
-          textDecoration: "none",
-          cursor: "pointer",
-          display: "inline-flex",
-          alignItems: "center",
-          ml: "2%",
-          mt: 2,
-          color: theme.palette.success.main,
-          "&:hover": { color: theme.palette.success.dark },
-        }}
+        sx={{ textDecoration: "none" }}
+        style={{ cursor: "pointer" }}
       >
-        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+        <Typography variant="body2" sx={{ m: 2 }}>
           {"<"} Back to Judging Dashboard{" "}
         </Typography>
       </Link>
-      {/* Main page title */}
-      <Typography variant="h1" sx={{ ml: "2%", mr: 5, mt: 4, mb: 2, fontWeight: "bold" }}>
+      <Typography variant="h1" sx={{ ml: "2%", mr: 5, mt: 4, mb: 2 }}>
         {title}
       </Typography>
-      {/* Team name subtitle */}
-      <Typography variant="body1" sx={{ ml: "2%", mr: 5, mb: 4, fontWeight: "bold" }}>
+      <Typography variant="body1" sx={{ ml: "2%", mr: 5, mb: 4 }}>
         {teamName}
       </Typography>
-      {/* Main form container */}
       <Container
         component="form"
         sx={{
-          width: "auto",
-          p: 3,
-          bgcolor: "#fff", 
-          borderRadius: 3,                               
-          border: `1px solid ${theme.palette.grey[300]}`,
+          width: "90vw",
+          height: "auto",
+          padding: 3,
+          bgcolor: theme.palette.secondary.light,
           ml: "2%",
           mr: 1,
           mb: 3,
+          borderRadius: 5,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        {/* Action buttons container */}
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2 }}>
-          {/* Save button */}
-          <Button
-            variant="contained"
-            onClick={handleSaveScoreSheet}
-            sx={{
-              bgcolor: theme.palette.success.main,   
-              "&:hover": { bgcolor: theme.palette.success.dark },
-              color: "#fff",                            
-            }}
-          >
-            Save
-          </Button>
-          {/* Expand incomplete rows button */}
-          <Button
-            variant="contained"
-            onClick={expandIncompleteRows}
-            sx={{
-              bgcolor: theme.palette.success.main,
-              "&:hover": { bgcolor: theme.palette.success.dark },
-              color: "#fff",
-              minWidth: 200,
-              height: 44,
-              textTransform: "none",
-              borderRadius: 2,
-            }}
-          >
-            Expand Incomplete Rows
-          </Button>
-          {/* Collapse all rows button */}
-          <Button
-            variant="contained"
-            onClick={handleCollapseAllRows}
-            sx={{
-              bgcolor: theme.palette.success.main,
-              "&:hover": { bgcolor: theme.palette.success.dark },
-              color: "#fff",
-              minWidth: 200,
-              height: 44,
-              textTransform: "none",
-              borderRadius: 2,
-            }}
-          >
-            Collapse All
-          </Button>
-        </Box>
-        {/* Scoring table container */}
-        <TableContainer
-          component={Paper}
+        <Button
+          variant="contained"
+          onClick={handleSaveScoreSheet}
           sx={{
-            borderRadius: 2,
-            border: `1px solid ${theme.palette.grey[200]}`,
-            overflow: "hidden",
+            mb: 2,
+            bgcolor: theme.palette.secondary.main,
+            color: theme.palette.primary.main,
+            width: 200,
+            height: 45,
           }}
         >
-          <Table sx={{ tableLayout: "auto" }}>
+          Save
+        </Button>
+        <Button
+          variant="contained"
+          onClick={expandIncompleteRows}
+          sx={{
+            mb: 2,
+            bgcolor: theme.palette.secondary.main,
+            color: theme.palette.primary.main,
+            width: 200,
+            height: 45,
+          }}
+        >
+          Expand Incomplete Rows
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleCollapseAllRows}
+          sx={{
+            mb: 2,
+            bgcolor: theme.palette.secondary.main,
+            color: theme.palette.primary.main,
+            width: 200,
+            height: 45,
+          }}
+        >
+          Collapse All
+        </Button>
+        <TableContainer component={Paper}>
+          <Table>
             <TableBody>
               {questions.map((question) => (
                 <React.Fragment key={question.id}>
-                  <TableRow onClick={() => handleToggle(question.id)} sx={{ cursor: "pointer" }}>
-                    <TableCell sx={{ width: 56 }}>
+                  <TableRow onClick={() => handleToggle(question.id)}>
+                    <TableCell>
                       <IconButton aria-label="expand row" size="small">
                         {openRows[question.id] ? (
                           <KeyboardArrowUpIcon />
@@ -323,15 +294,14 @@ export default function ScoreSheetTableRedesign({
                         )}
                       </IconButton>
                     </TableCell>
-                    {/* Question text */}
                     <TableCell
                       component="th"
                       scope="row"
-                      sx={{ pl: 2, textAlign: "left", pr: 2, fontWeight: "bold" }}
+                      sx={{ pl: 2, textAlign: "left", mr: 1 }}
                     >
                       {question.questionText}
                     </TableCell>
-                    <TableCell align="right" scope="row" sx={{ width: 56 }}>
+                    <TableCell align="right" scope="row">
                       {question.id !== 8 && (
                         <>
                           {formData[question.id] == 0 ? (
@@ -364,14 +334,13 @@ export default function ScoreSheetTableRedesign({
                         >
                           {question.id !== 8 ? (
                             <>
-                              {/* Criteria 1 box */}
                               <Box
                                 sx={{
-                                  bgcolor: theme.palette.grey[50],
-                                  border: `1px solid ${theme.palette.grey[200]}`,
-                                  p: 1.5,                               
-                                  borderRadius: 2,
-                                  flex: 1,
+                                  bgcolor: theme.palette.secondary.light,
+                                  padding: 1,
+                                  borderRadius: 3,
+                                  width: "95%",
+                                  height: "100%",
                                 }}
                               >
                                 <Typography>{question.criteria1}</Typography>
@@ -385,14 +354,13 @@ export default function ScoreSheetTableRedesign({
                                   {question.criteria1Points}
                                 </Typography>
                               </Box>
-                              {/* Criteria 2 box */}
                               <Box
                                 sx={{
-                                  bgcolor: theme.palette.grey[50],
-                                  border: `1px solid ${theme.palette.grey[200]}`,
-                                  p: 1.5,
-                                  borderRadius: 2,
-                                  flex: 1,
+                                  bgcolor: theme.palette.secondary.light,
+                                  padding: 1,
+                                  borderRadius: 3,
+                                  width: "95%",
+                                  height: "100%",
                                 }}
                               >
                                 <Typography>{question.criteria2}</Typography>
@@ -406,14 +374,13 @@ export default function ScoreSheetTableRedesign({
                                   {question.criteria2Points}
                                 </Typography>
                               </Box>
-                              {/* Criteria 3 box */}
                               <Box
                                 sx={{
-                                  bgcolor: theme.palette.grey[50],
-                                  border: `1px solid ${theme.palette.grey[200]}`,
-                                  p: 1.5,
-                                  borderRadius: 2,
-                                  flex: 1,
+                                  bgcolor: theme.palette.secondary.light,
+                                  padding: 1,
+                                  borderRadius: 3,
+                                  width: "95%",
+                                  height: "100%",
                                 }}
                               >
                                 <Typography>{question.criteria3}</Typography>
@@ -432,9 +399,6 @@ export default function ScoreSheetTableRedesign({
                                 label="Score"
                                 type="number"
                                 value={
-                                  formData[question.id] !== undefined && 
-                                  formData[question.id] !== null && 
-                                  formData[question.id] !== "" &&
                                   formData[question.id] !== 0
                                     ? formData[question.id]
                                     : ""
@@ -448,13 +412,11 @@ export default function ScoreSheetTableRedesign({
   
                                   if (value !== undefined) {
                                     if (value === "") {
-                                      value = ""; 
-                                    } else if (Number(value) < question.lowPoints) {
-                                      value = ""; 
-                                    } else if (Number(value) > question.highPoints) {
-                                      value = ""; 
-                                    } else {
-                                      value = value; 
+                                      value = "";
+                                    } else if (value < question.lowPoints) {
+                                      value = "";
+                                    } else if (value > question.highPoints) {
+                                      value = "";
                                     }
                                   }
   
@@ -507,19 +469,16 @@ export default function ScoreSheetTableRedesign({
             </TableBody>
           </Table>
         </TableContainer>
-        {/* Final submit button */}
         <Button
           variant="contained"
           onClick={() => setOpenAreYouSure(true)}
           disabled={!allFieldsFilled()}
           sx={{
             mt: 3,
-            bgcolor: theme.palette.success.main,
-            "&:hover": { bgcolor: theme.palette.success.dark },
-            color: "#fff", 
-            minWidth: 200,                          
-            textTransform: "none",
-            borderRadius: 2,
+            bgcolor: theme.palette.secondary.main,
+            color: theme.palette.primary.main,
+            width: 200,
+            height: 45,
           }}
         >
           Submit

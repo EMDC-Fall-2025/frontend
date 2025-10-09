@@ -53,7 +53,7 @@ export default function TeamModal(props: ITeamModalProps) {
         // Create team with initial scores and coach information
         await createTeam({
           team_name: teamName,
-          school_name: schoolName || "MNSU",
+          school_name: schoolName || "NA",
           journal_score: 0,
           presentation_score: 0,
           machinedesign_score: 0,
@@ -119,7 +119,7 @@ export default function TeamModal(props: ITeamModalProps) {
       await editTeam({
         id: teamData?.id ?? 0,
         team_name: teamName,
-        school_name: schoolName || "MNSU",
+        school_name: schoolName || "NA",
         clusterid: cluster,
         username: coachEmail,
         first_name: coachFirstName,
@@ -204,7 +204,7 @@ export default function TeamModal(props: ITeamModalProps) {
           value={schoolName}
           onChange={(e: any) => setSchoolName(e.target.value)}
           sx={{ mt: 3, width: 300 }}
-          placeholder="MNSU"
+          placeholder="School Name"
         />
         <FormControl
           required
@@ -249,7 +249,7 @@ export default function TeamModal(props: ITeamModalProps) {
           onChange={(e: any) => setCoachEmail(e.target.value)}
           sx={{ mt: 3, width: 300 }}
         />
-        // Submit button
+        
         <Button
           type="submit"
           sx={{
