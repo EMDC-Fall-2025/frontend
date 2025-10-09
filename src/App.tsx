@@ -12,7 +12,7 @@ import { useAuthStore } from "./store/primary_stores/authStore";
 import Logout from "./pages/Logout";
 import ManageContest from "./pages/ManageContest";
 import Coach from "./pages/Coach";
-import JournalScore from "./pasges/JournalScore";
+import JournalScore from "./pages/JournalScore";
 import PresentationScore from "./pages/PresentationScore";
 import MachineDesignScore from "./pages/MachineDesignScore";
 import Admin from "./pages/Admin";
@@ -35,6 +35,7 @@ import Contests from "./pages/ContestsPage";
 
 
 import { Toaster } from "react-hot-toast";
+import Ranking from "./components/Tables/Rankings";
 
 function App() {
   const currentLink = useLocation().pathname;
@@ -51,6 +52,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/forgot-password/" element={<ForgotPassword />} />
           <Route path="/contestresults/:contestId" element={<ContestScores />} />
+          <Route path="/rank" element={<Ranking />} />
           {isAuthenticated && role?.user_type != 4 && (
             <Route path="/judging/:judgeId/" element={<Judging />} />
           )}
@@ -167,6 +169,7 @@ function App() {
             <Route path="/results/:contestId" element={<InternalResults />} />
           )}
           <Route path="/set-password/" element={<SetPassword />} />
+
           {isAuthenticated && (
             <Route
               path="/manage-contest/:contestId/"
@@ -181,7 +184,10 @@ function App() {
               element={<ScoreBreakdown />}
             />
           )}
+
         </Routes>
+
+
         <Toaster
           position="top-center"
           toastOptions={{

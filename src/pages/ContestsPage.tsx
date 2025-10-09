@@ -9,6 +9,8 @@ import ContestTable from "../components/Tables/ContestTable";
 
 // FILE OVERVIEW: page for displaying contests
 
+
+
 export default function Contests() {
   // Zustand store for contests
   const { allContests, fetchAllContests, isLoadingContest } = useContestStore();
@@ -22,13 +24,13 @@ export default function Contests() {
   // function to create data row
   function createData(id: number, name: string, date: string, is_open: boolean) {
     let status = "";
-    if (is_open) { 
+    if (is_open) {
       status = "In Progress";
-    } 
-    else { 
+    }
+    else {
       status = "Not Started"
     }
-    return { id, name, date, status};
+    return { id, name, date, status };
   }
 
 
@@ -39,10 +41,10 @@ export default function Contests() {
   };
 
   // transforms array into rows
-  const rows = allContests.map((contest) =>
+  const rows = allContests.map((contest: { id: number; name: string; date: string; is_open: boolean; }) =>
     createData(contest.id, contest.name, contest.date, contest.is_open)
   );
-  
+
   return (
     <>
       <Stack spacing={1} sx={{ mt: 4, mb: 3, ml: "2%" }}>
