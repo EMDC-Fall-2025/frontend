@@ -4,14 +4,16 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
 import InternalResultsTable from "../components/Tables/InternalResultsTable";
-import { Link, Typography } from "@mui/material";
-import { useAuthStore } from "../store/primary_stores/authStore";
+
 import axios from "axios";
-export default function InternalResults() {
-  const { contestId } = useParams();
-  const parsedContestId = contestId ? parseInt(contestId, 10) : undefined;
-  const { fetchTeamsByContest, clearTeamsByContest } =
-    useMapContestToTeamStore();
+
+  
+
+const InternalResults: React.FC = () => {
+
+
+  const { contestId } = useParams<{ contestId: string }>();
+  const navigate = useNavigate();
   const { role } = useAuthStore();
 
   const parsedContestId = contestId ? parseInt(contestId, 10) : undefined;

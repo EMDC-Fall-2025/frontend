@@ -46,17 +46,18 @@ export default function Judging() {
     }
   }, [judgeIdNumber]);
 
-  useEffect(() => {
-    if (cluster) {
-      getTeamsByClusterId(cluster.id);
-    }
-  }, [cluster]);
+  // These useEffects are no longer needed since we're fetching teams directly in fetchAllClustersByJudgeId
+  // useEffect(() => {
+  //   if (cluster) {
+  //     getTeamsByClusterId(cluster.id);
+  //   }
+  // }, [cluster]);
 
-  useEffect(() => {
-    if (teamsByClusterId && cluster?.id) {
-      setTeams(teamsByClusterId[cluster.id] || []);
-    }
-  }, [teamsByClusterId, cluster]);
+  // useEffect(() => {
+  //   if (teamsByClusterId && cluster?.id) {
+  //     setTeams(teamsByClusterId[cluster.id] || []);
+  //   }
+  // }, [teamsByClusterId, cluster]);
 
   // New function to fetch all clusters for a judge
   const fetchAllClustersByJudgeId = async (judgeId: number) => {
@@ -73,21 +74,38 @@ export default function Judging() {
       );
       
       if (response.data?.Clusters) {
+        console.log('Found clusters for judge:', response.data.Clusters);
         // Fetch teams from all clusters
         const allTeams: Team[] = [];
         for (const cluster of response.data.Clusters) {
           try {
-            await getTeamsByClusterId(cluster.id);
-            // Wait a bit for the teams to be loaded
-            await new Promise(resolve => setTimeout(resolve, 100));
-            if (teamsByClusterId && teamsByClusterId[cluster.id]) {
-              allTeams.push(...teamsByClusterId[cluster.id]);
+            console.log(`Fetching teams for cluster ${cluster.id} (${cluster.cluster_name || cluster.name})`);
+            // Fetch teams for this cluster
+            const teamsResponse = await axios.get(
+              `/api/mapping/clusterToTeam/getAllTeamsByCluster/${cluster.id}/`,
+              {
+                headers: {
+                  Authorization: `Token ${token}`,
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+            
+            if (teamsResponse.data?.Teams) {
+              console.log(`Found ${teamsResponse.data.Teams.length} teams in cluster ${cluster.id}`);
+              allTeams.push(...teamsResponse.data.Teams);
+            } else {
+              console.log(`No teams found in cluster ${cluster.id}`);
             }
           } catch (error) {
             console.error(`Error fetching teams for cluster ${cluster.id}:`, error);
           }
         }
+        console.log(`Total teams found for judge: ${allTeams.length}`);
         setTeams(allTeams);
+      } else {
+        console.log('No clusters found for judge');
+        setTeams([]);
       }
     } catch (error) {
       console.error('Error fetching all clusters for judge:', error);

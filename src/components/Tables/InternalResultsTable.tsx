@@ -153,7 +153,7 @@ export default function InternalResultsTable() {
                 </TableRow>
               );
             })}
-            {/* if there are no rows, body remains blank as requested */}
+            
           </TableBody>
         </Table>
       </TableContainer>

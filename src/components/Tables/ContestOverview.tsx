@@ -11,6 +11,7 @@ import {
 import axios from "axios";
 import { useContestStore } from "../../store/primary_stores/contestStore";
 import { useMapContestOrganizerStore } from "../../store/map_stores/mapContestToOrganizerStore";
+import { useMapContestJudgeStore } from "../../store/map_stores/mapContestToJudgeStore";
 import { useAuthStore } from "../../store/primary_stores/authStore";
 import theme from "../../theme";
 import { Judge, Contest } from "../../types";
@@ -22,14 +23,19 @@ interface ContestOverviewTableProps {
 export default function ContestOverviewTable({ contests: propContests }: ContestOverviewTableProps = {}) {
   const { allContests, fetchAllContests } = useContestStore();
   const { contests: organizerContests, fetchContestsByOrganizerId } = useMapContestOrganizerStore();
+  const { contest: judgeContest, getContestByJudgeId } = useMapContestJudgeStore();
   const { role } = useAuthStore();
 
   const [contestJudges, setContestJudges] = useState<{[key: number]: Judge[]}>({});
   const [isLoading, setIsLoading] = useState(false);
 
   // Determine which contests to display based on user role
-  // Organizers see only their assigned contests, admins see all contests
-  const contests = propContests || (role?.user_type === 2 ? organizerContests : allContests);
+  // Organizers see only their assigned contests, judges see their assigned contest, admins see all contests
+  const contests = propContests || (
+    role?.user_type === 2 ? organizerContests : 
+    role?.user_type === 3 ? (judgeContest ? [judgeContest] : []) : 
+    allContests
+  );
 
   // Load contest data based on user role
   useEffect(() => {
@@ -39,6 +45,9 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
         if (role?.user_type === 2 && role?.user?.id) {
           // For organizers, fetch only their assigned contests
           await fetchContestsByOrganizerId(role.user.id);
+        } else if (role?.user_type === 3 && role?.user?.id) {
+          // For judges, fetch their assigned contest
+          await getContestByJudgeId(role.user.id);
         } else {
           // For admins, fetch all available contests
           await fetchAllContests();
@@ -51,7 +60,7 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
     };
 
     loadData();
-  }, [fetchAllContests, fetchContestsByOrganizerId, role]);
+  }, [fetchAllContests, fetchContestsByOrganizerId, getContestByJudgeId, role]);
 
   // Fetch judges for each contest to display accurate judge counts
   useEffect(() => {
