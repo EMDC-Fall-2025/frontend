@@ -15,6 +15,7 @@ interface MapContestJudgeState {
   getAllJudgesByContestId: (contestId: number) => Promise<void>;
   getContestByJudgeId: (judgeId: number) => Promise<void>;
   deleteContestJudgeMappingById: (mapId: number) => Promise<void>;
+  removeJudgeFromContest: (judgeId: number, contestId: number) => Promise<void>;
   clearJudges: () => void;
   clearContest: () => void;
   clearMappings: () => void;
@@ -160,6 +161,23 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
           set({ mapContestJudgeError: null });
         } catch (error) {
           const errorMessage = "Error deleting contest-judge mapping";
+          set({ mapContestJudgeError: errorMessage });
+          throw new Error(errorMessage);
+        } finally {
+          set({ isLoadingMapContestJudge: false });
+        }
+      },
+
+      removeJudgeFromContest: async (judgeId: number, contestId: number) => {
+        set({ isLoadingMapContestJudge: true });
+        try {
+          const token = localStorage.getItem("token");
+          await axios.delete(`/api/mapping/contestToJudge/remove/${judgeId}/${contestId}/`, {
+            headers: { Authorization: `Token ${token}` },
+          });
+          set({ mapContestJudgeError: null });
+        } catch (error) {
+          const errorMessage = "Error removing judge from contest";
           set({ mapContestJudgeError: errorMessage });
           throw new Error(errorMessage);
         } finally {

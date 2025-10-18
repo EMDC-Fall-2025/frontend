@@ -11,7 +11,6 @@ import Typography from "@mui/material/Typography";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { Button, Container, CircularProgress } from "@mui/material";
-import axios from "axios";
 import { useState } from "react";
 import JudgeModal from "../Modals/JudgeModal";
 import { useNavigate } from "react-router-dom";
@@ -155,7 +154,7 @@ function JudgesTable(props: IJudgesTableProps) {
   const [judgeData, setJudgeData] = useState<JudgeData | undefined>(undefined);
   const { submissionStatus, checkAllScoreSheetsSubmitted } = useJudgeStore();
   const [judgeId, setJudgeId] = useState(0);
-  const { fetchJudgesByClusterId } = useMapClusterJudgeStore();
+  const { fetchJudgesByClusterId, removeJudgeFromContest } = useMapClusterJudgeStore();
 
   const { judgeClusters } = useMapClusterJudgeStore();
 
@@ -183,10 +182,7 @@ function JudgesTable(props: IJudgesTableProps) {
   const handleDelete = async (judgeId: number) => {
     try {
       // Unassign judge from THIS contest only 
-      const token = localStorage.getItem("token");
-      await axios.delete(`/api/mapping/contestToJudge/remove/${judgeId}/${contestid}/`, {
-        headers: { Authorization: `Token ${token}` },
-      });
+      await removeJudgeFromContest(judgeId, contestid);
       // Refresh judges for all clusters in this contest to reflect removal
       if (clusters && clusters.length > 0) {
         for (const c of clusters) {
