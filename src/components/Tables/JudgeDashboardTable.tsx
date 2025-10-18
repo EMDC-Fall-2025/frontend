@@ -232,8 +232,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
           break;
       }
     } catch {
-      // noop – error is surfaced by scoreSheetError in the modal
-    }
+      
   };
 
   const handleOpenAreYouSure = (

@@ -533,18 +533,16 @@ export default function MultiTeamScoreSheet({
                                 inputElement.blur();
                               }}
                               onChange={(e) => {
-                                let value = e.target.value;
+                                let value: number | string | undefined = e.target.value;
 
-                                if (value !== undefined) {
-                                  if (value === "") {
-                                    value = undefined;
-                                  } else if (Number(value) < question.lowPoints) {
-                                    value = undefined;
-                                  } else if (Number(value) > question.highPoints) {
-                                    value = undefined;
-                                  } else {
-                                    value = Number(value);
-                                  }
+                                if (value === "") {
+                                  value = undefined;
+                                } else if (Number(value) < question.lowPoints) {
+                                  value = undefined;
+                                } else if (Number(value) > question.highPoints) {
+                                  value = undefined;
+                                } else {
+                                  value = Number(value);
                                 }
 
                                 handleScoreChange(team.id, question.id, value);
@@ -613,7 +611,7 @@ export default function MultiTeamScoreSheet({
                     ))}
                   </TableRow>
 
-                  {/* Expanded details: criteria boxes (light grey) */}
+                  {/* Expanded details: */}
                   <TableRow>
                     <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={filteredTeams.length + 2}>
                       <Collapse in={openRows[question.id]} timeout="auto" unmountOnExit>
@@ -800,7 +798,6 @@ export default function MultiTeamScoreSheet({
           handleClose={() => setOpenAreYouSure(false)}
           title="Are you sure you want to submit scores for all teams?"
           handleSubmit={() => handleSubmit()}
-          error={scoreSheetError}
         />
       </Container>
     </>
