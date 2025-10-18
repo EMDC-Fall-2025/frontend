@@ -232,7 +232,8 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
           break;
       }
     } catch {
-      
+      // Handle error silently
+    }
   };
 
   const handleOpenAreYouSure = (
@@ -312,9 +313,11 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     );
   }
 
-  return isLoadingMapScoreSheet ? (
-    <CircularProgress />
-  ) : (
+  if (isLoadingMapScoreSheet) {
+    return <CircularProgress />;
+  }
+
+  return (
     <>
       <Container
         sx={{

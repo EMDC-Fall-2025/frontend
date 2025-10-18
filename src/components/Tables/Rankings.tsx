@@ -1,27 +1,50 @@
-import { Button, Box, Checkbox, Collapse, IconButton, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, Chip } from "@mui/material";
+import { Button, Box, Checkbox, Collapse, IconButton, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, Chip, CircularProgress } from "@mui/material";
 import  { useEffect, useState } from "react";
 import theme from "../../theme";
 import { TriangleIcon, Trophy} from "lucide-react";
 import { useAuthStore } from "../../store/primary_stores/authStore";
-import axios from "axios";
+import { useRankingsStore } from "../../store/primary_stores/rankingsStore";
 import { useNavigate } from "react-router-dom";
+
+// Extended cluster type for rankings
+interface ClusterWithTeams {
+  id: number;
+  cluster_name: string;
+  teams: TeamWithStatus[];
+}
+
+interface TeamWithStatus {
+  id: number;
+  team_name: string;
+  school_name: string;
+  total_score: number;
+  cluster_rank: number;
+  status: 'completed' | 'in_progress' | 'not_started';
+}
 
 // Rankings component for displaying team rankings by cluster
 const Ranking = () => {
     const navigate = useNavigate();
     const [selectedTeams, setSelectedTeams] = useState<number[]>([])
     const [openCluster, setOpenCluster] = useState<Set<number>>(new Set())
-    const { isAuthenticated, role, token } = useAuthStore()
-
-    const [contests, setContests] = useState<any[]>([])
-    const [clusters, setClusters] = useState<any[]>([])
-    const [selectedContest, setSelectedContest] = useState<any>(null)
+    const { isAuthenticated, role } = useAuthStore()
+    
+    const { 
+      contests, 
+      clusters, 
+      selectedContest, 
+      isLoadingRankings, 
+      rankingsError,
+      fetchContestsForOrganizer,
+      fetchClustersWithTeamsForContest,
+      setSelectedContest
+    } = useRankingsStore()
 
     // Load contests for organizer
     useEffect(() => {
-      const fetchContests = async () => {
+      const loadContests = async () => {
         try {
-          if (!isAuthenticated || !token) {
+          if (!isAuthenticated) {
             console.error('Please log in to view rankings')
             return
           }
@@ -30,78 +53,34 @@ const Ranking = () => {
             console.error('Organizer ID not found')
             return
           }
-          const { data } = await axios.get(`/api/mapping/contestToOrganizer/getByOrganizer/${organizerId}/`, {
-            headers: { Authorization: `Token ${token}` }
-          })
-          const contestsData = data?.Contests ?? []
-          setContests(contestsData)
-          if (contestsData.length > 0) setSelectedContest(contestsData[0])
-          else console.error('No contests found for this organizer')
+          await fetchContestsForOrganizer(organizerId)
         } catch (e) {
           console.error('Failed to load contests:', e)
         }
       }
-      if (isAuthenticated) fetchContests()
-    }, [isAuthenticated, role, token])
+      if (isAuthenticated) loadContests()
+    }, [isAuthenticated, role, fetchContestsForOrganizer])
 
     // Load clusters and teams for selected contest
     useEffect(() => {
-      const fetchClusters = async () => {
-        if (!selectedContest || !token) return
+      const loadClusters = async () => {
+        if (!selectedContest) return
         try {
-          const { data: clusterResp } = await axios.get(`/api/mapping/clusterToContest/getAllClustersByContest/${selectedContest.id}/`, {
-            headers: { Authorization: `Token ${token}` }
-          })
-          const clusterData = (clusterResp?.Clusters ?? []).map((c: any) => ({ id: c.id, cluster_name: c.cluster_name ?? c.name, teams: [] }))
-          const withTeams = await Promise.all(
-            clusterData.map(async (cluster: any) => {
-              try {
-                const { data: teamResp } = await axios.get(`/api/mapping/clusterToTeam/getAllTeamsByCluster/${cluster.id}/`, {
-                  headers: { Authorization: `Token ${token}` }
-                })
-                const teams = (teamResp?.Teams ?? []).map((t: any) => ({ id: t.id, team_name: t.team_name ?? t.name, school_name: t.school_name ?? 'N/A', total_score: t.total_score ?? 0 }))
-                const ranked = teams
-                  .sort((a: any, b: any) => (b.total_score ?? 0) - (a.total_score ?? 0))
-                  .map((t: any, i: number) => ({ ...t, cluster_rank: i + 1 }))
-
-                // derive per-team status without changing ranking logic
-                const teamsWithStatus = await Promise.all(
-                  ranked.map(async (t: any) => {
-                    try {
-                      const { data: s } = await axios.get(`/api/mapping/scoreSheet/allSubmittedForTeam/${t.id}/`, {
-                        headers: { Authorization: `Token ${token}` }
-                      })
-                      const total = t.total_score ?? 0
-                      const status = (s?.allSubmitted && total > 0)
-                        ? 'completed'
-                        : ((s?.submittedCount > 0 || total > 0) ? 'in_progress' : 'not_started')
-                      return { ...t, status }
-                    } catch {
-                      return { ...t, status: 'not_started' as const }
-                    }
-                  })
-                )
-
-                return { ...cluster, teams: teamsWithStatus }
-              } catch {
-                return { ...cluster, teams: [] }
-              }
-            })
-          )
-          setClusters(withTeams)
+          await fetchClustersWithTeamsForContest(selectedContest.id)
         } catch (e) {
           console.error('Failed to load contest data:', e)
         }
       }
-      fetchClusters()
-    }, [selectedContest, token])
+      loadClusters()
+    }, [selectedContest, fetchClustersWithTeamsForContest])
 
     // autoselect
     useEffect(() => {
       if (!selectedContest && contests.length > 0) {
         setSelectedContest(contests[0])
       }
-    }, [contests, selectedContest])
+    }, [contests, selectedContest, setSelectedContest])
+
 
 
     const toggleCluster = (id: number) => {
@@ -114,6 +93,26 @@ const Ranking = () => {
 
     const handleSelect = (teamId: number) => {
       setSelectedTeams((prev) => (prev.includes(teamId) ? prev.filter((id) => id !== teamId) : [...prev, teamId]))
+    }
+
+    // Show loading state
+    if (isLoadingRankings) {
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+          <CircularProgress />
+        </Box>
+      )
+    }
+
+    // Show error state
+    if (rankingsError) {
+      return (
+        <Box sx={{ maxWidth: 900, px: { xs: 1, sm: 2 }, mb: 4, mt: 3 }}>
+          <Typography color="error" variant="h6">
+            Error: {rankingsError}
+          </Typography>
+        </Box>
+      )
     }
 
     return (
@@ -152,7 +151,7 @@ const Ranking = () => {
                     fontSize: { xs: "0.75rem", sm: "0.875rem" }
                   }}
                 >
-                  {contest.contest_name|| contest.name}
+                  {contest.name}
                 </Button>
               ))}
             </Box>
@@ -201,7 +200,7 @@ const Ranking = () => {
         {/*  spacing between stats card and clusters */}
         <Box sx={{ mb: 3 }} />
   
-        {clusters.map((cluster) => {
+        {(clusters as ClusterWithTeams[]).map((cluster) => {
           const isOpen = openCluster.has(cluster.id)
           return (
             <Paper

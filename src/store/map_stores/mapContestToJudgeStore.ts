@@ -7,6 +7,7 @@ interface MapContestJudgeState {
   judges: Judge[];
   contest: Contest | null;
   mappings: MapContestToJudge[];
+  contestJudges: {[contestId: number]: Judge[]};
   isLoadingMapContestJudge: boolean;
   mapContestJudgeError: string | null;
 
@@ -17,6 +18,8 @@ interface MapContestJudgeState {
   clearJudges: () => void;
   clearContest: () => void;
   clearMappings: () => void;
+  clearContestJudges: () => Promise<void>;
+  fetchJudgesForMultipleContests: (contestIds: number[]) => Promise<void>;
 }
 
 export const useMapContestJudgeStore = create<MapContestJudgeState>()(
@@ -25,6 +28,7 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
       judges: [],
       contest: null,
       mappings: [],
+      contestJudges: {},
       isLoadingMapContestJudge: false,
       mapContestJudgeError: null,
 
@@ -160,6 +164,58 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
           throw new Error(errorMessage);
         } finally {
           set({ isLoadingMapContestJudge: false });
+        }
+      },
+
+      clearContestJudges: async () => {
+        try {
+          set({ contestJudges: {} });
+          set({ mapContestJudgeError: null });
+        } catch (error) {
+          const errorMessage = "Error clearing contest judges";
+          set({ mapContestJudgeError: errorMessage });
+          throw new Error(errorMessage);
+        }
+      },
+
+      fetchJudgesForMultipleContests: async (contestIds: number[]) => {
+        console.log('Store: fetchJudgesForMultipleContests called with:', contestIds);
+        set({ isLoadingMapContestJudge: true });
+        try {
+          const contestJudgesMap: {[contestId: number]: Judge[]} = {};
+          
+          for (const contestId of contestIds) {
+            try {
+              const token = localStorage.getItem("token");
+              const response = await axios.get(
+                `/api/mapping/judgeToContest/getAllJudges/${contestId}/`,
+                {
+                  headers: {
+                    Authorization: `Token ${token}`,
+                  },
+                }
+              );
+              contestJudgesMap[contestId] = response.data.Judges || [];
+              console.log(`Store: Fetched ${response.data.Judges?.length || 0} judges for contest ${contestId}`);
+            } catch (error) {
+              console.warn(`Failed to fetch judges for contest ${contestId}`);
+              contestJudgesMap[contestId] = [];
+            }
+          }
+          
+          console.log('Store: Setting contestJudges to:', contestJudgesMap);
+          set({ 
+            contestJudges: contestJudgesMap,
+            mapContestJudgeError: null,
+            isLoadingMapContestJudge: false,
+          });
+        } catch (error) {
+          const errorMessage = "Error fetching judges for multiple contests";
+          set({ 
+            mapContestJudgeError: errorMessage,
+            isLoadingMapContestJudge: false,
+          });
+          throw new Error(errorMessage);
         }
       },
     }),
