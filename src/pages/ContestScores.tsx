@@ -93,23 +93,40 @@ export default function ContestScores() {
 
   return (
     <>
-      <Typography variant="h1" sx={{ ml: "2%", mt: 4, mb: 4 }}>
+      <Typography 
+        variant="h1" 
+        sx={{ 
+          ml: { xs: 2, sm: "2%" }, 
+          mt: 4, 
+          mb: 4,
+          fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" }
+        }}
+      >
         Contest Results
       </Typography>
 
       {/* Back link to contest page */}
       <Link to="/contestPage/" style={{ textDecoration: "none", color: "inherit" }}>
-        <Typography variant="body2" sx={{ ml: 2, mt: 2 }}>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            ml: { xs: 2, sm: 2 }, 
+            mt: 2,
+            fontSize: { xs: "0.875rem", sm: "1rem" }
+          }}
+        >
           {"<"} Back to Contests {" "}
         </Typography>
       </Link>
 
       <Container
+        maxWidth="lg"
         sx={{
-          width: "90vw",
-          padding: 3,
+          width: { xs: "100%", sm: "90vw" },
+          padding: { xs: 2, sm: 3 },
           bgcolor: theme.palette.secondary.light,
-          ml: "2%",
+          ml: { xs: 0, sm: "2%" },
+          mx: { xs: 2, sm: "auto" },
           borderRadius: 5,
           display: "flex",
           flexDirection: "column",

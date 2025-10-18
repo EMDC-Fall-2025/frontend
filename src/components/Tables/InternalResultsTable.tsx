@@ -43,10 +43,22 @@ export default function InternalResultsTable() {
 
   return (
     <Container maxWidth={false} sx={{ px: 0, py: 0 }}>
-      <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 1 }}>
+      <TableContainer 
+        component={Paper} 
+        elevation={2} 
+        sx={{ 
+          borderRadius: 1,
+          overflow: "auto",
+          maxWidth: "100%"
+        }}
+      >
         <Table
           size="small"
-          sx={{ tableLayout: "fixed", width: "100%" }}
+          sx={{ 
+            tableLayout: "fixed", 
+            width: "100%",
+            minWidth: { xs: 600, sm: 800 }
+          }}
           aria-label="contest results"
         >
           <TableHead>
@@ -59,6 +71,9 @@ export default function InternalResultsTable() {
                     width: c.width,
                     fontWeight: 800,
                     whiteSpace: "nowrap",
+                    fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                    py: { xs: 0.5, sm: 1 },
+                    px: { xs: 0.25, sm: 1 },
                     ...(c.key === "penalties" && { color: "error.main" }),
                     ...(c.key === "total" && { color: "common.white", bgcolor: "success.main" }),
                   }}
@@ -96,34 +111,109 @@ export default function InternalResultsTable() {
                   }}
                 >
                   {/* Rank + medal */}
-                  <TableCell align="center" sx={{ fontWeight: 900, color: borderColor ?? "text.primary" }}>
+                  <TableCell 
+                    align="center" 
+                    sx={{ 
+                      fontWeight: 900, 
+                      color: borderColor ?? "text.primary",
+                      fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                      py: { xs: 0.5, sm: 1 },
+                      px: { xs: 0.25, sm: 1 }
+                    }}
+                  >
                     {rank ?? "—"} {is1 ? "🏆" : is2 ? "🥈" : is3 ? "🥉" : null}
                   </TableCell>
 
                   {/* Team */}
-                  <TableCell sx={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                    <Typography fontWeight={700}>{team.team_name}</Typography>
-                    <Typography variant="caption" color="text.disabled">ID: {team.id}</Typography>
+                  <TableCell 
+                    sx={{ 
+                      overflow: "hidden", 
+                      textOverflow: "ellipsis",
+                      py: { xs: 0.5, sm: 1 },
+                      px: { xs: 0.25, sm: 1 }
+                    }}
+                  >
+                    <Typography 
+                      fontWeight={700}
+                      sx={{ fontSize: { xs: "0.7rem", sm: "0.875rem" } }}
+                    >
+                      {team.team_name}
+                    </Typography>
+                    <Typography 
+                      variant="caption" 
+                      color="text.disabled"
+                      sx={{ fontSize: { xs: "0.6rem", sm: "0.75rem" } }}
+                    >
+                      ID: {team.id}
+                    </Typography>
                   </TableCell>
 
                   {/* School */}
-                  <TableCell sx={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                    <Typography variant="body2">{school}</Typography>
+                  <TableCell 
+                    sx={{ 
+                      overflow: "hidden", 
+                      textOverflow: "ellipsis",
+                      py: { xs: 0.5, sm: 1 },
+                      px: { xs: 0.25, sm: 1 }
+                    }}
+                  >
+                    <Typography 
+                      variant="body2"
+                      sx={{ fontSize: { xs: "0.7rem", sm: "0.875rem" } }}
+                    >
+                      {school}
+                    </Typography>
                   </TableCell>
 
                   {/* Scores */}
-                  <TableCell align="center" sx={{ fontWeight: 600, color: "success.dark" }}>
+                  <TableCell 
+                    align="center" 
+                    sx={{ 
+                      fontWeight: 600, 
+                      color: "success.dark",
+                      fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                      py: { xs: 0.5, sm: 1 },
+                      px: { xs: 0.25, sm: 1 }
+                    }}
+                  >
                     {team.journal_score}
                   </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 600, color: "success.dark" }}>
+                  <TableCell 
+                    align="center" 
+                    sx={{ 
+                      fontWeight: 600, 
+                      color: "success.dark",
+                      fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                      py: { xs: 0.5, sm: 1 },
+                      px: { xs: 0.25, sm: 1 }
+                    }}
+                  >
                     {team.presentation_score}
                   </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 600, color: "success.dark" }}>
+                  <TableCell 
+                    align="center" 
+                    sx={{ 
+                      fontWeight: 600, 
+                      color: "success.dark",
+                      fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                      py: { xs: 0.5, sm: 1 },
+                      px: { xs: 0.25, sm: 1 }
+                    }}
+                  >
                     {team.machinedesign_score}
                   </TableCell>
 
                   {/* Penalties */}
-                  <TableCell align="center" sx={{ fontWeight: 800, color: "error.main" }}>
+                  <TableCell 
+                    align="center" 
+                    sx={{ 
+                      fontWeight: 800, 
+                      color: "error.main",
+                      fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                      py: { xs: 0.5, sm: 1 },
+                      px: { xs: 0.25, sm: 1 }
+                    }}
+                  >
                     -{Number(team.penalties_score).toFixed(1)}
                   </TableCell>
 
@@ -134,18 +224,29 @@ export default function InternalResultsTable() {
                       fontWeight: 900,
                       color: "common.white",
                       bgcolor: is1 ? GOLD : is2 ? SILVER : is3 ? BRONZE : "success.main",
+                      fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                      py: { xs: 0.5, sm: 1 },
+                      px: { xs: 0.25, sm: 1 }
                     }}
                   >
                     {Number(team.total_score).toFixed(1)}
                   </TableCell>
 
                   {/* Details */}
-                  <TableCell align="center">
+                  <TableCell 
+                    align="center"
+                    sx={{ py: { xs: 0.5, sm: 1 }, px: { xs: 0.25, sm: 1 } }}
+                  >
                     <Button
                       size="small"
                       variant="outlined"
                       color="success"
                       onClick={() => navigate(`/score-breakdown/${team.id}`)}
+                      sx={{
+                        fontSize: { xs: "0.6rem", sm: "0.75rem" },
+                        px: { xs: 1, sm: 2 },
+                        py: { xs: 0.25, sm: 0.5 }
+                      }}
                     >
                       VIEW
                     </Button>

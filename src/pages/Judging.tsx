@@ -10,8 +10,7 @@ import {
   Stack,
   Divider,
 } from "@mui/material";
-import { useNavigate, useParams } from "react-router-dom";
-import { useAuthStore } from "../store/primary_stores/authStore";
+import { useParams } from "react-router-dom";
 import { useJudgeStore } from "../store/primary_stores/judgeStore";
 import { useEffect, useState } from "react";
 import { useMapClusterJudgeStore } from "../store/map_stores/mapClusterToJudgeStore";
@@ -22,16 +21,11 @@ import { Team } from "../types";
 import axios from "axios";
 
 export default function Judging() {
-  const navigate = useNavigate();
-  const { role } = useAuthStore();
-
   const { judgeId } = useParams();
   const judgeIdNumber = judgeId ? parseInt(judgeId, 10) : null;
   const { judge, fetchJudgeById, clearJudge } = useJudgeStore();
-  const { fetchClusterByJudgeId, cluster, clearCluster } = useMapClusterJudgeStore();
+  const { fetchClusterByJudgeId, clearCluster } = useMapClusterJudgeStore();
   const {
-    getTeamsByClusterId,
-    teamsByClusterId,
     mapClusterToTeamError,
     clearClusterTeamMappings,
     clearTeamsByClusterId,
@@ -46,18 +40,6 @@ export default function Judging() {
     }
   }, [judgeIdNumber]);
 
-  // These useEffects are no longer needed since we're fetching teams directly in fetchAllClustersByJudgeId
-  // useEffect(() => {
-  //   if (cluster) {
-  //     getTeamsByClusterId(cluster.id);
-  //   }
-  // }, [cluster]);
-
-  // useEffect(() => {
-  //   if (teamsByClusterId && cluster?.id) {
-  //     setTeams(teamsByClusterId[cluster.id] || []);
-  //   }
-  // }, [teamsByClusterId, cluster]);
 
   // New function to fetch all clusters for a judge
   const fetchAllClustersByJudgeId = async (judgeId: number) => {
@@ -151,16 +133,27 @@ export default function Judging() {
 
   return (
     <Box sx={{ pb: 8, backgroundColor: "#fafafa", minHeight: "100vh" }}>
-      <Container maxWidth="lg">
+      <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 } }}>
         {mapClusterToTeamError ? (
           <CircularProgress />
         ) : (
           <>
             <Stack spacing={1} sx={{ mb: 3, mt: 3 }}>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: theme.palette.success.main }}>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 800, 
+                  color: theme.palette.success.main,
+                  fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" }
+                }}
+              >
                 Judge Dashboard
               </Typography>
-              <Typography variant="subtitle1" color="text.secondary">
+              <Typography 
+                variant="subtitle1" 
+                color="text.secondary"
+                sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
+              >
                 {judge?.first_name} {judge?.last_name}
               </Typography>
             </Stack>

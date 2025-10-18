@@ -63,7 +63,7 @@ export default function Nav() {
             zIndex: (t) => t.zIndex.drawer + 2,
           }}
         >
-          <Container maxWidth={isHomePage ? false : "lg"} disableGutters={isHomePage} sx={{ py: 1 }}>
+          <Container maxWidth={isHomePage ? false : "lg"} disableGutters={isHomePage} sx={{ py: 1, px: { xs: 1, sm: 2 } }}>
             <Paper
               elevation={0}
               sx={{
@@ -78,23 +78,30 @@ export default function Nav() {
                   "0 2px 6px rgba(0,0,0,0.05), 0 10px 24px rgba(0,0,0,0.06)",
               }}
             >
-              <Toolbar disableGutters sx={{ minHeight: { xs: 56, sm: 64 } }}>
+              <Toolbar disableGutters sx={{ minHeight: { xs: 56, sm: 64 }, flexWrap: { xs: "wrap", sm: "nowrap" } }}>
                 {/* Logo (left) */}
                 <Box
                   component={Link}
                   to={logoUrl}
-                  sx={{ display: "inline-flex", alignItems: "center" }}
+                  sx={{ display: "inline-flex", alignItems: "center", flexShrink: 0 }}
                 >
                   <Box
                     component="img"
                     src={logo}
                     alt="Logo"
-                    sx={{ width: { xs: "7.5rem", sm: "8.5rem" } }}
+                    sx={{ width: { xs: "6rem", sm: "7.5rem", md: "8.5rem" } }}
                   />
                 </Box>
 
                 {/* Right actions */}
-                <Box sx={{ display: "flex", alignItems: "center", ml: "auto", gap: 2 }}>
+                <Box sx={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  ml: "auto", 
+                  gap: { xs: 1, sm: 2 },
+                  flexWrap: { xs: "wrap", sm: "nowrap" },
+                  justifyContent: { xs: "flex-end", sm: "flex-start" }
+                }}>
                   {isHomePage && (
                     <Button
                       variant="contained"
@@ -102,12 +109,13 @@ export default function Nav() {
                       sx={{
                         textTransform: "none",
                         borderRadius: 2,
-                        px: 2.5,
+                        px: { xs: 1.5, sm: 2.5 },
                         minWidth: { xs: "auto", sm: 120 },
                         fontSize: { xs: "0.75rem", sm: "0.875rem" },
                         whiteSpace: "nowrap",
                         bgcolor: theme.palette.success.main,
                         "&:hover": { bgcolor: theme.palette.success.dark },
+                        order: { xs: 2, sm: 0 }
                       }}
                     >
                       Contest Results
@@ -121,12 +129,13 @@ export default function Nav() {
                       sx={{
                         textTransform: "none",
                         borderRadius: 2,
-                        px: 2.5,
+                        px: { xs: 1.5, sm: 2.5 },
                         minWidth: { xs: 80, sm: 120 },
                         fontSize: { xs: "0.75rem", sm: "0.875rem" },
                         whiteSpace: "nowrap",
                         bgcolor: theme.palette.success.main,
                         "&:hover": { bgcolor: theme.palette.success.dark },
+                        order: { xs: 1, sm: 0 }
                       }}
                     >
                       Logout
@@ -138,12 +147,13 @@ export default function Nav() {
                       sx={{
                         textTransform: "none",
                         borderRadius: 2,
-                        px: 2.5,
+                        px: { xs: 1.5, sm: 2.5 },
                         minWidth: { xs: 80, sm: 120 },
                         fontSize: { xs: "0.75rem", sm: "0.875rem" },
                         whiteSpace: "nowrap",
                         bgcolor: theme.palette.success.main,
                         "&:hover": { bgcolor: theme.palette.success.dark },
+                        order: { xs: 1, sm: 0 }
                       }}
                     >
                       Login

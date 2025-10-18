@@ -20,6 +20,8 @@ export interface IModalProps {
 export default function Modal(props: IModalProps) {
   const { open, handleClose, title, children } = props;
   const theme = useTheme();
+  
+  // Use full screen on mobile devices
   const fullScreen = useMediaQuery(theme.breakpoints.down("xs"));
 
   return (
@@ -28,16 +30,22 @@ export default function Modal(props: IModalProps) {
       open={open}
       onClose={handleClose}
       sx={{ textAlign: "center" }}
+      maxWidth="sm"
+      fullWidth
     >
-      <Box sx={{ position: "relative", padding: "16px" }}>
+      <Box sx={{ 
+        position: "relative", 
+        padding: { xs: "12px", sm: "16px" } 
+      }}>
         <IconButton
           aria-label="close"
           onClick={handleClose}
           sx={{
             position: "absolute",
-            right: "8px",
-            top: "8px",
+            right: { xs: "4px", sm: "8px" },
+            top: { xs: "4px", sm: "8px" },
             color: theme.palette.grey[500],
+            fontSize: { xs: "1.2rem", sm: "1.5rem" },
           }}
         >
           <CloseIcon />
@@ -46,14 +54,24 @@ export default function Modal(props: IModalProps) {
           sx={{
             margin: 0,
             textAlign: "center",
-            padding: "0 48px",
+            padding: { xs: "0 32px", sm: "0 48px" },
+            fontSize: { xs: "1.1rem", sm: "1.25rem" },
+            fontWeight: 600,
           }}
         >
           {title}
         </DialogTitle>
       </Box>
       <DialogContent
-        sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+        sx={{ 
+          display: "flex", 
+          flexDirection: "column", 
+          alignItems: "center",
+          padding: { xs: "16px", sm: "24px" },
+          "&.MuiDialogContent-root": {
+            paddingTop: { xs: "8px", sm: "16px" },
+          }
+        }}
       >
         {children}
       </DialogContent>

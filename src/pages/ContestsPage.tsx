@@ -32,15 +32,25 @@ export default function Contests() {
 
   return (
     <>
-      <Typography variant="h1" sx={{ ml: "2%", mt: 4, mb: 4 }}>
+      <Typography 
+        variant="h1" 
+        sx={{ 
+          ml: { xs: 2, sm: "2%" }, 
+          mt: 4, 
+          mb: 4,
+          fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" }
+        }}
+      >
         Contests
       </Typography>
       <Container
+        maxWidth="lg"
         sx={{
-          width: "90vw",
-          padding: 3,
+          width: { xs: "100%", sm: "90vw" },
+          padding: { xs: 2, sm: 3 },
           bgcolor: theme.palette.secondary.light,
-          ml: "2%",
+          ml: { xs: 0, sm: "2%" },
+          mx: { xs: 2, sm: "auto" },
           borderRadius: 5,
           display: "flex",
           flexDirection: "column",

@@ -39,6 +39,26 @@ const theme = createTheme({
       color: "#009A4A",
     },
   },
+  components: {
+    MuiContainer: {
+      styleOverrides: {
+        root: {
+          paddingLeft: 16,
+          paddingRight: 16,
+        },
+      },
+    },
+    MuiTable: {
+      styleOverrides: {
+        root: {
+          '& .MuiTableCell-root': {
+            padding: '8px 4px',
+            fontSize: '0.875rem',
+          },
+        },
+      },
+    },
+  },
 });
 
 export default theme;

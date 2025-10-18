@@ -100,7 +100,8 @@ function JudgeRow(props: { row: ReturnType<typeof createDataJudge> }) {
               p: 0,
               display: "flex",
               alignItems: "center",
-              gap: 1.5,
+              gap: { xs: 0.5, sm: 1, md: 1.5 },
+              flexWrap: { xs: "wrap", sm: "nowrap" },
             }}
           >
             {row.viewEditScores}
@@ -241,9 +242,23 @@ function JudgesTable(props: IJudgesTableProps) {
         sx={{
           textTransform: "none",
           fontWeight: 600,
-          px: 2.25,
-          py: 0.75,
-          borderRadius: 1.5,
+          px: { xs: 1.5, sm: 2, md: 2.5 },
+          py: { xs: 0.6, sm: 0.8, md: 1 },
+          borderRadius: 2,
+          fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
+          minWidth: { xs: "90px", sm: "110px", md: "130px" },
+          height: { xs: "32px", sm: "36px", md: "40px" },
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#4caf50",
+          color: "white",
+          "&:hover": {
+            backgroundColor: "#45a049",
+            transform: "translateY(-1px)",
+            boxShadow: "0 4px 8px rgba(76,175,80,0.25)",
+          },
+          transition: "all 0.2s ease-in-out",
         }}
       >
         Edit Judge
@@ -257,12 +272,27 @@ function JudgesTable(props: IJudgesTableProps) {
           navigate(`/judging/${judge.id}/`);
         }}
         sx={{
-          mr: 2,
+          mr: { xs: 0.5, sm: 1, md: 2 },
           textTransform: "none",
           fontWeight: 600,
-          px: 2.25,
-          py: 0.75,
-          borderRadius: 1.5,
+          px: { xs: 1.5, sm: 2, md: 2.5 },
+          py: { xs: 0.6, sm: 0.8, md: 1 },
+          borderRadius: 2,
+          fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
+          minWidth: { xs: "90px", sm: "110px", md: "130px" },
+          height: { xs: "32px", sm: "36px", md: "40px" },
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderColor: "#4caf50",
+          color: "#4caf50",
+          "&:hover": {
+            backgroundColor: "#4caf50",
+            color: "white",
+            transform: "translateY(-1px)",
+            boxShadow: "0 4px 8px rgba(76,175,80,0.25)",
+          },
+          transition: "all 0.2s ease-in-out",
         }}
       >
         View/Edit Scores
@@ -270,12 +300,27 @@ function JudgesTable(props: IJudgesTableProps) {
       <Button
         variant="outlined"
         sx={{
-          ml: 2,
+          ml: { xs: 0.5, sm: 1, md: 2 },
           textTransform: "none",
           fontWeight: 600,
-          px: 2.25,
-          py: 0.75,
-          borderRadius: 1.5,
+          px: { xs: 1.5, sm: 2, md: 2.5 },
+          py: { xs: 0.6, sm: 0.8, md: 1 },
+          borderRadius: 2,
+          fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
+          minWidth: { xs: "90px", sm: "110px", md: "130px" },
+          height: { xs: "32px", sm: "36px", md: "40px" },
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderColor: "#d32f2f",
+          color: "#d32f2f",
+          "&:hover": {
+            backgroundColor: "#d32f2f",
+            color: "white",
+            transform: "translateY(-1px)",
+            boxShadow: "0 4px 8px rgba(211,47,47,0.25)",
+          },
+          transition: "all 0.2s ease-in-out",
         }}
         onClick={(e) => {
           e.stopPropagation();
@@ -290,12 +335,15 @@ function JudgesTable(props: IJudgesTableProps) {
 
   return (
     <TableContainer component={Box}>
-      <Table
-        sx={{
-          minWidth: 650,
-          "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 },
-        }}
-      >
+        <Table
+          sx={{
+            "& .MuiTableCell-root": { 
+              fontSize: { xs: "0.7rem", sm: "0.85rem", md: "0.95rem" }, 
+              py: { xs: 0.5, sm: 0.75, md: 1.25 },
+              px: { xs: 0.5, sm: 0.75, md: 1 }
+            },
+          }}
+        >
         <TableBody>
           {rows.map((row, index) => (
             <JudgeRow key={index} row={row} />

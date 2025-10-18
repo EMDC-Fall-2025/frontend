@@ -371,11 +371,19 @@ export default function ManageContest() {
         >
           <TabList
             onChange={handleChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
             TabIndicatorProps={{
               style: {
                 backgroundColor: theme.palette.primary.main,
                 height: 3,
                 borderRadius: 2,
+              },
+            }}
+            sx={{
+              "& .MuiTabs-scrollButtons": {
+                color: theme.palette.primary.main,
               },
             }}
           >

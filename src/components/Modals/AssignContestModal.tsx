@@ -31,27 +31,35 @@ export interface IAssignContestModalProps {
 
 export default function OrganizerModal(props: IAssignContestModalProps) {
   const { handleClose, open, organizerId } = props;
+  
+  // Contest store for available contests
   const { allContests } = useContestStore();
+  
+  // Contest-organizer mapping store for assignments
   const {
     contestsByOrganizers,
     createContestOrganizerMapping,
     fetchContestsByOrganizers,
   } = useMapContestOrganizerStore();
+  
   const title = "Assign Contest To Organizer";
   const [contestId, setContestId] = useState(0);
   const [assignedContests, setAssignedContests] = useState<Contest[]>([]);
 
+  // Load assigned contests when organizer changes
   useEffect(() => {
     if (contestsByOrganizers[organizerId]) {
       setAssignedContests(contestsByOrganizers[organizerId] || []);
     }
   }, [organizerId]);
 
+  // Close modal and reset form
   const handleCloseModal = () => {
     handleClose();
     setContestId(0);
   };
 
+  // Assign contest to organizer
   const handleAssignContest = async (event: React.FormEvent) => {
     event.preventDefault();
     if (organizerId) {
@@ -67,11 +75,13 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
     }
   };
 
+  // Form submission handler
   const onSubmitHandler = (e: React.FormEvent) => {
     e.preventDefault();
     handleAssignContest(e);
   };
 
+  // Filter out already assigned contests
   const availableContests = allContests?.filter(
     (contest: Contest) =>
       !assignedContests.some((assigned) => assigned.id === contest.id)
@@ -96,14 +106,23 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
         <FormControl
           required
           sx={{
-            width: 350,
-            mt: 3,
+            width: { xs: "100%", sm: 350 },
+            mt: { xs: 2, sm: 3 },
+            "& .MuiInputLabel-root": {
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+            },
+            "& .MuiSelect-select": {
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+            },
+            "& .MuiMenuItem-root": {
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+            },
           }}
         >
           <InputLabel>Contest</InputLabel>
           <Select
             value={contestId}
-            label="Cluster"
+            label="Contest"
             sx={{ textAlign: "left" }}
             onChange={(e) => setContestId(Number(e.target.value))}
           >
@@ -118,14 +137,17 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
         <Button
           type="submit"
           sx={{
-            width: 170,
-            height: 44,
+            width: { xs: "100%", sm: 170 },
+            height: { xs: 40, sm: 44 },
             bgcolor: theme.palette.success.main,          
             "&:hover": { bgcolor: theme.palette.success.dark },
             color: "#fff",
-            mt: 4,
+            mt: { xs: 3, sm: 4 },
             textTransform: "none",
             borderRadius: 2,
+            fontSize: { xs: "0.9rem", sm: "1rem" },
+            px: { xs: 3, sm: 4.5 },
+            py: { xs: 1, sm: 1.25 },
           }}
         >
           Assign Contest

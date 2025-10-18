@@ -269,12 +269,16 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
             variant="contained"
             onClick={() => navigate(`/${url}/${judge.id}/${team.id}/`)}
             sx={{
-              mb: 1,
+              mb: { xs: 0.5, sm: 1 },
               textTransform: "none",
               borderRadius: 2,
-              px: 2.25,
+              px: { xs: 1.5, sm: 2.25 },
+              py: { xs: 0.5, sm: 0.75 },
               bgcolor: theme.palette.success.main,
               "&:hover": { bgcolor: theme.palette.success.dark },
+              fontSize: { xs: "0.75rem", sm: "0.875rem" },
+              fontWeight: 600,
+              minWidth: { xs: "auto", sm: "auto" },
             }}
           >
             {buttonText}
@@ -283,12 +287,16 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
           <Button
             variant="contained"
             sx={{
-              mb: 1,
+              mb: { xs: 0.5, sm: 1 },
               textTransform: "none",
               borderRadius: 2,
-              px: 2.25,
+              px: { xs: 1.5, sm: 2.25 },
+              py: { xs: 0.5, sm: 0.75 },
               bgcolor: theme.palette.grey[500],
               "&:hover": { bgcolor: theme.palette.grey[600] },
+              fontSize: { xs: "0.75rem", sm: "0.875rem" },
+              fontWeight: 600,
+              minWidth: { xs: "auto", sm: "auto" },
             }}
             onClick={() =>
               handleOpenAreYouSure(
@@ -326,19 +334,29 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
           justifyContent: "center",
         }}
       >
-        <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", mb: 2 }}>
+        <Box sx={{ 
+          display: "flex", 
+          gap: { xs: 1, sm: 1.5 }, 
+          flexWrap: "wrap", 
+          mb: { xs: 1.5, sm: 2 },
+          flexDirection: { xs: "column", sm: "row" },
+          alignItems: { xs: "stretch", sm: "flex-start" }
+        }}>
           <Button
             variant="contained"
             onClick={handleExpandAll}
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: 2.5,
+              px: { xs: 2, sm: 2.5 },
+              py: { xs: 1, sm: 1.25 },
               bgcolor: theme.palette.success.main,
               color: theme.palette.common.white,
               "&:hover": { bgcolor: theme.palette.success.dark },
-              width: 220,
-              height: 44,
+              width: { xs: "100%", sm: 220 },
+              height: { xs: 40, sm: 44 },
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              fontWeight: 600,
             }}
           >
             Expand All Teams
@@ -351,12 +369,15 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: 2.5,
+              px: { xs: 2, sm: 2.5 },
+              py: { xs: 1, sm: 1.25 },
               bgcolor: theme.palette.success.main,
               color: theme.palette.common.white,
               "&:hover": { bgcolor: theme.palette.success.dark },
-              width: 220,
-              height: 44,
+              width: { xs: "100%", sm: 220 },
+              height: { xs: 40, sm: 44 },
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              fontWeight: 600,
             }}
             disabled={!contest?.id} // prevent bad route if contest not loaded
           >
@@ -377,8 +398,13 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
         >
           <Table
             sx={{
-              tableLayout: "fixed",
-              "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 },
+              tableLayout: "auto",
+              width: "100%",
+              "& .MuiTableCell-root": { 
+                fontSize: { xs: "0.8rem", sm: "0.95rem" }, 
+                py: { xs: 0.75, sm: 1.25 },
+                px: { xs: 0.75, sm: 1.5 }
+              },
             }}
           >
             <TableBody>
@@ -414,26 +440,63 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                       component="th"
                       scope="row"
                       sx={(t) => ({
-                        pl: 2,
+                        pl: { xs: 1, sm: 2 },
                         textAlign: "left",
                         mr: 1,
                         fontWeight: 600,
                         fontFamily: t.typography.h1.fontFamily,
-                        minWidth: 300, // Ensure enough space for team name + contest
+                        width: { xs: "60%", sm: "50%", md: "45%" }, // Use more of the available width
+                        minWidth: { xs: 200, sm: 250, md: 300 },
+                        verticalAlign: "top",
+                        alignItems: "flex-start"
                       })}
                     >
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      <Box sx={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: { xs: 0.5, sm: 1 },
+                        flexWrap: { xs: "wrap", sm: "nowrap" },
+                        width: "100%",
+                        justifyContent: { xs: "flex-start", sm: "flex-start" }
+                      }}>
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            fontWeight: 600,
+                            fontSize: { xs: "0.85rem", sm: "1rem" },
+                            flex: { xs: "1 1 100%", sm: "0 0 auto" },
+                            minWidth: 0,
+                            textAlign: "left"
+                          }}
+                        >
                           {team.team_name}
                         </Typography>
-                        <Typography variant="body2" sx={{ color: theme.palette.grey[600], ml: 1 }}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: theme.palette.grey[600], 
+                            ml: { xs: 0.5, sm: 1 },
+                            fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                            flex: { xs: "1 1 100%", sm: "0 0 auto" },
+                            minWidth: 0,
+                            textAlign: "left"
+                          }}
+                        >
                           ({team.school_name || 'N/A'})
                         </Typography>
                         {teamContestMap[team.id] && (
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, ml: 1, flexShrink: 0 }}>
+                          <Box sx={{ 
+                            display: "flex", 
+                            alignItems: "center", 
+                            gap: { xs: 0.25, sm: 0.5 }, 
+                            ml: { xs: 0.5, sm: 1 }, 
+                            flexShrink: 0,
+                            minWidth: 0,
+                            flex: { xs: "1 1 100%", sm: "0 0 auto" }
+                          }}>
                             <EmojiEventsIcon 
                               sx={{ 
-                                fontSize: 16, 
+                                fontSize: { xs: 14, sm: 16 }, 
                                 color: theme.palette.success.main,
                                 opacity: 0.8 
                               }} 
@@ -444,11 +507,13 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                                 color: theme.palette.success.main,
                                 fontWeight: 500,
                                 opacity: 0.8,
-                                fontSize: "0.875rem",
+                                fontSize: { xs: "0.75rem", sm: "0.875rem" },
                                 whiteSpace: "nowrap",
-                                maxWidth: "200px",
+                                maxWidth: { xs: "200px", sm: "300px", md: "400px" },
                                 overflow: "hidden",
-                                textOverflow: "ellipsis"
+                                textOverflow: "ellipsis",
+                                flex: 1,
+                                textAlign: "left"
                               }}
                               title={teamContestMap[team.id]} // Show full name on hover
                             >
@@ -483,11 +548,16 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                           sx={{
                             borderTop: `1px dashed ${theme.palette.grey[200]}`,
                             backgroundColor: theme.palette.grey[50],
-                            px: 2,
-                            py: 2,
+                            px: { xs: 1.5, sm: 2 },
+                            py: { xs: 1.5, sm: 2 },
                           }}
                         >
-                          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                          <Box sx={{ 
+                            display: "flex", 
+                            flexWrap: "wrap", 
+                            gap: { xs: 0.5, sm: 1 },
+                            flexDirection: { xs: "column", sm: "row" }
+                          }}>
                             {/* Journal - not tied to contest.is_open */}
                             <ScoreSheetButton
                               team={team}
@@ -570,21 +640,70 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
       {/* NEW: multi-team dialog (kept simple, matches theme) */}
       <Dialog open={openMultiDialog} onClose={handleCancelMulti}>
         <DialogTitle>Score Multiple Teams</DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          <FormControl component="fieldset" sx={{ mt: 1 }}>
-            <FormLabel component="legend">Select sheet type</FormLabel>
+        <DialogContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+          <FormControl component="fieldset" sx={{ mt: { xs: 0.5, sm: 1 } }}>
+            <FormLabel 
+              component="legend" 
+              sx={{ 
+                fontSize: { xs: "1rem", sm: "1.25rem" },
+                fontWeight: 600,
+                mb: { xs: 1, sm: 1.5 }
+              }}
+            >
+              Select sheet type
+            </FormLabel>
             <RadioGroup
               value={multiType}
               onChange={(e) => setMultiType(e.target.value as any)}
+              sx={{ gap: { xs: 0.5, sm: 1 } }}
             >
-              <FormControlLabel value="presentation" control={<Radio />} label="Presentation" />
-              <FormControlLabel value="journal" control={<Radio />} label="Journal" />
-              <FormControlLabel value="machine-design" control={<Radio />} label="Machine Design" />
+              <FormControlLabel 
+                value="presentation" 
+                control={<Radio />} 
+                label="Presentation" 
+                sx={{ 
+                  "& .MuiFormControlLabel-label": { 
+                    fontSize: { xs: "0.9rem", sm: "1rem" } 
+                  } 
+                }}
+              />
+              <FormControlLabel 
+                value="journal" 
+                control={<Radio />} 
+                label="Journal" 
+                sx={{ 
+                  "& .MuiFormControlLabel-label": { 
+                    fontSize: { xs: "0.9rem", sm: "1rem" } 
+                  } 
+                }}
+              />
+              <FormControlLabel 
+                value="machine-design" 
+                control={<Radio />} 
+                label="Machine Design" 
+                sx={{ 
+                  "& .MuiFormControlLabel-label": { 
+                    fontSize: { xs: "0.9rem", sm: "1rem" } 
+                  } 
+                }}
+              />
             </RadioGroup>
           </FormControl>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleCancelMulti} sx={{ textTransform: "none" }}>
+        <DialogActions sx={{ 
+          p: { xs: 1.5, sm: 2 },
+          flexDirection: { xs: "column", sm: "row" },
+          gap: { xs: 1, sm: 1.5 }
+        }}>
+          <Button 
+            onClick={handleCancelMulti} 
+            sx={{ 
+              textTransform: "none",
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              px: { xs: 2, sm: 3 },
+              py: { xs: 1, sm: 1.25 }
+            }}
+          >
             Cancel
           </Button>
           <Button
@@ -593,9 +712,11 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: 2.25,
+              px: { xs: 2, sm: 2.25 },
+              py: { xs: 1, sm: 1.25 },
               bgcolor: theme.palette.success.main,
               "&:hover": { bgcolor: theme.palette.success.dark },
+              fontSize: { xs: "0.9rem", sm: "1rem" },
             }}
             disabled={!contest?.id}
           >

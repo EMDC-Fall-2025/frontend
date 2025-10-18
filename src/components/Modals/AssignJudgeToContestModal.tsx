@@ -312,22 +312,26 @@ export default function AssignJudgeToContestModal(
       handleClose={handleCloseModal}
       title="Assign Judge to Contest"
     >
-      <Container sx={{ p: 3, minWidth: 500 }}>
+      <Container sx={{ 
+        p: { xs: 2, sm: 3 }, 
+        minWidth: { xs: "auto", sm: 500 },
+        maxWidth: { xs: "100%", sm: "600px" }
+      }}>
         {/* Success/Error Messages */}
         {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
+          <Alert severity="success" sx={{ mb: { xs: 1.5, sm: 2 } }}>
             {success}
           </Alert>
         )}
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: { xs: 1.5, sm: 2 } }}>
             {error}
           </Alert>
         )}
 
         {/* Judge Selection */}
         {allJudges.length > 0 && (
-    <Box sx={{ mb: 3 }}>
+    <Box sx={{ mb: { xs: 2, sm: 3 } }}>
         <SearchBar 
             judges={allJudges} 
             onJudgeSelect={(judge)=> setSelectedJudgeId(judge?.id || -1)}
@@ -337,11 +341,12 @@ export default function AssignJudgeToContestModal(
         
         
         {/* Contest Selection */}
-        <FormControl fullWidth sx={{ mb: 3 }}>
-          <InputLabel>Select Contest</InputLabel>
+        <FormControl fullWidth sx={{ mb: { xs: 2, sm: 3 } }}>
+          <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Select Contest</InputLabel>
           <Select
             value={selectedContestId}
             label="Select Contest"
+            sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}
             onChange={(e) => {
               const contestId = Number(e.target.value);
               // Handle contest selection for assignment
@@ -353,7 +358,7 @@ export default function AssignJudgeToContestModal(
               <em>Choose a contest...</em>
             </MenuItem>
             {contests.map((contest) => (
-              <MenuItem key={contest.id} value={contest.id}>
+              <MenuItem key={contest.id} value={contest.id} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
                 {contest.name}
               </MenuItem>
             ))}
@@ -361,36 +366,44 @@ export default function AssignJudgeToContestModal(
         </FormControl>
 
         {/* Cluster Selection */}
-        <FormControl fullWidth sx={{ mb: 3 }}>
-          <InputLabel>Select Cluster</InputLabel>
+        <FormControl fullWidth sx={{ mb: { xs: 2, sm: 3 } }}>
+          <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Select Cluster</InputLabel>
           <Select
             value={selectedClusterId}
             label="Select Cluster"
             disabled={selectedContestId === -1}
+            sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}
             onChange={(e) => setSelectedClusterId(Number(e.target.value))}
           >
             <MenuItem value={-1}>
               <em>Choose a cluster...</em>
             </MenuItem>
             {filteredClusters.map((cluster) => (
-              <MenuItem key={cluster.id} value={cluster.id}>
+              <MenuItem key={cluster.id} value={cluster.id} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
                 {cluster.cluster_name}
               </MenuItem>
             ))}
           </Select>
-          <FormHelperText>Only clusters from the selected contest are shown</FormHelperText>
+          <FormHelperText sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>Only clusters from the selected contest are shown</FormHelperText>
         </FormControl>
 
         {/* Score Sheet Types */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold" }}>
+        <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+          <Typography variant="h6" sx={{ 
+            mb: { xs: 1.5, sm: 2 }, 
+            fontWeight: "bold",
+            fontSize: { xs: "1.1rem", sm: "1.25rem" }
+          }}>
             Score Sheet Types
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ 
+            mb: { xs: 1.5, sm: 2 },
+            fontSize: { xs: "0.85rem", sm: "0.875rem" }
+          }}>
             Select which types of score sheets this judge will handle:
           </Typography>
 
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 0.5, sm: 1 } }}>
             {[
               { key: "presentation", label: "Presentation" },
               { key: "journal", label: "Journal" },
@@ -409,15 +422,28 @@ export default function AssignJudgeToContestModal(
                       [key]: e.target.checked,
                     }))
                   }
+                  sx={{ 
+                    padding: { xs: 0.5, sm: 1 },
+                    "& .MuiSvgIcon-root": { 
+                      fontSize: { xs: "1.2rem", sm: "1.5rem" } 
+                    }
+                  }}
                 />
-                <Typography variant="body2">{label}</Typography>
+                <Typography variant="body2" sx={{ fontSize: { xs: "0.85rem", sm: "0.875rem" } }}>
+                  {label}
+                </Typography>
               </Box>
             ))}
           </Box>
         </Box>
 
         {/* Action Buttons */}
-        <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
+        <Box sx={{ 
+          display: "flex", 
+          gap: { xs: 1.5, sm: 2 }, 
+          justifyContent: { xs: "center", sm: "flex-end" },
+          flexDirection: { xs: "column", sm: "row" }
+        }}>
           <Button
             type="button"
             variant="outlined"
@@ -426,8 +452,10 @@ export default function AssignJudgeToContestModal(
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: 4.5,
+              px: { xs: 3, sm: 4.5 },
+              py: { xs: 1, sm: 1.25 },
               fontWeight: 600,
+              fontSize: { xs: "0.9rem", sm: "1rem" },
               borderColor: theme.palette.grey[400],
               color: theme.palette.grey[600],
               "&:hover": {
@@ -446,8 +474,10 @@ export default function AssignJudgeToContestModal(
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: 4.5,
+              px: { xs: 3, sm: 4.5 },
+              py: { xs: 1, sm: 1.25 },
               fontWeight: 600,
+              fontSize: { xs: "0.9rem", sm: "1rem" },
               borderColor: theme.palette.success.main,
               color: theme.palette.success.main,
               "&:hover": {

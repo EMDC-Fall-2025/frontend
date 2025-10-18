@@ -332,7 +332,10 @@ export default function JudgeModal(props: IJudgeModalProps) {
       handleClose={handleCloseModal}
       title={title}
     >
-      <Container>
+      <Container sx={{ 
+        p: { xs: 2, sm: 3 }, 
+        maxWidth: { xs: "100%", sm: "500px" }
+      }}>
         <form
           onSubmit={handleSubmit}
           style={{
@@ -346,14 +349,24 @@ export default function JudgeModal(props: IJudgeModalProps) {
           <TextField
             label="First Name"
             variant="outlined"
-            sx={{ mt: 1, width: 350 }}
+            sx={{ 
+              mt: { xs: 1, sm: 1 }, 
+              width: { xs: "100%", sm: 350 },
+              "& .MuiInputLabel-root": { fontSize: { xs: "0.9rem", sm: "1rem" } },
+              "& .MuiOutlinedInput-input": { fontSize: { xs: "0.9rem", sm: "1rem" } }
+            }}
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
           />
           <TextField
             label="Last Name"
             variant="outlined"
-            sx={{ mt: 3, width: 350 }}
+            sx={{ 
+              mt: { xs: 2, sm: 3 }, 
+              width: { xs: "100%", sm: 350 },
+              "& .MuiInputLabel-root": { fontSize: { xs: "0.9rem", sm: "1rem" } },
+              "& .MuiOutlinedInput-input": { fontSize: { xs: "0.9rem", sm: "1rem" } }
+            }}
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
           />
@@ -361,43 +374,60 @@ export default function JudgeModal(props: IJudgeModalProps) {
             required
             label="Email"
             variant="outlined"
-            sx={{ mt: 3, width: 350 }}
+            sx={{ 
+              mt: { xs: 2, sm: 3 }, 
+              width: { xs: "100%", sm: 350 },
+              "& .MuiInputLabel-root": { fontSize: { xs: "0.9rem", sm: "1rem" } },
+              "& .MuiOutlinedInput-input": { fontSize: { xs: "0.9rem", sm: "1rem" } }
+            }}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <TextField
             label="Phone Number"
             variant="outlined"
-            sx={{ mt: 3, width: 350 }}
+            sx={{ 
+              mt: { xs: 2, sm: 3 }, 
+              width: { xs: "100%", sm: 350 },
+              "& .MuiInputLabel-root": { fontSize: { xs: "0.9rem", sm: "1rem" } },
+              "& .MuiOutlinedInput-input": { fontSize: { xs: "0.9rem", sm: "1rem" } }
+            }}
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value)}
           />
           <FormControl
             required
             sx={{
-              width: 350,
-              mt: 3,
+              width: { xs: "100%", sm: 350 },
+              mt: { xs: 2, sm: 3 },
             }}
           >
-            <InputLabel>Cluster</InputLabel>
+            <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Cluster</InputLabel>
             <Select
               value={clusterId}
               label="Cluster"
-              sx={{ textAlign: "left" }}
+              sx={{ 
+                textAlign: "left",
+                fontSize: { xs: "0.9rem", sm: "1rem" }
+              }}
               onChange={(e) => setClusterId(Number(e.target.value))}
             >
               {clusters?.map((clusterItem) => (
-                <MenuItem key={clusterItem.id} value={clusterItem.id}>
+                <MenuItem key={clusterItem.id} value={clusterItem.id} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
                   {clusterItem.cluster_name}
                 </MenuItem>
               ))}
             </Select>
             {errors.cluster && (
-              <FormHelperText>Please select a cluster.</FormHelperText>
+              <FormHelperText sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>Please select a cluster.</FormHelperText>
             )}
           </FormControl>
-          <FormControl sx={{ mt: 3, width: 350, position: "relative" }}>
-            <InputLabel>Score Sheets</InputLabel>
+          <FormControl sx={{ 
+            mt: { xs: 2, sm: 3 }, 
+            width: { xs: "100%", sm: 350 }, 
+            position: "relative" 
+          }}>
+            <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Score Sheets</InputLabel>
             <Select
               multiple
               value={selectedSheets}
@@ -405,9 +435,9 @@ export default function JudgeModal(props: IJudgeModalProps) {
               onClose={() => setScoreSheetsSelectIsOpen(false)}
               onOpen={() => setScoreSheetsSelectIsOpen(true)}
               onChange={handleScoringSheetsChange}
-              input={<OutlinedInput label="Scoring Sheets" />}
+              input={<OutlinedInput label="Scoring Sheets" sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }} />}
               renderValue={(selected) => (
-                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: { xs: 0.25, sm: 0.5 } }}>
                   {selected.map((value) => (
                     <Chip
                       key={value}
@@ -415,6 +445,10 @@ export default function JudgeModal(props: IJudgeModalProps) {
                         scoringSheetOptions.find((o) => o.value === value)
                           ?.label
                       }
+                      sx={{ 
+                        fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                        height: { xs: "24px", sm: "32px" }
+                      }}
                     />
                   ))}
                 </Box>
@@ -432,41 +466,59 @@ export default function JudgeModal(props: IJudgeModalProps) {
                 </IconButton>
               </Box>
               {scoringSheetOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  <Checkbox checked={selectedSheets.includes(option.value)} />
-                  <ListItemText primary={option.label} />
+                <MenuItem key={option.value} value={option.value} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
+                  <Checkbox 
+                    checked={selectedSheets.includes(option.value)} 
+                    sx={{ 
+                      padding: { xs: 0.5, sm: 1 },
+                      "& .MuiSvgIcon-root": { 
+                        fontSize: { xs: "1.2rem", sm: "1.5rem" } 
+                      }
+                    }}
+                  />
+                  <ListItemText 
+                    primary={option.label} 
+                    sx={{ 
+                      "& .MuiListItemText-primary": { 
+                        fontSize: { xs: "0.9rem", sm: "1rem" } 
+                      } 
+                    }} 
+                  />
                 </MenuItem>
               ))}
             </Select>
             {errors.scoreSheets && (
-              <FormHelperText error>
+              <FormHelperText error sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
                 Please select at least one scoring sheet.
               </FormHelperText>
             )}
-            <FormHelperText>Select one or more scoring sheets</FormHelperText>
+            <FormHelperText sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>Select one or more scoring sheets</FormHelperText>
           </FormControl>
           <FormControl
             required
             sx={{
-              width: 350,
-              mt: 3,
+              width: { xs: "100%", sm: 350 },
+              mt: { xs: 2, sm: 3 },
             }}
           >
-            <InputLabel>Title</InputLabel>
+            <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Title</InputLabel>
             <Select
               value={selectedTitle}
               label="Title"
-              sx={{ textAlign: "left" }}
+              sx={{ 
+                textAlign: "left",
+                fontSize: { xs: "0.9rem", sm: "1rem" }
+              }}
               onChange={(e) => setSelectedTitle(Number(e.target.value))}
             >
               {titleOptions?.map((title) => (
-                <MenuItem key={title.value} value={title.value}>
+                <MenuItem key={title.value} value={title.value} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
                   {title.label}
                 </MenuItem>
               ))}
             </Select>
             {errors.titles && (
-              <FormHelperText>Please select a title.</FormHelperText>
+              <FormHelperText sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>Please select a title.</FormHelperText>
             )}
           </FormControl>
 
@@ -474,14 +526,16 @@ export default function JudgeModal(props: IJudgeModalProps) {
           <Button
             type="submit"
             sx={{
-              width: 130,
-              height: 44,
+              width: { xs: "100%", sm: 130 },
+              height: { xs: 40, sm: 44 },
               bgcolor: theme.palette.success.main,
               "&:hover": { bgcolor: theme.palette.success.dark },
               color: "#fff",
-              mt: 3,
+              mt: { xs: 2, sm: 3 },
               textTransform: "none",
               borderRadius: 2,
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              fontWeight: 600,
             }}
           >
             {buttonText}

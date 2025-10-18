@@ -89,14 +89,30 @@ const InternalResults: React.FC = () => {
         </Box>
 
         <Paper elevation={2} sx={{ p: { xs: 2, md: 3 }, mb: 2, borderRadius: 1 }}>
-          <Typography variant="h4" fontWeight={800}>
+          <Typography 
+            variant="h4" 
+            fontWeight={800}
+            sx={{ fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" } }}
+          >
             Master ScoreSheet Results
           </Typography>
-          <Typography variant="h6" color="success.main" sx={{ mt: 1 }}>
+          <Typography 
+            variant="h6" 
+            color="success.main" 
+            sx={{ 
+              mt: 1,
+              fontSize: { xs: "1rem", sm: "1.25rem" }
+            }}
+          >
             Contest ID: {contestId}
           </Typography>
           <Box sx={{ mt: 1 }}>
-            <Chip size="small" color="success" label={isLoading ? "Loading…" : "Live"} />
+            <Chip 
+              size="small" 
+              color="success" 
+              label={isLoading ? "Loading…" : "Live"}
+              sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}
+            />
           </Box>
         </Paper>
 

@@ -79,13 +79,24 @@ useEffect(() => {
 
   return (
     <Box sx={{ pb: 8, backgroundColor: "#fafafa", minHeight: "100vh" }}>
-      <Container maxWidth="lg" sx={{ pb: 6 }}>
+      <Container maxWidth="lg" sx={{ pb: 6, px: { xs: 2, sm: 3 } }}>
         {/* Title in green */}
-        <Stack spacing={1} sx={{ mb: 3 , mt: 3}}>
-          <Typography variant="h4" sx={{ fontWeight: 800, color: theme.palette.success.main}}>
+        <Stack spacing={1} sx={{ mb: 3, mt: 3 }}>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontWeight: 800, 
+              color: theme.palette.success.main,
+              fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" }
+            }}
+          >
             Admin Dashboard
           </Typography>
-          <Typography variant="subtitle1" color="text.secondary">
+          <Typography 
+            variant="subtitle1" 
+            color="text.secondary"
+            sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
+          >
             Manage contests and organizers
           </Typography>
         </Stack>
@@ -102,7 +113,12 @@ useEffect(() => {
         </Grid>
 
   
-        <Stack direction="row" spacing={2} sx={{ mb: 2, flexWrap: "wrap" }} useFlexGap>
+        <Stack 
+          direction={{ xs: "column", sm: "row" }} 
+          spacing={2} 
+          sx={{ mb: 2, flexWrap: "wrap" }} 
+          useFlexGap
+        >
           <Button
             onClick={() => setContestModal(true)}
             variant="contained"
@@ -110,9 +126,12 @@ useEffect(() => {
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: 2.5,
+              px: { xs: 2, sm: 2.5 },
+              py: { xs: 1, sm: 1.5 },
               bgcolor: theme.palette.success.main,
               "&:hover": { bgcolor: theme.palette.success.dark },
+              fontSize: { xs: "0.875rem", sm: "1rem" },
+              width: { xs: "100%", sm: "auto" }
             }}
           >
             Create Contest
@@ -125,13 +144,16 @@ useEffect(() => {
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: 2.5,
+              px: { xs: 2, sm: 2.5 },
+              py: { xs: 1, sm: 1.5 },
               borderColor: theme.palette.success.main,
               color: theme.palette.success.main,
               "&:hover": {
                 borderColor: theme.palette.success.dark,
                 backgroundColor: "rgba(46,125,50,0.06)",
               },
+              fontSize: { xs: "0.875rem", sm: "1rem" },
+              width: { xs: "100%", sm: "auto" }
             }}
           >
             Create Organizer
@@ -144,18 +166,20 @@ useEffect(() => {
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: 2.5,
+              px: { xs: 2, sm: 2.5 },
+              py: { xs: 1, sm: 1.5 },
               borderColor: theme.palette.success.main,
               color: theme.palette.success.main,
               "&:hover": {
                 borderColor: theme.palette.success.dark,
                 backgroundColor: "rgba(46,125,50,0.06)",
               },
+              fontSize: { xs: "0.875rem", sm: "1rem" },
+              width: { xs: "100%", sm: "auto" }
             }}
           >
             Create Award
           </Button>
-
         </Stack>
 
         {/* Tabs */}
@@ -172,9 +196,22 @@ useEffect(() => {
           >
             <TabList
               onChange={handleChange}
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
               sx={{
-                "& .MuiTab-root": { textTransform: "none", fontWeight: 600, minHeight: 56 },
+                "& .MuiTab-root": { 
+                  textTransform: "none", 
+                  fontWeight: 600, 
+                  minHeight: 56,
+                  minWidth: { xs: "auto", sm: 160 },
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                  px: { xs: 1, sm: 2 },
+                },
                 "& .MuiTabs-indicator": { height: 3, backgroundColor: theme.palette.success.main },
+                "& .MuiTabs-scrollButtons": {
+                  color: theme.palette.success.main,
+                },
               }}
             >
               <Tab
