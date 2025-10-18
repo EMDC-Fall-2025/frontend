@@ -433,9 +433,10 @@ export default function ScoreSheetTable({
                             gap: 2,
                             flexDirection: { md: "row", sm: "column", xs: "column" },
                             width: "100%",
-                            alignItems: "stretch",
+                            alignItems: { md: "flex-start", sm: "stretch", xs: "stretch" },
                             justifyContent: "center",
                             px: { xs: 1, sm: 2 },
+                            flexWrap: { md: "nowrap", sm: "wrap", xs: "wrap" },
                           }}
                         >
                           {question.id !== 9 ? (
@@ -585,7 +586,10 @@ export default function ScoreSheetTable({
                                 }}
                                 helperText={`Allowed: ${question.lowPoints} – ${question.highPoints}`}
                                 sx={{
-                                  minWidth: 120,
+                                  minWidth: { xs: 80, sm: 100, md: 120 },
+                                  width: { xs: "80px", sm: "100px", md: "120px" },
+                                  flexShrink: 0,
+                                  margin: { xs: 0.5, sm: 1, md: 1.5 },
                                   "& .MuiOutlinedInput-root.Mui-focused fieldset": {
                                     borderColor: theme.palette.success.main,
                                   },
@@ -616,7 +620,7 @@ export default function ScoreSheetTable({
                                 )
                               }
                               sx={{
-                                width: "90%",
+                                width: { xs: "100%", sm: "90%" },
                                 "& .MuiOutlinedInput-root.Mui-focused fieldset": {
                                   borderColor: theme.palette.success.main,
                                 },
