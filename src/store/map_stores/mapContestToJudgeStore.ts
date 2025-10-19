@@ -137,8 +137,11 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
             contest: response.data.Contest,
           });
           set({ mapContestJudgeError: null });
-        } catch (error) {
-          const errorMessage = "Error fetching contest by judge ID";
+        } catch (error: any) {
+          console.error('Error fetching contest by judge ID:', error);
+          console.error('Error response:', error.response?.data);
+          console.error('Error status:', error.response?.status);
+          const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || "Error fetching contest by judge ID";
           set({ mapContestJudgeError: errorMessage });
           throw new Error(errorMessage);
         } finally {

@@ -27,6 +27,7 @@ interface MapScoreSheetState {
   ) => Promise<number | null>;
   deleteScoreSheetMapping: (mapId: number) => Promise<void>;
   fetchScoreSheetsByJudge: (judgeId: number) => Promise<void>;
+  fetchScoreSheetsByJudgeAndCluster: (judgeId: number, clusterId: number) => Promise<void>;
   allSheetsSubmittedForContests: (contests: Contest[]) => Promise<void>;
   clearMappings: () => void;
   submitAllPenalties: (judgeId: number) => Promise<void>;
@@ -109,8 +110,49 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
           );
           set({ mappings: fetchedMappings });
           set({ mapScoreSheetError: null });
+        } catch (error: any) {
+          console.error('Error fetching score sheets by judge:', error);
+          console.error('Error response:', error.response?.data);
+          console.error('Error status:', error.response?.status);
+          const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || "Failed to fetch score sheets by judge";
+          set({ mapScoreSheetError: errorMessage });
+          throw new Error(errorMessage);
+        } finally {
+          set({ isLoadingMapScoreSheet: false });
+        }
+      },
+
+      fetchScoreSheetsByJudgeAndCluster: async (judgeId: number, clusterId: number) => {
+        set({ isLoadingMapScoreSheet: true });
+        try {
+          const token = localStorage.getItem("token");
+          const response = await axios.get(
+            `/api/mapping/scoreSheet/getSheetsByJudgeAndCluster/${judgeId}/${clusterId}/`,
+            {
+              headers: {
+                Authorization: `Token ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          const fetchedMappings: Record<
+            string,
+            { scoresheet: ScoreSheet | null; total: number | null }
+          > = {};
+          response.data.ScoreSheets.forEach(
+            (item: ScoreSheetMappingWithSheet) => {
+              const key = `${item.mapping.teamid}-${item.mapping.judgeid}-${item.mapping.sheetType}`;
+              fetchedMappings[key] = {
+                scoresheet: item.scoresheet,
+                total: item.total,
+              };
+            }
+          );
+          set({ mappings: fetchedMappings });
+          set({ mapScoreSheetError: null });
         } catch (error) {
-          const errorMessage = "Failed to fetch score sheets by judge";
+          const errorMessage = "Failed to fetch score sheets by judge and cluster";
           set({ mapScoreSheetError: errorMessage });
           throw new Error(errorMessage);
         } finally {

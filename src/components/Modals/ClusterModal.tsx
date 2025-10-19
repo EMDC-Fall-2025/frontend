@@ -3,7 +3,7 @@
  * 
  * Modal for creating and editing clusters. 
  */
-import { Button, TextField } from "@mui/material";
+import { Button, TextField, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import Modal from "./Modal";
 import theme from "../../theme";
 import { useEffect, useState } from "react";
@@ -20,24 +20,28 @@ export interface IClusterModalProps {
   clusterData?: {
     id: number;
     cluster_name: string;
+    cluster_type?: string;
   };
 }
 
 export default function ClusterModal(props: IClusterModalProps) {
   const { handleClose, open, mode, contestid, clusterData } = props;
   const [clusterName, setClusterName] = useState("");
+  const [clusterType, setClusterType] = useState("preliminary");
   const { fetchClustersByContestId } = useMapClusterToContestStore();
   const { createCluster, editCluster } = useClusterStore();
 
   useEffect(() => {
     if (clusterData) {
       setClusterName(clusterData.cluster_name);
+      setClusterType(clusterData.cluster_type || "preliminary");
     }
   }, [clusterData]);
 
   const handleCloseModal = () => {
     handleClose();
     setClusterName("");
+    setClusterType("preliminary");
   };
 
   const handleCreateCluster = async (event: React.FormEvent) => {
@@ -46,6 +50,7 @@ export default function ClusterModal(props: IClusterModalProps) {
       try {
         await createCluster({
           cluster_name: clusterName,
+          cluster_type: clusterType,
           contestid: contestid,
         });
         fetchClustersByContestId(contestid);
@@ -62,7 +67,7 @@ export default function ClusterModal(props: IClusterModalProps) {
     event.preventDefault();
     if (clusterData?.id && contestid) {
       try {
-        await editCluster({ id: clusterData.id, cluster_name: clusterName });
+        await editCluster({ id: clusterData.id, cluster_name: clusterName, cluster_type: clusterType });
         fetchClustersByContestId(contestid);
         toast.success("Cluster updated successfully!");
         handleCloseModal();
@@ -101,6 +106,25 @@ export default function ClusterModal(props: IClusterModalProps) {
           onChange={(e: any) => setClusterName(e.target.value)}
           sx={{ mt: 1, width: 300 }}
         />
+        <FormControl
+          required
+          sx={{
+            width: 300,
+            mt: 3,
+          }}
+        >
+          <InputLabel>Cluster Type</InputLabel>
+          <Select
+            value={clusterType}
+            label="Cluster Type"
+            sx={{ textAlign: "left" }}
+            onChange={(e) => setClusterType(e.target.value)}
+          >
+            <MenuItem value="preliminary">Preliminary</MenuItem>
+            <MenuItem value="championship">Championship</MenuItem>
+            <MenuItem value="redesign">Redesign</MenuItem>
+          </Select>
+        </FormControl>
         {/* Submit button - updated to use modern green success theme */}
         <Button
           type="submit"

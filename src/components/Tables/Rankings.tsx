@@ -1,50 +1,31 @@
-import { Button, Box, Checkbox, Collapse, IconButton, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, Chip, CircularProgress } from "@mui/material";
+import { Button, Box, Checkbox, Collapse, IconButton, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, Chip } from "@mui/material";
 import  { useEffect, useState } from "react";
 import theme from "../../theme";
 import { TriangleIcon, Trophy} from "lucide-react";
 import { useAuthStore } from "../../store/primary_stores/authStore";
 import { useRankingsStore } from "../../store/primary_stores/rankingsStore";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
-
-// Extended cluster type for rankings
-interface ClusterWithTeams {
-  id: number;
-  cluster_name: string;
-  teams: TeamWithStatus[];
-}
-
-interface TeamWithStatus {
-  id: number;
-  team_name: string;
-  school_name: string;
-  total_score: number;
-  cluster_rank: number;
-  status: 'completed' | 'in_progress' | 'not_started';
-}
+import toast from "react-hot-toast";
 
 // Rankings component for displaying team rankings by cluster
 const Ranking = () => {
     const navigate = useNavigate();
     const [selectedTeams, setSelectedTeams] = useState<number[]>([])
     const [openCluster, setOpenCluster] = useState<Set<number>>(new Set())
-    const { isAuthenticated, role } = useAuthStore()
-    
-    const { 
-      contests, 
-      clusters, 
-      selectedContest, 
-      isLoadingRankings, 
-      rankingsError,
-      fetchContestsForOrganizer,
-      fetchClustersWithTeamsForContest,
-      setSelectedContest
-    } = useRankingsStore()
+    const { isAuthenticated, role, token } = useAuthStore()
+
+    const [contests, setContests] = useState<any[]>([])
+    const [clusters, setClusters] = useState<any[]>([])
+    const [selectedContest, setSelectedContest] = useState<any>(null)
+
+    const { advanceToChampionship, undoChampionshipAdvancement } = useRankingsStore()
 
     // Load contests for organizer
     useEffect(() => {
-      const loadContests = async () => {
+      const fetchContests = async () => {
         try {
-          if (!isAuthenticated) {
+          if (!isAuthenticated || !token) {
             console.error('Please log in to view rankings')
             return
           }
@@ -53,34 +34,78 @@ const Ranking = () => {
             console.error('Organizer ID not found')
             return
           }
-          await fetchContestsForOrganizer(organizerId)
+          const { data } = await axios.get(`/api/mapping/contestToOrganizer/getByOrganizer/${organizerId}/`, {
+            headers: { Authorization: `Token ${token}` }
+          })
+          const contestsData = data?.Contests ?? []
+          setContests(contestsData)
+          if (contestsData.length > 0) setSelectedContest(contestsData[0])
+          else console.error('No contests found for this organizer')
         } catch (e) {
           console.error('Failed to load contests:', e)
         }
       }
-      if (isAuthenticated) loadContests()
-    }, [isAuthenticated, role, fetchContestsForOrganizer])
+      if (isAuthenticated) fetchContests()
+    }, [isAuthenticated, role, token])
 
     // Load clusters and teams for selected contest
     useEffect(() => {
-      const loadClusters = async () => {
-        if (!selectedContest) return
+      const fetchClusters = async () => {
+        if (!selectedContest || !token) return
         try {
-          await fetchClustersWithTeamsForContest(selectedContest.id)
+          const { data: clusterResp } = await axios.get(`/api/mapping/clusterToContest/getAllClustersByContest/${selectedContest.id}/`, {
+            headers: { Authorization: `Token ${token}` }
+          })
+          const clusterData = (clusterResp?.Clusters ?? []).map((c: any) => ({ id: c.id, cluster_name: c.cluster_name ?? c.name, teams: [] }))
+          const withTeams = await Promise.all(
+            clusterData.map(async (cluster: any) => {
+              try {
+                const { data: teamResp } = await axios.get(`/api/mapping/clusterToTeam/getAllTeamsByCluster/${cluster.id}/`, {
+                  headers: { Authorization: `Token ${token}` }
+                })
+                const teams = (teamResp?.Teams ?? []).map((t: any) => ({ id: t.id, team_name: t.team_name ?? t.name, school_name: t.school_name ?? 'N/A', total_score: t.total_score ?? 0 }))
+                const ranked = teams
+                  .sort((a: any, b: any) => (b.total_score ?? 0) - (a.total_score ?? 0))
+                  .map((t: any, i: number) => ({ ...t, cluster_rank: i + 1 }))
+
+                // derive per-team status without changing ranking logic
+                const teamsWithStatus = await Promise.all(
+                  ranked.map(async (t: any) => {
+                    try {
+                      const { data: s } = await axios.get(`/api/mapping/scoreSheet/allSubmittedForTeam/${t.id}/`, {
+                        headers: { Authorization: `Token ${token}` }
+                      })
+                      const total = t.total_score ?? 0
+                      const status = (s?.allSubmitted && total > 0)
+                        ? 'completed'
+                        : ((s?.submittedCount > 0 || total > 0) ? 'in_progress' : 'not_started')
+                      return { ...t, status }
+                    } catch {
+                      return { ...t, status: 'not_started' as const }
+                    }
+                  })
+                )
+
+                return { ...cluster, teams: teamsWithStatus }
+              } catch {
+                return { ...cluster, teams: [] }
+              }
+            })
+          )
+          setClusters(withTeams)
         } catch (e) {
           console.error('Failed to load contest data:', e)
         }
       }
-      loadClusters()
-    }, [selectedContest, fetchClustersWithTeamsForContest])
+      fetchClusters()
+    }, [selectedContest, token])
 
     // autoselect
     useEffect(() => {
       if (!selectedContest && contests.length > 0) {
         setSelectedContest(contests[0])
       }
-    }, [contests, selectedContest, setSelectedContest])
-
+    }, [contests, selectedContest])
 
 
     const toggleCluster = (id: number) => {
@@ -95,24 +120,41 @@ const Ranking = () => {
       setSelectedTeams((prev) => (prev.includes(teamId) ? prev.filter((id) => id !== teamId) : [...prev, teamId]))
     }
 
-    // Show loading state
-    if (isLoadingRankings) {
-      return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-          <CircularProgress />
-        </Box>
-      )
+    const handleAdvanceToChampionship = async () => {
+      if (!selectedContest || selectedTeams.length === 0) {
+        console.error('No contest selected or no teams selected')
+        return
+      }
+
+      try {
+        // Call the championship advancement API
+        await advanceToChampionship(selectedContest.id, selectedTeams)
+        
+        toast(`Successfully advanced ${selectedTeams.length} teams to championship!`)
+        setSelectedTeams([]) // Clear selection
+      } catch (error) {
+        console.error('Error advancing to championship:', error)
+        alert('Error advancing to championship. Please try again.')
+      }
     }
 
-    // Show error state
-    if (rankingsError) {
-      return (
-        <Box sx={{ maxWidth: 900, px: { xs: 1, sm: 2 }, mb: 4, mt: 3 }}>
-          <Typography color="error" variant="h6">
-            Error: {rankingsError}
-          </Typography>
-        </Box>
-      )
+    const handleUndoChampionshipAdvancement = async () => {
+      if (!selectedContest) {
+        console.error('No contest selected')
+        return
+      }
+
+      try {
+        console.log('Undoing championship advancement for contest:', selectedContest.id)
+        
+        // Call the undo championship advancement API
+        await undoChampionshipAdvancement(selectedContest.id)
+        
+        toast('Successfully undone championship advancement!')
+      } catch (error) {
+        console.error('Error undoing championship advancement:', error)
+        alert('Error undoing championship advancement. Please try again.')
+      }
     }
 
     return (
@@ -151,7 +193,7 @@ const Ranking = () => {
                     fontSize: { xs: "0.75rem", sm: "0.875rem" }
                   }}
                 >
-                  {contest.name}
+                  {contest.contest_name|| contest.name}
                 </Button>
               ))}
             </Box>
@@ -168,7 +210,7 @@ const Ranking = () => {
             bgcolor: "white",
             }}
         >
-            <Box sx={{ display: "flex", alignItems: "right", justifyContent: "space-between" }}>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <Box>
                 <Typography 
                   variant="caption" 
@@ -191,8 +233,83 @@ const Ranking = () => {
                 {selectedTeams.length}
                 </Typography>
             </Box>
-            <Box sx={{ color: theme.palette.grey[400] }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Box sx={{ color: theme.palette.grey[400] }}>
                 <Trophy size={20} />
+              </Box>
+              {selectedContest && (
+                <>
+                  {/* Check if championship advancement has been done by looking for teams with advanced_to_championship flag */}
+                  {(() => {
+                    // Method 1: Check for teams with advanced_to_championship flag
+                    const hasAdvancedTeams = clusters.some(cluster => {
+                      return cluster.teams && cluster.teams.some((team: any) => {
+                        return team.advanced_to_championship === true;
+                      });
+                    });
+                    
+                    // Method 2: Check for championship/redesign clusters (fallback)
+                    const hasChampionshipClusters = clusters.some(cluster => {
+                      const isChampionship = cluster.cluster_type === 'championship' || 
+                                           cluster.cluster_name?.toLowerCase().includes('championship');
+                      const isRedesign = cluster.cluster_type === 'redesign' || 
+                                       cluster.cluster_name?.toLowerCase().includes('redesign');
+                      return isChampionship || isRedesign;
+                    });
+                    
+                    const hasAdvanced = hasAdvancedTeams || hasChampionshipClusters;
+                    
+                    // For debugging: Show both buttons temporarily
+                    return (
+                      <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                        {hasAdvanced && (
+                          <Button
+                            variant="outlined"
+                            onClick={() => handleUndoChampionshipAdvancement()}
+                            sx={{
+                              borderColor: theme.palette.error.main,
+                              color: theme.palette.error.main,
+                              "&:hover": { 
+                                borderColor: theme.palette.error.dark,
+                                bgcolor: theme.palette.error.light,
+                                color: theme.palette.error.dark
+                              },
+                              textTransform: "none",
+                              borderRadius: 2,
+                              fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                              px: { xs: 1.5, sm: 2 },
+                              py: { xs: 0.5, sm: 1 }
+                            }}
+                          >
+                            Undo Championship
+                          </Button>
+                        )}
+                        
+                        {selectedTeams.length > 0 && (
+                          <Button
+                            variant="contained"
+                            onClick={() => {
+                              handleAdvanceToChampionship()
+                            }}
+                            sx={{
+                              bgcolor: theme.palette.success.main,
+                              "&:hover": { bgcolor: theme.palette.success.dark },
+                              color: "white",
+                              textTransform: "none",
+                              borderRadius: 2,
+                              fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                              px: { xs: 1.5, sm: 2 },
+                              py: { xs: 0.5, sm: 1 }
+                            }}
+                          >
+                            Advance to Championship
+                          </Button>
+                        )}
+                      </Box>
+                    );
+                  })()}
+                </>
+              )}
             </Box>
             </Box>
             </Paper>
@@ -200,7 +317,7 @@ const Ranking = () => {
         {/*  spacing between stats card and clusters */}
         <Box sx={{ mb: 3 }} />
   
-        {(clusters as ClusterWithTeams[]).map((cluster) => {
+        {clusters.map((cluster) => {
           const isOpen = openCluster.has(cluster.id)
           return (
             <Paper
@@ -273,7 +390,7 @@ const Ranking = () => {
               display: "flex", 
               alignItems: "center", 
               gap: 0.25,
-              flexShrink: 0,  // Don't shrink the team count
+              flexShrink: 0,  
               ml: 0.5
             }}>
               <Typography 

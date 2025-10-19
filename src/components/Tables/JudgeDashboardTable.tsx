@@ -34,16 +34,139 @@ import AreYouSureModal from "../Modals/AreYouSureModal";
 import { useScoreSheetStore } from "../../store/primary_stores/scoreSheetStore";
 import theme from "../../theme";
 import useMapContestJudgeStore from "../../store/map_stores/mapContestToJudgeStore";
+import { useAuthStore } from "../../store/primary_stores/authStore";
 import { Team } from "../../types";
 
 interface IJudgeDashboardProps {
   teams: Team[];
+  currentCluster?: any;
 }
 
 export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
-  const { teams } = props;
+  const { teams, currentCluster } = props;
 
   const navigate = useNavigate();
+
+  // Function to determine if a scoresheet is from preliminary round (should be greyed out)
+  const isPreliminaryScoresheet = (_teamId: number, sheetType: number) => {
+    // Check if we're in a championship or redesign cluster
+    const isInChampionshipOrRedesignCluster = currentCluster && (
+      currentCluster.cluster_type === 'championship' || 
+      currentCluster.cluster_type === 'redesign' ||
+      currentCluster.cluster_name?.toLowerCase().includes('championship') ||
+      currentCluster.cluster_name?.toLowerCase().includes('redesign')
+    );
+    
+    // Only apply grey styling if we're in a championship/redesign cluster
+    if (!isInChampionshipOrRedesignCluster) {
+      return false; // No grey styling in preliminary clusters
+    }
+    
+    // In championship/redesign clusters, preliminary scoresheets (1-5) should be greyed out
+    const isPreliminary = sheetType <= 5;
+    
+    return isPreliminary; // Preliminary scoresheets (1-5) should be greyed out for judges in championship/redesign clusters
+  };
+
+  // Function to determine if a scoresheet should be editable
+  const isScoresheetEditable = (teamId: number, sheetType: number) => {
+    // If user is organizer/admin, they can edit all scoresheets
+    if (isOrganizerOrAdmin()) {
+      return true;
+    }
+    
+    // If user is judge, they can only edit non-preliminary scoresheets
+    // But if contest info is not available, allow editing (fallback behavior)
+    if (!contest) {
+      console.warn('Contest info not available, allowing editing as fallback');
+      return true;
+    }
+    
+    return !isPreliminaryScoresheet(teamId, sheetType);
+  };
+
+  // Function to determine if a team has only preliminary scoresheets (should grey out header)
+  const hasOnlyPreliminaryScoresheets = (teamId: number) => {
+    // Check if we're in a championship or redesign cluster
+    const isInChampionshipOrRedesignCluster = currentCluster && (
+      currentCluster.cluster_type === 'championship' || 
+      currentCluster.cluster_type === 'redesign' ||
+      currentCluster.cluster_name?.toLowerCase().includes('championship') ||
+      currentCluster.cluster_name?.toLowerCase().includes('redesign')
+    );
+    
+    // Only apply grey styling if we're in a championship/redesign cluster
+    if (!isInChampionshipOrRedesignCluster) {
+      return false; // No grey styling in preliminary clusters
+    }
+    
+    // After advancement, check if this team is in a championship/redesign cluster
+    const teamInChampionshipCluster = teams.some(team => 
+      team.id === teamId && team.advanced_to_championship === true
+    );
+    
+    if (teamInChampionshipCluster) {
+      // Check if team has any championship (7) or redesign (6) scoresheets
+      const hasChampionshipScoresheets = judge && (
+        hasScoresheet(judge.id, teamId, 6) || // redesign
+        hasScoresheet(judge.id, teamId, 7)    // championship
+      );
+      
+      // If team has championship scoresheets, check if any non-preliminary scoresheets are not completed
+      if (hasChampionshipScoresheets) {
+        // Check if any championship/redesign scoresheets are not completed
+        const hasIncompleteChampionshipScoresheets = judge && (
+          (hasScoresheet(judge.id, teamId, 6) && !getIsSubmitted(judge.id, teamId, 6)) || // redesign not submitted
+          (hasScoresheet(judge.id, teamId, 7) && !getIsSubmitted(judge.id, teamId, 7))    // championship not submitted
+        );
+        
+        // Return false (white header) if there are incomplete championship scoresheets
+        return !hasIncompleteChampionshipScoresheets;
+      } else {
+        // No championship scoresheets yet, check if all preliminary are completed
+        const allPreliminaryCompleted = checkAllPreliminaryScoresheetsCompleted(teamId);
+        return allPreliminaryCompleted; // Grey if all preliminary are completed
+      }
+    }
+    
+    return false; // Default: no grey styling
+  };
+
+  const checkAllPreliminaryScoresheetsCompleted = (teamId: number) => {
+    if (!judge) return false;
+    
+    
+    // Check if all preliminary scoresheets (1-5) are completed
+    const preliminaryTypes = [1, 2, 3, 4, 5]; // runpenalties, otherpenalties, presentation, journal, mdo
+    let allCompleted = true;
+    
+    for (const sheetType of preliminaryTypes) {
+      if (hasScoresheet(judge.id, teamId, sheetType)) {
+        // Check if this scoresheet is completed (has been submitted)
+        const scoresheet = multipleScoreSheets?.find(sheet => 
+          sheet.teamId === teamId && 
+          sheet.judgeId === judge.id && 
+          sheet.sheetType === sheetType
+        );
+        
+        if (scoresheet && !scoresheet.isSubmitted) {
+          allCompleted = false;
+          break;
+        }
+      }
+    }
+    
+    return allCompleted;
+  };
+
+  // Function to check if current user is organizer/admin (can edit preliminary scoresheets)
+  const isOrganizerOrAdmin = () => {
+    // Import auth store to check user role
+    const { role } = useAuthStore();
+    
+    // Check if user is admin (user_type: 1) or organizer (user_type: 2)
+    return role?.user_type === 1 || role?.user_type === 2;
+  };
 
   const { judge, clearJudge } = useJudgeStore();
 
@@ -59,7 +182,8 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
   // State to store contest names for each team
   const [teamContestMap, setTeamContestMap] = React.useState<{[teamId: number]: string}>({});
 
-  const { editScoreSheetField, scoreSheetError } = useScoreSheetStore();
+  const { editScoreSheetField, multipleScoreSheets } = useScoreSheetStore();
+  
 
   const [openRows, setOpenRows] = React.useState<{ [key: number]: boolean }>(
     {}
@@ -93,11 +217,36 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
 
   useEffect(() => {
     if (judge) {
-      fetchScoreSheetsByJudge(judge.id);
-      getContestByJudgeId(judge.id);
+      // Always fetch all scoresheets for the judge to show both preliminary and championship/redesign
+      if (judge.id) {
+        try {
+          fetchScoreSheetsByJudge(judge.id);
+          // Try to get contest info, but don't fail if it's not available
+          getContestByJudgeId(judge.id).catch(error => {
+            console.warn('Contest info not available for judge:', error);
+            // Continue without contest info - the judge dashboard can still work
+          });
+        } catch (error) {
+          console.error('Error fetching judge data:', error);
+        }
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [judge]);
+
+  // Refresh scoresheets when teams change (after championship advancement)
+  useEffect(() => {
+    if (judge && teams && teams.length > 0) {
+      if (judge.id) {
+        try {
+          fetchScoreSheetsByJudge(judge.id);
+        } catch (error) {
+          console.error('Error refreshing scoresheets:', error);
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teams]);
 
   // Fetch contest information for each team
   useEffect(() => {
@@ -262,26 +411,39 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
       return null;
     }
 
+    // Check if this is a preliminary scoresheet (should be greyed out)
+    const isPreliminary = isPreliminaryScoresheet(team.id, type);
+    const isEditable = isScoresheetEditable(team.id, type);
+
     return (
       <>
         {!getIsSubmitted(judge?.id, team.id, type) ? (
           <Button
             variant="contained"
-            onClick={() => navigate(`/${url}/${judge.id}/${team.id}/`)}
+            onClick={() => isEditable ? navigate(`/${url}/${judge.id}/${team.id}/`) : null}
+            disabled={!isEditable}
             sx={{
               mb: { xs: 0.5, sm: 1 },
               textTransform: "none",
               borderRadius: 2,
               px: { xs: 1.5, sm: 2.25 },
               py: { xs: 0.5, sm: 0.75 },
-              bgcolor: theme.palette.success.main,
-              "&:hover": { bgcolor: theme.palette.success.dark },
+              bgcolor: isPreliminary ? theme.palette.grey[400] : theme.palette.success.main,
+              color: isPreliminary ? theme.palette.grey[600] : "white",
+              "&:hover": { 
+                bgcolor: isPreliminary ? theme.palette.grey[400] : theme.palette.success.dark 
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.grey[400],
+                color: theme.palette.grey[600],
+              },
               fontSize: { xs: "0.75rem", sm: "0.875rem" },
               fontWeight: 600,
               minWidth: { xs: "auto", sm: "auto" },
+              opacity: isPreliminary ? 0.6 : 1,
             }}
           >
-            {buttonText}
+            {isPreliminary ? `${buttonText} (Preliminary)` : buttonText}
           </Button>
         ) : (
           <Button
@@ -292,11 +454,15 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
               borderRadius: 2,
               px: { xs: 1.5, sm: 2.25 },
               py: { xs: 0.5, sm: 0.75 },
-              bgcolor: theme.palette.grey[500],
-              "&:hover": { bgcolor: theme.palette.grey[600] },
+              bgcolor: isPreliminary ? theme.palette.grey[400] : theme.palette.grey[500],
+              color: isPreliminary ? theme.palette.grey[600] : "white",
+              "&:hover": { 
+                bgcolor: isPreliminary ? theme.palette.grey[400] : theme.palette.grey[600] 
+              },
               fontSize: { xs: "0.75rem", sm: "0.875rem" },
               fontWeight: 600,
               minWidth: { xs: "auto", sm: "auto" },
+              opacity: isPreliminary ? 0.6 : 1,
             }}
             onClick={() =>
               handleOpenAreYouSure(
@@ -306,7 +472,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
               )
             }
           >
-            {buttonText} {getTotal(judge?.id, team.id, type)}
+            {isPreliminary ? `${buttonText} (Preliminary)` : buttonText} {getTotal(judge?.id, team.id, type)}
           </Button>
         )}
       </>
@@ -410,14 +576,21 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
             }}
           >
             <TableBody>
-              {teams.map((team: Team) => (
+              {teams.map((team: Team) => {
+                const isPreliminaryTeam = hasOnlyPreliminaryScoresheets(team.id);
+                return (
                 <React.Fragment key={team.id}>
                   <TableRow
                     onClick={() => handleToggle(team.id)}
                     sx={{
                       cursor: "pointer",
-                      "&:hover": { backgroundColor: "rgba(46,125,50,0.06)" },
+                      "&:hover": { backgroundColor: isPreliminaryTeam ? "rgba(0,0,0,0.01)" : "rgba(46,125,50,0.06)" },
                       borderBottom: `1px solid ${theme.palette.grey[200]}`,
+                      backgroundColor: isPreliminaryTeam ? theme.palette.grey[100] : "inherit",
+                      opacity: isPreliminaryTeam ? 0.7 : 1,
+                      "& .MuiTableCell-root": {
+                        color: isPreliminaryTeam ? theme.palette.grey[600] : "inherit"
+                      }
                     }}
                   >
                     <TableCell sx={{ width: 56 }}>
@@ -470,9 +643,9 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                             minWidth: 0,
                             textAlign: "left"
                           }}
-                        >
-                          {team.team_name}
-                        </Typography>
+                          >
+                            {team.team_name}
+                          </Typography>
                         <Typography 
                           variant="body2" 
                           sx={{ 
@@ -625,7 +798,8 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                     </TableCell>
                   </TableRow>
                 </React.Fragment>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </TableContainer>

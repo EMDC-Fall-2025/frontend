@@ -222,6 +222,7 @@ export interface Team {
   team_rank: number | null;
   judge_disqualified: boolean;
   organizer_disqualified: boolean;
+  advanced_to_championship?: boolean;
 }
 
 export interface TeamData {

@@ -10,9 +10,10 @@ interface ClusterState {
   fetchClusterById: (clusterId: number) => Promise<void>;
   createCluster: (data: {
     cluster_name: string;
+    cluster_type?: string;
     contestid: number;
   }) => Promise<void>;
-  editCluster: (data: { id: number; cluster_name: string }) => Promise<void>;
+  editCluster: (data: { id: number; cluster_name: string; cluster_type?: string }) => Promise<void>;
   deleteCluster: (clusterId: number) => Promise<void>;
   clearCluster: () => void;
 }
@@ -56,6 +57,7 @@ export const useClusterStore = create<ClusterState>()(
 
       createCluster: async (data: {
         cluster_name: string;
+        cluster_type?: string;
         contestid: number;
       }) => {
         set({ isLoadingCluster: true });
@@ -78,7 +80,7 @@ export const useClusterStore = create<ClusterState>()(
         }
       },
 
-      editCluster: async (data: { id: number; cluster_name: string }) => {
+      editCluster: async (data: { id: number; cluster_name: string; cluster_type?: string }) => {
         set({ isLoadingCluster: true });
         try {
           const token = localStorage.getItem("token");
