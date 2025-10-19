@@ -53,6 +53,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     const isInChampionshipOrRedesignCluster = currentCluster && (
       currentCluster.cluster_type === 'championship' || 
       currentCluster.cluster_type === 'redesign' ||
+      // Fallback: check by name for existing clusters (transition period)
       currentCluster.cluster_name?.toLowerCase().includes('championship') ||
       currentCluster.cluster_name?.toLowerCase().includes('redesign')
     );
@@ -91,6 +92,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     const isInChampionshipOrRedesignCluster = currentCluster && (
       currentCluster.cluster_type === 'championship' || 
       currentCluster.cluster_type === 'redesign' ||
+      // Fallback: check by name for existing clusters (transition period)
       currentCluster.cluster_name?.toLowerCase().includes('championship') ||
       currentCluster.cluster_name?.toLowerCase().includes('redesign')
     );
@@ -813,7 +815,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
         handleSubmit={handleUnsubmitSheet}
       />
 
-      {/* NEW: multi-team dialog (kept simple, matches theme) */}
+      {/*  multi-team dialog  */}
       <Dialog open={openMultiDialog} onClose={handleCancelMulti}>
         <DialogTitle>Score Multiple Teams</DialogTitle>
         <DialogContent sx={{ p: { xs: 1.5, sm: 2 } }}>

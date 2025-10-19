@@ -239,16 +239,13 @@ const Ranking = () => {
               </Box>
               {selectedContest && (
                 <>
-                  {/* Check if championship advancement has been done by looking for teams with advanced_to_championship flag */}
                   {(() => {
-                    // Method 1: Check for teams with advanced_to_championship flag
                     const hasAdvancedTeams = clusters.some(cluster => {
                       return cluster.teams && cluster.teams.some((team: any) => {
                         return team.advanced_to_championship === true;
                       });
                     });
                     
-                    // Method 2: Check for championship/redesign clusters (fallback)
                     const hasChampionshipClusters = clusters.some(cluster => {
                       const isChampionship = cluster.cluster_type === 'championship' || 
                                            cluster.cluster_name?.toLowerCase().includes('championship');
@@ -259,51 +256,38 @@ const Ranking = () => {
                     
                     const hasAdvanced = hasAdvancedTeams || hasChampionshipClusters;
                     
-                    // For debugging: Show both buttons temporarily
                     return (
                       <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-                        {hasAdvanced && (
+                        {hasAdvanced ? (
                           <Button
-                            variant="outlined"
+                            variant="contained"
+                            color="error"
                             onClick={() => handleUndoChampionshipAdvancement()}
-                            sx={{
-                              borderColor: theme.palette.error.main,
-                              color: theme.palette.error.main,
-                              "&:hover": { 
-                                borderColor: theme.palette.error.dark,
-                                bgcolor: theme.palette.error.light,
-                                color: theme.palette.error.dark
-                              },
-                              textTransform: "none",
-                              borderRadius: 2,
-                              fontSize: { xs: "0.7rem", sm: "0.875rem" },
-                              px: { xs: 1.5, sm: 2 },
-                              py: { xs: 0.5, sm: 1 }
-                            }}
+                            sx={{ bgcolor: theme.palette.error.main }}
                           >
                             Undo Championship
                           </Button>
-                        )}
-                        
-                        {selectedTeams.length > 0 && (
-                          <Button
-                            variant="contained"
-                            onClick={() => {
-                              handleAdvanceToChampionship()
-                            }}
-                            sx={{
-                              bgcolor: theme.palette.success.main,
-                              "&:hover": { bgcolor: theme.palette.success.dark },
-                              color: "white",
-                              textTransform: "none",
-                              borderRadius: 2,
-                              fontSize: { xs: "0.7rem", sm: "0.875rem" },
-                              px: { xs: 1.5, sm: 2 },
-                              py: { xs: 0.5, sm: 1 }
-                            }}
-                          >
-                            Advance to Championship
-                          </Button>
+                        ) : (
+                          selectedTeams.length > 0 && (
+                            <Button
+                              variant="contained"
+                              onClick={() => {
+                                handleAdvanceToChampionship()
+                              }}
+                              sx={{
+                                bgcolor: theme.palette.success.main,
+                                "&:hover": { bgcolor: theme.palette.success.dark },
+                                color: "white",
+                                textTransform: "none",
+                                borderRadius: 2,
+                                fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                                px: { xs: 1.5, sm: 2 },
+                                py: { xs: 0.5, sm: 1 }
+                              }}
+                            >
+                              Advance to Championship
+                            </Button>
+                          )
                         )}
                       </Box>
                     );

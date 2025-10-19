@@ -413,7 +413,7 @@ export default function ScoreSheetTable({
                     <TableCell align="right" scope="row" sx={{ width: 56 }}>
                       {/* For questions 1..8 show a check/close icon; question 9 is comments */}
                       {question.id != 9 &&
-                        (formData[question.id] == 0 ? (
+                        (formData[question.id] === undefined || formData[question.id] === 0 || formData[question.id] === "" || formData[question.id] === null ? (
                           <CloseIcon sx={{ color: theme.palette.error.main }} />
                         ) : (
                           <CheckIcon sx={{ color: theme.palette.success.main }} />

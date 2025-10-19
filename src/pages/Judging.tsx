@@ -70,13 +70,11 @@ export default function Judging() {
 
   useEffect(() => {
     if (judgeIdNumber) {
-      console.log('DEBUG: Judge ID found:', judgeIdNumber);
       setIsLoading(true);
       fetchJudgeById(judgeIdNumber);
       // Fetch all clusters for this judge across all contests
       fetchAllClustersByJudgeId(judgeIdNumber);
     } else {
-      console.log('DEBUG: No judge ID found');
       setIsLoading(false);
     }
   }, [judgeIdNumber]);
@@ -104,6 +102,7 @@ export default function Judging() {
         const championshipClusters = allClusters.filter((cluster: any) => 
           cluster.cluster_type === 'championship' || 
           cluster.cluster_type === 'redesign' ||
+          // Fallback: check by name for existing clusters (transition period)
           cluster.cluster_name?.toLowerCase().includes('championship') ||
           cluster.cluster_name?.toLowerCase().includes('redesign')
         );
@@ -191,7 +190,7 @@ export default function Judging() {
               break;
             }
           } catch (error) {
-            // Silently continue if cluster has no teams
+        
           }
         }
         
@@ -281,7 +280,7 @@ export default function Judging() {
               <Grid item xs={12} sm={6} md={3}>
                 <StatCard value={teams.length} label="Teams Assigned" />
               </Grid>
-              {/* Add more stat cards if needed */}
+          
             </Grid>
 
             {/* List Advancers Button */}

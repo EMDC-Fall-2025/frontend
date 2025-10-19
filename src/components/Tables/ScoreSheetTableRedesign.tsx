@@ -304,7 +304,7 @@ export default function ScoreSheetTableRedesign({
                     <TableCell align="right" scope="row">
                       {question.id !== 8 && (
                         <>
-                          {formData[question.id] == 0 ? (
+                          {formData[question.id] === undefined || formData[question.id] === 0 || formData[question.id] === "" || formData[question.id] === null ? (
                             <CloseIcon sx={{ color: "red" }} />
                           ) : (
                             <CheckIcon sx={{ color: "green" }} />
