@@ -7,6 +7,10 @@ import { useContestStore } from "../store/primary_stores/contestStore";
 import ContestTable from "../components/Tables/ContestTable";
 
 
+// FILE OVERVIEW: page for displaying contests
+
+
+
 export default function Contests() {
   // Zustand store for contests
   const { allContests, fetchAllContests, isLoadingContest } = useContestStore();

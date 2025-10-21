@@ -2,12 +2,12 @@ import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
-// FILE OVERVIEW: table component for contest page
+import theme from "../../theme";
 
-// structure for row
 interface ContestRow {
   id: number;
   name: string;
@@ -15,35 +15,72 @@ interface ContestRow {
   status: string;
 }
 
-// props for table
 interface ContestTableProps {
   rows: ContestRow[];
   isLoading: boolean;
   onRowClick: (contestId: number) => void;
 }
 
-export default function ContestTable({ rows, isLoading, onRowClick }: ContestTableProps) {
+export default function ContestTable({
+  rows,
+  isLoading,
+  onRowClick,
+}: ContestTableProps) {
   return (
-    <TableContainer component={Paper}>
+    <TableContainer
+      component={Paper}
+      sx={{
+        borderRadius: 3,
+        overflow: "hidden",
+        boxShadow: 3,
+      }}
+    >
       <Table aria-label="contest table">
+        {/* ✅ Light Green Header Row */}
+        <TableHead>
+          <TableRow
+            sx={{
+              backgroundColor: theme.palette.primary.light,
+            }}
+          >
+            <TableCell sx={{ fontWeight: 700, color: "#fff" }}>
+              Contest Name
+            </TableCell>
+            <TableCell sx={{ fontWeight: 700, color: "#fff" }}>Date</TableCell>
+            <TableCell sx={{ fontWeight: 700, color: "#fff" }}>Status</TableCell>
+          </TableRow>
+        </TableHead>
+
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={4} align="center">
+              <TableCell colSpan={3} align="center">
                 <Typography>Loading contests...</Typography>
               </TableCell>
             </TableRow>
           ) : (
-            // Map over the rows and render each row in the table
             rows.map((row) => (
               <TableRow
                 key={row.id}
-                sx={{ cursor: "pointer" }}
+                hover
+                sx={{
+                  cursor: "pointer",
+                }}
                 onClick={() => onRowClick(row.id)}
               >
-                <TableCell component="th" scope="row">{row.name}</TableCell>
+                <TableCell>{row.name}</TableCell>
                 <TableCell>{row.date}</TableCell>
-                <TableCell sx={{ color: row.status === "In Progress" ? "green" : "red" }}>
+                <TableCell
+                  sx={{
+                    color:
+                      row.status === "Finalized"
+                        ? "green"
+                        : row.status === "In Progress"
+                          ? "orange"
+                          : "red",
+                    fontWeight: 600,
+                  }}
+                >
                   {row.status}
                 </TableCell>
               </TableRow>

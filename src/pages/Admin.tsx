@@ -183,7 +183,6 @@ useEffect(() => {
                 label={
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <span>Contests</span>
-                    
                   </Stack>
                 }
                 value="1"

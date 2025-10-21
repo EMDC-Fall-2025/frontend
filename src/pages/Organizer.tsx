@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import theme from "../theme";
 import OrganizerContestTable from "../components/Tables/OrganizerContestTable";
-import  ContestOverviewTable from "./ContestOverview";
+import ContestOverviewTable from "./ContestOverview";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import useMapContestOrganizerStore from "../store/map_stores/mapContestToOrganizerStore";
 import useMapScoreSheetStore from "../store/map_stores/mapScoreSheetStore";

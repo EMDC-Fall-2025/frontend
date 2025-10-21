@@ -47,7 +47,7 @@ export interface IJudgeModalProps {
 
 export default function JudgeModal(props: IJudgeModalProps) {
   const { handleClose, open, mode, judgeData, clusters, contestid, onSuccess } = props;
-  
+
   // Store hooks for refreshing data
   const { getAllJudgesByContestId } = useContestJudgeStore();
   const { fetchJudgesByClusterId } = useMapClusterJudgeStore();
@@ -177,21 +177,21 @@ export default function JudgeModal(props: IJudgeModalProps) {
         // Create judge account and refresh judge list
         await createJudge(judgeData);
         getAllJudgesByContestId(contestid);
-        
+
         // Refresh judges for the specific cluster to show the new judge
         if (clusterId !== -1) {
           fetchJudgesByClusterId(clusterId);
         }
-        
+
         // Call parent component's success callback
         onSuccess?.();
-        
+
         toast.success("Judge created successfully!");
         handleCloseModal();
       } catch (error: any) {
         // Handle judge creation errors with user-friendly messages
         let errorMessage = "";
-        
+
         // Extract error message from various possible response structures
         if (error?.response?.data) {
           const data = error.response.data;
@@ -210,10 +210,10 @@ export default function JudgeModal(props: IJudgeModalProps) {
         } else if (error?.message && typeof error.message === 'string') {
           errorMessage = error.message;
         }
-        
-        if (errorMessage.toLowerCase().includes("already exists") || 
-            errorMessage.toLowerCase().includes("duplicate") ||
-            errorMessage.toLowerCase().includes("username") && errorMessage.toLowerCase().includes("taken")) {
+
+        if (errorMessage.toLowerCase().includes("already exists") ||
+          errorMessage.toLowerCase().includes("duplicate") ||
+          errorMessage.toLowerCase().includes("username") && errorMessage.toLowerCase().includes("taken")) {
           toast.error("Account already exists in the system");
         } else {
           toast.error("Failed to create judge. Please try again.");
@@ -249,17 +249,17 @@ export default function JudgeModal(props: IJudgeModalProps) {
 
         // Update judge
         await editJudge(updatedData);
-        
+
         toast.success("Judge updated successfully!");
         handleCloseModal();
-        
+
         // Refresh the judge list after modal closes to prevent UI conflicts
         if (contestid) {
           setTimeout(async () => {
             try {
               // Refresh the main judge store
               await getAllJudgesByContestId(contestid);
-              
+
               // Also refresh judges for each cluster to update the cluster-specific data
               if (clusters && clusters.length > 0) {
                 for (const cluster of clusters) {
@@ -278,7 +278,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
       } catch (error: any) {
         // Handle judge update errors with detailed error information
         console.error("Judge update error:", error);
-        
+
         let errorMessage = "";
         if (error?.response?.data) {
           const data = error.response.data;
@@ -296,16 +296,10 @@ export default function JudgeModal(props: IJudgeModalProps) {
         } else if (error?.message && typeof error.message === 'string') {
           errorMessage = error.message;
         }
-        
+
         // Show specific error message or generic fallback
         if (errorMessage) {
-          //when a cluster is edited with no teams
-    
-          if (errorMessage.includes("No teams found for the specified cluster")) {
-            toast.error("Cannot update judge: The selected cluster has no teams. Please add teams to the cluster first or select a different cluster.");
-          } else {
-            toast.error(`Failed to update judge: ${errorMessage}`);
-          }
+          toast.error(`Failed to update judge: ${errorMessage}`);
         } else {
           toast.error("Failed to update judge. Please try again.");
         }
