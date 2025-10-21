@@ -2,7 +2,7 @@
 /**
  * AssignJudgeToContestModal Component
  *
- * Allows administrators to assign an existing judge to additional contests.
+ * Allows organisers to assign an existing judge to additional contests.
  * This enables the same judge to work on multiple contests simultaneously.
  *
  * Features:
@@ -25,20 +25,20 @@ import {
   Box,
   Typography,
   Alert,
-  IconButton
+  
 } from "@mui/material";
 import Modal from "./Modal";
 import theme from "../../theme";
+import toast from "react-hot-toast";
 import { useContestStore } from "../../store/primary_stores/contestStore";
 import { Judge } from "../../types";
-import { api } from "../../lib/api";
 import axios from "axios";
 import SearchBar from "../SearchBar";
 
 export interface IAssignJudgeToContestModalProps {
   open: boolean;
   handleClose: () => void;
-  onSuccess?: () => void; // Callback when assignment is successful
+  onSuccess?: () => void; 
 }
 
 export default function AssignJudgeToContestModal(
@@ -46,13 +46,11 @@ export default function AssignJudgeToContestModal(
 ) {
   const { handleClose, open, onSuccess } = props;
 
-  // ----- State Management -----
-  // Use stable selectors to prevent unnecessary re-renders
+  // all contests fetched
   const contests = useContestStore((s) => s.allContests);
   const fetchAllContests = useContestStore((s) => s.fetchAllContests);
 
   // ----- Form State Management -----
-  // Track user selections for judge, contest, and cluster
   const [selectedJudgeId, setSelectedJudgeId] = React.useState<number>(-1);
   const [selectedContestId, setSelectedContestId] = React.useState<number>(-1);
   const [selectedClusterId, setSelectedClusterId] = React.useState<number>(-1);
@@ -80,15 +78,14 @@ export default function AssignJudgeToContestModal(
   // ----- Judges -----
   const [allJudges, setAllJudges] = React.useState<Judge[]>([]);
 
-  //state for searching judges
-  const [searchJudge, setSearchJudge] = React.useState("");
   
 
   // Local state for clusters specific to selected contest
   const [contestClusters, setContestClusters] = React.useState<any[]>([]);
-  // Local state for judges already assigned to the selected contest and cluster combination
+  // Local state for judges 
   const [assignedJudgeClusterPairs, setAssignedJudgeClusterPairs] = React.useState<Set<string>>(new Set());
   
+  //# preventing duplicate assignments
   const availableClusters = contestClusters;
   const filteredClusters = React.useMemo(() => {
     if (selectedJudgeId <= 0 || selectedContestId <= 0) {
@@ -99,15 +96,8 @@ export default function AssignJudgeToContestModal(
       return !assignedJudgeClusterPairs.has(pairKey);
     });
   }, [availableClusters, selectedJudgeId, selectedContestId, assignedJudgeClusterPairs]);
-  // Filter out judges who are already assigned to the selected contest AND cluster combination
-  const availableJudges = selectedContestId > 0 && selectedClusterId > 0
-    ? allJudges.filter(judge => {
-        const pairKey = `${judge.id}-${selectedContestId}-${selectedClusterId}`;
-        return !assignedJudgeClusterPairs.has(pairKey);
-      })
-    : allJudges;
 
-  // Load contests & judges each time the modal opens
+  // # Load contests & judges each time the modal opens
   React.useEffect(() => {
     if (!open) return;
 
@@ -123,7 +113,16 @@ export default function AssignJudgeToContestModal(
         }
 
         // Load all judges
-        const response = await api.get("/judge/getAll/");
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          "/api/judge/getAll/",
+          {
+            headers: {
+              Authorization: `Token ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
         if (!isMounted) return;
         if (response.data?.Judges) {
           setAllJudges(response.data.Judges);
@@ -143,9 +142,9 @@ export default function AssignJudgeToContestModal(
 
   // Load clusters when a contest is selected
   React.useEffect(() => {
-    // Handle contest selection and load associated clusters
+    // cluster validation
     if (selectedContestId === -1 || selectedContestId <= 0) {
-      // Clear clusters if no valid contest is selected
+    
       setContestClusters([]);
       return;
     }
@@ -157,7 +156,7 @@ export default function AssignJudgeToContestModal(
         try {
           const token = localStorage.getItem("token");
           
-          // Fetch clusters for the selected contest
+          // #Fetch clusters for the selected contest
           const clustersResponse = await axios.get(
             `/api/mapping/clusterToContest/getAllClustersByContest/${selectedContestId}/`,
             {
@@ -196,7 +195,7 @@ export default function AssignJudgeToContestModal(
                   });
                 }
               } catch (error) {
-                // Ignore individual cluster errors to allow other clusters to proceed
+                
               }
             })
           );
@@ -213,7 +212,7 @@ export default function AssignJudgeToContestModal(
       // Mark this contest as loaded to prevent duplicate requests
       loadedContestIdRef.current = selectedContestId;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [selectedContestId]);
 
   /**
@@ -221,7 +220,7 @@ export default function AssignJudgeToContestModal(
    * Validates form data and creates judge-contest-cluster assignment
    */
   const handleSubmit = async () => {
-    if (isSubmitting) return; // Prevent double-clicks during submission
+    if (isSubmitting) return; 
 
     // Validate required selections
     if (selectedJudgeId === -1 || selectedContestId === -1 || selectedClusterId === -1) {
@@ -267,7 +266,6 @@ export default function AssignJudgeToContestModal(
 
       setSuccess(response?.data?.message || "Judge successfully assigned to contest!");
 
-      // optional external refresh
       onSuccess?.();
 
       // Reset form
@@ -283,8 +281,20 @@ export default function AssignJudgeToContestModal(
         redesign: false,
         championship: false,
       });
+      toast.success("Judge assigned to contest successfully!");
+      handleClose();
     } catch (err: any) {
-      setError(err?.response?.data?.error || "Failed to assign judge to contest");
+      const errorMessage = err?.response?.data?.error || err?.response?.data?.detail || "Failed to assign judge to contest";
+      
+      // Check for specific error about no teams in cluster
+      if (errorMessage.toLowerCase().includes("no teams") || 
+          errorMessage.toLowerCase().includes("teams") && errorMessage.toLowerCase().includes("cluster")) {
+        setError("Cannot assign judge: The selected cluster has no teams. Please add teams to the cluster first or select a different cluster.");
+        toast.error("Cannot assign judge: The selected cluster has no teams. Please add teams to the cluster first.");
+      } else {
+        setError(errorMessage);
+        toast.error("Failed to assign judge to contest. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -302,22 +312,26 @@ export default function AssignJudgeToContestModal(
       handleClose={handleCloseModal}
       title="Assign Judge to Contest"
     >
-      <Container sx={{ p: 3, minWidth: 500 }}>
+      <Container sx={{ 
+        p: { xs: 2, sm: 3 }, 
+        minWidth: { xs: "auto", sm: 500 },
+        maxWidth: { xs: "100%", sm: "600px" }
+      }}>
         {/* Success/Error Messages */}
         {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
+          <Alert severity="success" sx={{ mb: { xs: 1.5, sm: 2 } }}>
             {success}
           </Alert>
         )}
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: { xs: 1.5, sm: 2 } }}>
             {error}
           </Alert>
         )}
 
         {/* Judge Selection */}
         {allJudges.length > 0 && (
-    <Box sx={{ mb: 3 }}>
+    <Box sx={{ mb: { xs: 2, sm: 3 } }}>
         <SearchBar 
             judges={allJudges} 
             onJudgeSelect={(judge)=> setSelectedJudgeId(judge?.id || -1)}
@@ -325,30 +339,14 @@ export default function AssignJudgeToContestModal(
     </Box>
 )}
         
-        {/* // <FormControl fullWidth sx={{ mb: 3 }}>
-        //   <InputLabel>Select Judge</InputLabel>
-        //   <Select
-        //     value={selectedJudgeId}
-        //     label="Select Judge"
-        //     onChange={(e) => setSelectedJudgeId(Number(e.target.value))}
-        //   >
-        //     <MenuItem value={-1}>
-        //       <em>Choose a judge...</em>
-        //     </MenuItem>
-        //     {availableJudges.map((judge) => (
-        //       <MenuItem key={judge.id} value={judge.id}>
-        //         {judge.first_name} {judge.last_name}
-        //       </MenuItem>
-        //     ))}
-        //   </Select>
-        // </FormControl> */}
-
+        
         {/* Contest Selection */}
-        <FormControl fullWidth sx={{ mb: 3 }}>
-          <InputLabel>Select Contest</InputLabel>
+        <FormControl fullWidth sx={{ mb: { xs: 2, sm: 3 } }}>
+          <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Select Contest</InputLabel>
           <Select
             value={selectedContestId}
             label="Select Contest"
+            sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}
             onChange={(e) => {
               const contestId = Number(e.target.value);
               // Handle contest selection for assignment
@@ -360,7 +358,7 @@ export default function AssignJudgeToContestModal(
               <em>Choose a contest...</em>
             </MenuItem>
             {contests.map((contest) => (
-              <MenuItem key={contest.id} value={contest.id}>
+              <MenuItem key={contest.id} value={contest.id} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
                 {contest.name}
               </MenuItem>
             ))}
@@ -368,36 +366,44 @@ export default function AssignJudgeToContestModal(
         </FormControl>
 
         {/* Cluster Selection */}
-        <FormControl fullWidth sx={{ mb: 3 }}>
-          <InputLabel>Select Cluster</InputLabel>
+        <FormControl fullWidth sx={{ mb: { xs: 2, sm: 3 } }}>
+          <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Select Cluster</InputLabel>
           <Select
             value={selectedClusterId}
             label="Select Cluster"
             disabled={selectedContestId === -1}
+            sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}
             onChange={(e) => setSelectedClusterId(Number(e.target.value))}
           >
             <MenuItem value={-1}>
               <em>Choose a cluster...</em>
             </MenuItem>
             {filteredClusters.map((cluster) => (
-              <MenuItem key={cluster.id} value={cluster.id}>
+              <MenuItem key={cluster.id} value={cluster.id} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
                 {cluster.cluster_name}
               </MenuItem>
             ))}
           </Select>
-          <FormHelperText>Only clusters from the selected contest are shown</FormHelperText>
+          <FormHelperText sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>Only clusters from the selected contest are shown</FormHelperText>
         </FormControl>
 
         {/* Score Sheet Types */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold" }}>
+        <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+          <Typography variant="h6" sx={{ 
+            mb: { xs: 1.5, sm: 2 }, 
+            fontWeight: "bold",
+            fontSize: { xs: "1.1rem", sm: "1.25rem" }
+          }}>
             Score Sheet Types
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ 
+            mb: { xs: 1.5, sm: 2 },
+            fontSize: { xs: "0.85rem", sm: "0.875rem" }
+          }}>
             Select which types of score sheets this judge will handle:
           </Typography>
 
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 0.5, sm: 1 } }}>
             {[
               { key: "presentation", label: "Presentation" },
               { key: "journal", label: "Journal" },
@@ -416,15 +422,28 @@ export default function AssignJudgeToContestModal(
                       [key]: e.target.checked,
                     }))
                   }
+                  sx={{ 
+                    padding: { xs: 0.5, sm: 1 },
+                    "& .MuiSvgIcon-root": { 
+                      fontSize: { xs: "1.2rem", sm: "1.5rem" } 
+                    }
+                  }}
                 />
-                <Typography variant="body2">{label}</Typography>
+                <Typography variant="body2" sx={{ fontSize: { xs: "0.85rem", sm: "0.875rem" } }}>
+                  {label}
+                </Typography>
               </Box>
             ))}
           </Box>
         </Box>
 
         {/* Action Buttons */}
-        <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
+        <Box sx={{ 
+          display: "flex", 
+          gap: { xs: 1.5, sm: 2 }, 
+          justifyContent: { xs: "center", sm: "flex-end" },
+          flexDirection: { xs: "column", sm: "row" }
+        }}>
           <Button
             type="button"
             variant="outlined"
@@ -433,8 +452,10 @@ export default function AssignJudgeToContestModal(
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: 4.5,
+              px: { xs: 3, sm: 4.5 },
+              py: { xs: 1, sm: 1.25 },
               fontWeight: 600,
+              fontSize: { xs: "0.9rem", sm: "1rem" },
               borderColor: theme.palette.grey[400],
               color: theme.palette.grey[600],
               "&:hover": {
@@ -453,8 +474,10 @@ export default function AssignJudgeToContestModal(
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: 4.5,
+              px: { xs: 3, sm: 4.5 },
+              py: { xs: 1, sm: 1.25 },
               fontWeight: 600,
+              fontSize: { xs: "0.9rem", sm: "1rem" },
               borderColor: theme.palette.success.main,
               color: theme.palette.success.main,
               "&:hover": {

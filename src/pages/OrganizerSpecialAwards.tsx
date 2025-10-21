@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Typography,
+  Link as MuiLink,
   Button,
   Box,
   Select,
@@ -19,8 +20,11 @@ import {
 } from "@mui/material";
 import useSpecialAwardStore, { SpecialAward } from "../store/map_stores/mapAwardToTeamStore";
 import { useTeamStore } from "../store/primary_stores/teamStore";
+import { useNavigate } from "react-router-dom";
+import theme from "../theme";
 
 export default function OrganizerSpecialAwards() {
+  const navigate = useNavigate();
   const {
     awards,
     isLoading,
@@ -135,7 +139,12 @@ export default function OrganizerSpecialAwards() {
 
   return (
     <Container>
-      <Typography variant="h4" sx={{ my: 4 }}>
+      <MuiLink onClick={() => navigate(-1)} sx={{ textDecoration: "none", cursor: "pointer" }}>
+        <Typography variant="body2" sx={{ ml: 2, mt: 2 }}>
+          {"<"} Back to Organizer
+        </Typography>
+      </MuiLink>
+      <Typography variant="h4" sx={{ my: 4, ml: 2 }}>
         Organizer Awards Management
       </Typography>
 

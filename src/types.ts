@@ -42,6 +42,7 @@ export interface NewContest {
 export interface EditedTeam {
   id: number;
   team_name: string;
+  school_name: string;
   clusterid: number;
   username: string;
   first_name: string;
@@ -119,6 +120,7 @@ export interface NewJudge {
 
 export interface NewTeam {
   team_name: string;
+  school_name: string;
   journal_score: number;
   presentation_score: number;
   machinedesign_score: number;
@@ -210,6 +212,7 @@ export interface ScoreSheetMappingWithSheet {
 export interface Team {
   id: number;
   team_name: string;
+  school_name: string;
   journal_score: number;
   presentation_score: number;
   machinedesign_score: number;
@@ -219,11 +222,13 @@ export interface Team {
   team_rank: number | null;
   judge_disqualified: boolean;
   organizer_disqualified: boolean;
+  advanced_to_championship?: boolean;
 }
 
 export interface TeamData {
   id: number;
   team_name: string;
+  school_name: string;
   clusterid: number;
   username: string;
   first_name: string;

@@ -278,7 +278,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
           // First get the score sheet IDs for each team
           const sheetsPromises = teamIds.map(async (teamId) => {
             try {
-              console.log(`Fetching sheet: sheetType=${sheetType}, judgeId=${judgeId}, teamId=${teamId}`);
+              // Fetch score sheet data
               const mapResponse = await axios.get(`/api/mapping/scoreSheet/getByTeamJudge/${sheetType}/${judgeId}/${teamId}/`, {
                 headers: {
                   Authorization: `Token ${token}`,

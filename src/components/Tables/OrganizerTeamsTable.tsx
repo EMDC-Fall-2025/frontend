@@ -67,7 +67,7 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
   const handleConfirmDelete = async () => {
     if (clusterToDelete) {
       try {
-        await deleteCluster(clusterToDelete);
+        await deleteCluster(clusterToDelete); // Delete from backend
         toast.success('Cluster deleted successfully!');
         // Refresh clusters list
         fetchClustersByContestId(contestId);
@@ -126,8 +126,11 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
     return (
       <Table
         sx={{
-          minWidth: 650,
-          "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 }, // font only
+          "& .MuiTableCell-root": { 
+            fontSize: { xs: "0.7rem", sm: "0.85rem", md: "0.95rem" }, 
+            py: { xs: 0.5, sm: 0.75, md: 1.25 },
+            px: { xs: 0.5, sm: 0.75, md: 1 }
+          },
         }}
       >
         <TableBody>
@@ -135,6 +138,14 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
             <TableRow key={team.id}>
               <TableCell component="th" scope="row" sx={{ fontWeight: 500 }}>
                 {team.team_name}
+                {team.school_name && (
+                  <Typography variant="body2" sx={{ 
+                    color: theme.palette.grey[600], 
+                    fontSize: { xs: "0.6rem", sm: "0.75rem", md: "0.875rem" } 
+                  }}>
+                    ({team.school_name})
+                  </Typography>
+                )}
               </TableCell>
               {team.judge_disqualified && !team.organizer_disqualified && (
                 <TableCell>
@@ -146,9 +157,22 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
                     sx={{
                       textTransform: "none",
                       fontWeight: 600,
-                      px: 2.25,
-                      py: 0.75,
-                      borderRadius: 1.5,
+                      px: { xs: 1.5, sm: 2, md: 2.25 },
+                      py: { xs: 0.4, sm: 0.6, md: 0.75 },
+                      borderRadius: 2,
+                      fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
+                      minWidth: { xs: "80px", sm: "100px", md: "120px" },
+                      height: { xs: "28px", sm: "32px", md: "36px" },
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "#d32f2f",
+                      "&:hover": {
+                        backgroundColor: "#c62828",
+                        transform: "translateY(-1px)",
+                        boxShadow: "0 4px 8px rgba(211,47,47,0.25)",
+                      },
+                      transition: "all 0.2s ease-in-out",
                     }}
                   >
                     Disqualify Team
@@ -165,6 +189,7 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
                     handleOpenTeamModal({
                       id: team.id,
                       team_name: team.team_name,
+                      school_name: team.school_name || "NA",
                       clusterid: cluster,
                       username: coachesByTeams[team.id]?.username || "N/A",
                       first_name: coachesByTeams[team.id]?.first_name || "N/A",
@@ -175,9 +200,24 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
                   sx={{
                     textTransform: "none",
                     fontWeight: 600,
-                    px: 2.25,
-                    py: 0.75,
-                    borderRadius: 1.5,
+                    px: { xs: 1.5, sm: 2, md: 2.25 },
+                    py: { xs: 0.4, sm: 0.6, md: 0.75 },
+                    borderRadius: 2,
+                    fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
+                    minWidth: { xs: "80px", sm: "100px", md: "120px" },
+                    height: { xs: "28px", sm: "32px", md: "36px" },
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderColor: "#4caf50",
+                    color: "#4caf50",
+                    "&:hover": {
+                      backgroundColor: "#4caf50",
+                      color: "white",
+                      transform: "translateY(-1px)",
+                      boxShadow: "0 4px 8px rgba(76,175,80,0.25)",
+                    },
+                    transition: "all 0.2s ease-in-out",
                   }}
                 >
                   Edit Team
@@ -194,7 +234,11 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
     <TableContainer component={Box}>
       <Table
         sx={{
-          "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 }, // font only
+          "& .MuiTableCell-root": { 
+            fontSize: { xs: "0.7rem", sm: "0.85rem", md: "0.95rem" }, 
+            py: { xs: 0.5, sm: 0.75, md: 1.25 },
+            px: { xs: 0.5, sm: 0.75, md: 1 }
+          },
         }}
       >
         <TableBody>
@@ -236,9 +280,10 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
                       sx={{
                         textTransform: "none",
                         fontWeight: 600,
-                        px: 2.25,
-                        py: 0.75,
+                        px: { xs: 1.5, sm: 2, md: 2.25 },
+                        py: { xs: 0.4, sm: 0.6, md: 0.75 },
                         borderRadius: 1.5,
+                        fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
                       }}
                     >
                       Edit Cluster
@@ -253,6 +298,12 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
                     sx={{
                       color: theme.palette.error.main,
                       borderColor: theme.palette.error.main,
+                      textTransform: "none",
+                      fontWeight: 600,
+                      px: { xs: 1.5, sm: 2, md: 2.25 },
+                      py: { xs: 0.4, sm: 0.6, md: 0.75 },
+                      borderRadius: 1.5,
+                      fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
                       "&:hover": {
                         backgroundColor: theme.palette.error.light,
                         borderColor: theme.palette.error.dark,

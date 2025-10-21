@@ -71,13 +71,13 @@ export default function DisqualificationModal(
           onClick={() => setOpenAreYouSureConfirm(true)}
           sx={{
             width: 90,
-            height: 44,                                    // Consistent height (was 35)
-            bgcolor: theme.palette.success.main,          // Green theme (was primary.main)
-            "&:hover": { bgcolor: theme.palette.success.dark }, // Hover effect
-            color: "#fff",                                // White text (was secondary.main)
+            height: 44,
+            bgcolor: theme.palette.success.main,
+            "&:hover": { bgcolor: theme.palette.success.dark },
+            color: "#fff",
             mt: 2,
-            textTransform: "none",                        // No uppercase transformation
-            borderRadius: 2,                              // Modern border radius
+            textTransform: "none",
+            borderRadius: 2,
           }}
         >
           Confirm
@@ -87,13 +87,13 @@ export default function DisqualificationModal(
           onClick={() => setOpenAreYouSureReverse(true)}
           sx={{
             width: 90,
-            height: 44,                                    // Consistent height (was 35)
-            bgcolor: theme.palette.warning.main,          // Orange theme for reverse action
-            "&:hover": { bgcolor: theme.palette.warning.dark }, // Hover effect
-            color: "#fff",                                // White text
+            height: 44,
+            bgcolor: theme.palette.warning.main,
+            "&:hover": { bgcolor: theme.palette.warning.dark },
+            color: "#fff",
             mt: 2,
-            textTransform: "none",                        // No uppercase transformation
-            borderRadius: 2,                              // Modern border radius
+            textTransform: "none",
+            borderRadius: 2,
           }}
         >
           Reverse

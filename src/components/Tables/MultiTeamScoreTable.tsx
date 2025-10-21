@@ -1,18 +1,8 @@
 /**
  * MultiTeamScoreTable Component
- *
- * Goal
- * ----
- * Judges can enter scores/comments for multiple teams in one screen,
- * save drafts, and submit all at once. UI is aligned to the modern
- * green/white theme used across the app.
- *
- * What to know
- * ------------
- * - Rows = questions/criteria; columns (after the second column) = teams.
- * - Row 9 is a text comment field; other rows are numeric with bounds.
- * - Uses Zustand store (useScoreSheetStore) for fetching/saving/submitting.
- * - Expand/Collapse reveals detailed scoring criteria (Jr/Sr aware on Q4).
+ * 
+ * Allows judges to score multiple teams simultaneously with expandable criteria sections.
+ * Supports draft saving and final submission for all teams at once.
  */
 
 import * as React from "react";
@@ -44,8 +34,8 @@ import { useScoreSheetStore } from "../../store/primary_stores/scoreSheetStore";
 import { useEffect, useState } from "react";
 
 type IMultiTeamScoreSheetProps = {
-  sheetType: number; // Which sheet definition to load (presentation, machine design, etc.)
-  title: string;     // Page H1
+  sheetType: number; 
+  title: string;   
   teams: { id: number, name: string }[]; // Teams visible to this judge
   questions: any[];  // Question configs (id, text, low/high points, criteria text)
   seperateJrAndSr: boolean; // If true, show Jr/Sr copy in criteria for Q4
@@ -60,19 +50,19 @@ export default function MultiTeamScoreSheet({
   judgeId,
   seperateJrAndSr,
 }: IMultiTeamScoreSheetProps) {
-  // Tracks expand/collapse state per question row (by question.id)
+  // Tracks expand/collapse state per question row
   const [openRows, setOpenRows] = React.useState<{ [key: number]: boolean }>({});
 
-  // ---- Store wiring: fetch, update, submit, and error state ----
+  // Score sheet store for data management
   const {
-    multipleScoreSheets,           // Array of sheets keyed by teamId (fetched)
-    fetchMultipleScoreSheets,      // Fetch sheets for teams/judge/sheetType
-    updateMultipleScores,          // Save (draft) updates
-    submitMultipleScoreSheets,     // Final submit
-    scoreSheetError,               // Error text from store actions (if any)
+    multipleScoreSheets,
+    fetchMultipleScoreSheets,
+    updateMultipleScores,
+    submitMultipleScoreSheets,
+    scoreSheetError,
   } = useScoreSheetStore();
 
-  // Only render teams that have a sheet record (prevents empty columns)
+  // Filter teams that have score sheets available
   const filteredTeams = React.useMemo(() => {
     if (!multipleScoreSheets) return [];
     return teams.filter(team =>
@@ -80,7 +70,7 @@ export default function MultiTeamScoreSheet({
     );
   }, [teams, multipleScoreSheets]);
 
-  // Show message if no teams have scoresheets available
+  // Show message if no score sheets are available
   if (multipleScoreSheets && multipleScoreSheets.length === 0) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -96,12 +86,11 @@ export default function MultiTeamScoreSheet({
     );
   }
 
-  // Confirmation modal state for "Submit All"
+ 
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
-
   const navigate = useNavigate();
 
-  // Toggle a single question row open/closed
+
   const handleToggle = (id: number) => {
     setOpenRows((prevState) => ({
       ...prevState,
@@ -109,29 +98,26 @@ export default function MultiTeamScoreSheet({
     }));
   };
 
-  // Open all question rows (useful for quick scanning)
+
   const handleExpandAllRows = () => {
     const expanded = questions.reduce((acc, q) => ({ ...acc, [q.id]: true }), {});
     setOpenRows(expanded);
   };
 
-  // Collapse all question rows (tidy view)
+
   const handleCollapseAllRows = () => {
     const closed = questions.reduce((acc, q) => ({ ...acc, [q.id]: false }), {});
     setOpenRows(closed);
   };
 
-  // Local form state:
-  // formData[teamId][questionId] = number | string | undefined
-  // - Questions 1..8 are numeric (undefined = not filled)
-  // - Question 9 is comment (string | undefined)
+  // Form data state: teamId -> questionId -> value
   const [formData, setFormData] = useState<{
     [teamId: number]: {
       [questionId: number]: number | string | undefined;
     };
   }>({});
 
-  // Fetch sheets when teams/judge/sheetType are known
+  // Fetch score sheets when component mounts
   useEffect(() => {
     if (teams.length > 0 && judgeId) {
       const teamIds = teams.map(team => team.id);
@@ -139,7 +125,7 @@ export default function MultiTeamScoreSheet({
     }
   }, [teams, judgeId, fetchMultipleScoreSheets, sheetType]);
 
-  // Hydrate formData from fetched sheets (and ensure every filtered team has an object)
+  // Initialize form data from fetched score sheets
   useEffect(() => {
     if (multipleScoreSheets && multipleScoreSheets.length > 0) {
       const newFormData: {
@@ -148,7 +134,7 @@ export default function MultiTeamScoreSheet({
         };
       } = {};
 
-      // Copy existing sheet values per team
+      // Load existing values from score sheets
       multipleScoreSheets.forEach(sheet => {
         if (!sheet || sheet.teamId === undefined) return;
 
@@ -161,11 +147,11 @@ export default function MultiTeamScoreSheet({
           6: sheet.field6,
           7: sheet.field7,
           8: sheet.field8,
-          9: sheet.field9, // comments
+          9: sheet.field9,
         };
       });
 
-      // Ensure every filtered team has an entry (prevents uncontrolled inputs)
+      // Initialize empty data for teams without sheets
       filteredTeams.forEach(team => {
         if (!newFormData[team.id]) {
           newFormData[team.id] = {
@@ -186,7 +172,7 @@ export default function MultiTeamScoreSheet({
     }
   }, [multipleScoreSheets, filteredTeams]);
 
-  // Update a single cell (teamId x questionId)
+  // Update individual score/comment value
   const handleScoreChange = (teamId: number, questionId: number, value: number | string | undefined) => {
     setFormData(prev => ({
       ...prev,
@@ -197,7 +183,7 @@ export default function MultiTeamScoreSheet({
     }));
   };
 
-  // Save as draft (does not mark as submitted)
+  // Save current form data as draft
   const handleSaveScoreSheets = async () => {
     if (!multipleScoreSheets || multipleScoreSheets.length === 0) return;
 
@@ -227,7 +213,7 @@ export default function MultiTeamScoreSheet({
           field6: formData[team.id][6],
           field7: formData[team.id][7],
           field8: formData[team.id][8],
-          field9: formData[team.id][9]?.toString(), // normalize comments to string
+          field9: formData[team.id][9]?.toString(),
         });
       }
     }
@@ -235,8 +221,7 @@ export default function MultiTeamScoreSheet({
     if (updatedSheets.length > 0) await updateMultipleScores(updatedSheets);
   };
 
-  // Validation: all required numeric fields (1..8) must be filled (non-empty, non-zero)
-  // Comment (9) is optional.
+  // Validate that all required fields are completed
   const allFieldsFilled = () => {
     if (!multipleScoreSheets || multipleScoreSheets.length === 0) return false;
 
@@ -246,7 +231,7 @@ export default function MultiTeamScoreSheet({
 
       const complete = Object.keys(data).every(key => {
         const id = Number(key);
-        // Allow Q9 (comments) to be empty
+        // Comments (Q9) are optional
         return id === 9 || (data[id] !== undefined && data[id] !== "" && data[id] !== 0);
       });
 
@@ -289,7 +274,7 @@ export default function MultiTeamScoreSheet({
 
   return (
     <>
-      {/* Back link to Judging Dashboard (uses success color for consistency) */}
+      {/* Navigation back to judging dashboard */}
       <Link
         onClick={() => navigate(-1)}
         sx={{
@@ -309,31 +294,49 @@ export default function MultiTeamScoreSheet({
       </Link>
 
       {/* Page title */}
-      <Typography variant="h1" sx={{ ml: "2%", mr: 5, mt: 4, mb: 2, fontWeight: "bold" }}>
+      <Typography 
+        variant="h1" 
+        sx={{ 
+          ml: { xs: "2%", sm: "2%" }, 
+          mr: { xs: 2, sm: 5 }, 
+          mt: { xs: 2, sm: 4 }, 
+          mb: { xs: 1.5, sm: 2 }, 
+          fontWeight: "bold",
+          fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" }
+        }}
+      >
         {title}
       </Typography>
 
-      {/* Main container: white background + subtle border to match modern theme */}
+      {/* Main form container */}
       <Container
         component="form"
         sx={{
           width: "auto",
-          p: 3,
+          p: { xs: 2, sm: 3 },
           bgcolor: "#fff",
           borderRadius: 3,
           border: `1px solid ${theme.palette.grey[300]}`,
-          ml: "2%",
-          mr: 1,
-          mb: 3,
+          ml: { xs: "2%", sm: "2%" },
+          mr: { xs: 1, sm: 1 },
+          mb: { xs: 2, sm: 3 },
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        {/* Action buttons (Save, Expand, Collapse) */}
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2 }}>
-          {/* Save Draft for all teams */}
+        {/* Action buttons for form management */}
+        <Box sx={{ 
+          display: "flex", 
+          flexWrap: "wrap", 
+          gap: { xs: 1, sm: 1.5 }, 
+          mb: { xs: 1.5, sm: 2 },
+          flexDirection: { xs: "column", sm: "row" },
+          alignItems: { xs: "stretch", sm: "flex-start" },
+          width: "100%"
+        }}>
+          {/* Save draft button */}
           <Button
             variant="contained"
             onClick={handleSaveScoreSheets}
@@ -341,10 +344,12 @@ export default function MultiTeamScoreSheet({
               bgcolor: theme.palette.success.main,
               "&:hover": { bgcolor: theme.palette.success.dark },
               color: "#fff",
-              minWidth: 200,
-              height: 44,
+              minWidth: { xs: "100%", sm: 200 },
+              height: { xs: 40, sm: 44 },
               textTransform: "none",
               borderRadius: 2,
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              fontWeight: 600,
             }}
           >
             Save All
@@ -358,10 +363,12 @@ export default function MultiTeamScoreSheet({
               bgcolor: theme.palette.success.main,
               "&:hover": { bgcolor: theme.palette.success.dark },
               color: "#fff",
-              minWidth: 200,
-              height: 44,
+              minWidth: { xs: "100%", sm: 200 },
+              height: { xs: 40, sm: 44 },
               textTransform: "none",
               borderRadius: 2,
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              fontWeight: 600,
             }}
           >
             Expand Rows
@@ -375,10 +382,12 @@ export default function MultiTeamScoreSheet({
               bgcolor: theme.palette.success.main,
               "&:hover": { bgcolor: theme.palette.success.dark },
               color: "#fff",
-              minWidth: 200,
-              height: 44,
+              minWidth: { xs: "100%", sm: 200 },
+              height: { xs: 40, sm: 44 },
               textTransform: "none",
               borderRadius: 2,
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              fontWeight: 600,
             }}
           >
             Collapse All
@@ -391,28 +400,85 @@ export default function MultiTeamScoreSheet({
           sx={{
             borderRadius: 2,
             border: `1px solid ${theme.palette.grey[200]}`,
-            overflow: "hidden",
+            overflow: { xs: "auto", sm: "hidden" },
+            width: "100%",
+            "&::-webkit-scrollbar": {
+              height: "8px",
+            },
+            "&::-webkit-scrollbar-track": {
+              backgroundColor: "#f1f1f1",
+              borderRadius: "4px",
+            },
+            "&::-webkit-scrollbar-thumb": {
+              backgroundColor: "#c1c1c1",
+              borderRadius: "4px",
+            },
+            "&::-webkit-scrollbar-thumb:hover": {
+              backgroundColor: "#a8a8a8",
+            },
           }}
         >
-          <Table>
+          <Table sx={{
+            minWidth: { xs: "600px", sm: "auto" },
+            "& .MuiTableCell-root": {
+              fontSize: { xs: "0.8rem", sm: "0.95rem" },
+              py: { xs: 0.75, sm: 1.25 },
+              px: { xs: 0.5, sm: 1 }
+            }
+          }}>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ width: '50px' }}></TableCell>
-                <TableCell sx={{ width: '35%' }}>Criteria</TableCell>
-                {/* Dynamically render team columns */}
+                <TableCell sx={{ 
+                  width: { xs: '40px', sm: '50px' },
+                  minWidth: { xs: '40px', sm: '50px' }
+                }}></TableCell>
+                <TableCell sx={{ 
+                  width: { xs: '30%', sm: '35%' },
+                  minWidth: { xs: '200px', sm: '250px' }
+                }}>
+                  <Typography 
+                    variant="subtitle1" 
+                    sx={{ 
+                      fontSize: { xs: "0.8rem", sm: "1rem" },
+                      fontWeight: 600
+                    }}
+                  >
+                    Criteria
+                  </Typography>
+                </TableCell>
+                {/* Team name columns */}
                 {filteredTeams.map(team => (
-                  <TableCell key={team.id} align="center">
-                    <Typography variant="subtitle1">{team.name}</Typography>
+                  <TableCell 
+                    key={team.id} 
+                    align="center"
+                    sx={{ 
+                      minWidth: { xs: '80px', sm: '100px' },
+                      maxWidth: { xs: '120px', sm: '150px' }
+                    }}
+                  >
+                    <Typography 
+                      variant="subtitle1" 
+                      sx={{ 
+                        fontSize: { xs: "0.75rem", sm: "0.9rem" },
+                        fontWeight: 600,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis"
+                      }}
+                      title={team.name}
+                    >
+                      {team.name}
+                    </Typography>
                   </TableCell>
                 ))}
               </TableRow>
             </TableHead>
 
             <TableBody>
-              {/* One expandable row per question */}
+              {/* Expandable rows for each question */}
               {questions.map((question) => (
                 <React.Fragment key={question.id}>
-                  {/* Row header: click anywhere on row (except inputs) to toggle */}
+                  {/* Question header row */}
                   <TableRow onClick={() => handleToggle(question.id)} sx={{ cursor: 'pointer' }}>
                     <TableCell>
                       <IconButton aria-label="expand row" size="small">
@@ -420,19 +486,37 @@ export default function MultiTeamScoreSheet({
                       </IconButton>
                     </TableCell>
 
-                    {/* Question text (bold for scan-ability) */}
-                    <TableCell component="th" scope="row" sx={{ pl: 2, textAlign: "left", pr: 2, fontWeight: "bold" }}>
-                      {question.questionText}
+                    {/* Question text */}
+                    <TableCell 
+                      component="th" 
+                      scope="row" 
+                      sx={{ 
+                        pl: { xs: 1, sm: 2 }, 
+                        textAlign: "left", 
+                        pr: { xs: 1, sm: 2 }, 
+                        fontWeight: "bold",
+                        fontSize: { xs: "0.8rem", sm: "0.95rem" },
+                        minWidth: { xs: '200px', sm: '250px' }
+                      }}
+                    >
+                      <Typography 
+                        sx={{ 
+                          fontSize: { xs: "0.8rem", sm: "0.95rem" },
+                          fontWeight: 600,
+                          lineHeight: 1.3
+                        }}
+                      >
+                        {question.questionText}
+                      </Typography>
                     </TableCell>
 
-                    {/* Render a cell per team for this question */}
+                    {/* Score input cells for each team */}
                     {filteredTeams.map(team => (
                       <TableCell key={team.id} align="center">
                         {question.id !== 9 ? (
-                          // Numeric score input (bounded by low/high points)
                           <>
                             <TextField
-                              onClick={(e) => e.stopPropagation()} // prevent row toggle when editing
+                              onClick={(e) => e.stopPropagation()}
                               type="number"
                               size="small"
                               value={
@@ -444,30 +528,25 @@ export default function MultiTeamScoreSheet({
                                   ? formData[team.id][question.id]
                                   : ""
                               }
-                              // Prevent accidental scroll increments on number inputs
                               onWheel={(e) => {
                                 const inputElement = e.target as HTMLInputElement;
                                 inputElement.blur();
                               }}
-                              // Validate bounds; clear value if outside range
                               onChange={(e) => {
-                                let value = e.target.value;
+                                let value: number | string | undefined = e.target.value;
 
-                                if (value !== undefined) {
-                                  if (value === "") {
-                                    value = undefined; // Clear the field
-                                  } else if (Number(value) < question.lowPoints) {
-                                    value = undefined; // Clear if below range
-                                  } else if (Number(value) > question.highPoints) {
-                                    value = undefined; // Clear if above range
-                                  } else {
-                                    value = Number(value); // Convert to number if valid
-                                  }
+                                if (value === "") {
+                                  value = undefined;
+                                } else if (Number(value) < question.lowPoints) {
+                                  value = undefined;
+                                } else if (Number(value) > question.highPoints) {
+                                  value = undefined;
+                                } else {
+                                  value = Number(value);
                                 }
 
                                 handleScoreChange(team.id, question.id, value);
                               }}
-                              // Disable arrow key step to avoid accidental changes
                               onKeyDown={(e) => {
                                 if (e.key === "ArrowUp" || e.key === "ArrowDown") {
                                   e.preventDefault();
@@ -478,10 +557,16 @@ export default function MultiTeamScoreSheet({
                                 max: question.highPoints,
                                 step: 0.5,
                               }}
-                              sx={{ width: "75px" }}
+                              sx={{ 
+                                width: { xs: "60px", sm: "75px" },
+                                '& .MuiInputBase-input': {
+                                  fontSize: { xs: '0.75rem', sm: '0.9rem' },
+                                  padding: { xs: '6px', sm: '8px' }
+                                }
+                              }}
                             />
 
-                            {/* Inline completion indicator (red X = missing, green check = filled) */}
+                            {/* Completion status indicator */}
                             {formData[team.id] && (
                               <Box sx={{ display: "inline", ml: 1 }}>
                         {formData[team.id][question.id] === undefined ||
@@ -496,7 +581,6 @@ export default function MultiTeamScoreSheet({
                             )}
                           </>
                         ) : (
-                          // Q9: Free-text comments per team
                           <TextField
                             onClick={(e) => e.stopPropagation()}
                             size="small"
@@ -514,27 +598,44 @@ export default function MultiTeamScoreSheet({
                                 e.target.value ? String(e.target.value) : undefined
                               )
                             }
-                            sx={{ width: "90%" }}
+                            sx={{ 
+                              width: { xs: "85%", sm: "90%" },
+                              '& .MuiInputBase-input': {
+                                fontSize: { xs: '0.75rem', sm: '0.9rem' },
+                                padding: { xs: '6px', sm: '8px' }
+                              }
+                            }}
                           />
                         )}
                       </TableCell>
                     ))}
                   </TableRow>
 
-                  {/* Expanded details: criteria boxes (light grey) */}
+                  {/* Expanded details: */}
                   <TableRow>
                     <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={filteredTeams.length + 2}>
                       <Collapse in={openRows[question.id]} timeout="auto" unmountOnExit>
-                        <Box sx={{ margin: 2 }}>
-                          <Typography variant="h6" gutterBottom>
+                        <Box sx={{ 
+                          margin: { xs: 1, sm: 2 },
+                          p: { xs: 1, sm: 1.5 }
+                        }}>
+                          <Typography 
+                            variant="h6" 
+                            gutterBottom
+                            sx={{
+                              fontSize: { xs: "1rem", sm: "1.25rem" },
+                              fontWeight: 600,
+                              mb: { xs: 1, sm: 1.5 }
+                            }}
+                          >
                             {question.questionText} - Scoring Criteria
                           </Typography>
 
                           <Box
                             sx={{
                               display: "flex",
-                              gap: 3,
-                              flexDirection: "row",
+                              gap: { xs: 1.5, sm: 3 },
+                              flexDirection: { xs: "column", sm: "row" },
                               width: "100%",
                               flexWrap: "wrap",
                             }}
@@ -547,31 +648,50 @@ export default function MultiTeamScoreSheet({
                                   sx={{
                                     bgcolor: theme.palette.grey[50],
                                     border: `1px solid ${theme.palette.grey[200]}`,
-                                    p: 1.5,
+                                    p: { xs: 1, sm: 1.5 },
                                     borderRadius: 2,
                                     flex: 1,
-                                    minWidth: "250px",
+                                    minWidth: { xs: "200px", sm: "250px" },
                                   }}
                                 >
-                                  <Typography sx={{ mt: 1, fontWeight: 800, fontSize: "12pt" }}>
+                                  <Typography sx={{ 
+                                    mt: { xs: 0.5, sm: 1 }, 
+                                    fontWeight: 800, 
+                                    fontSize: { xs: "10pt", sm: "12pt" } 
+                                  }}>
                                     {question.criteria1Points}
                                   </Typography>
 
                                   {/* Optional Jr/Sr text (question 4 only) */}
                                   {seperateJrAndSr && question.id === 4 ? (
                                     <>
-                                      <Typography sx={{ fontSize: "12pt", fontWeight: 800, mb: 1 }}>
+                                      <Typography sx={{ 
+                                        fontSize: { xs: "10pt", sm: "12pt" }, 
+                                        fontWeight: 800, 
+                                        mb: { xs: 0.5, sm: 1 } 
+                                      }}>
                                         Jr. Div.
                                       </Typography>
-                                      <Typography>{question.criteria1Junior}</Typography>
+                                      <Typography sx={{ fontSize: { xs: "9pt", sm: "11pt" } }}>
+                                        {question.criteria1Junior}
+                                      </Typography>
 
-                                      <Typography sx={{ fontSize: "12pt", fontWeight: 800, mb: 1, mt: 1 }}>
+                                      <Typography sx={{ 
+                                        fontSize: { xs: "10pt", sm: "12pt" }, 
+                                        fontWeight: 800, 
+                                        mb: { xs: 0.5, sm: 1 }, 
+                                        mt: { xs: 0.5, sm: 1 } 
+                                      }}>
                                         Sr. Div.
                                       </Typography>
-                                      <Typography>{question.criteria1Senior}</Typography>
+                                      <Typography sx={{ fontSize: { xs: "9pt", sm: "11pt" } }}>
+                                        {question.criteria1Senior}
+                                      </Typography>
                                     </>
                                   ) : (
-                                    <Typography>{question.criteria1}</Typography>
+                                    <Typography sx={{ fontSize: { xs: "9pt", sm: "11pt" } }}>
+                                      {question.criteria1}
+                                    </Typography>
                                   )}
                                 </Box>
 
@@ -580,10 +700,10 @@ export default function MultiTeamScoreSheet({
                                   sx={{
                                     bgcolor: theme.palette.grey[50],
                                     border: `1px solid ${theme.palette.grey[200]}`,
-                                    p: 1.5,
+                                    p: { xs: 1, sm: 1.5 },
                                     borderRadius: 2,
                                     flex: 1,
-                                    minWidth: "250px",
+                                    minWidth: { xs: "200px", sm: "250px" },
                                   }}
                                 >
                                   <Typography sx={{ mt: 1, fontWeight: 800, fontSize: "12pt" }}>
@@ -612,10 +732,10 @@ export default function MultiTeamScoreSheet({
                                   sx={{
                                     bgcolor: theme.palette.grey[50],
                                     border: `1px solid ${theme.palette.grey[200]}`,
-                                    p: 1.5,
+                                    p: { xs: 1, sm: 1.5 },
                                     borderRadius: 2,
                                     flex: 1,
-                                    minWidth: "250px",
+                                    minWidth: { xs: "200px", sm: "250px" },
                                   }}
                                 >
                                   <Typography sx={{ mt: 1, fontWeight: 800, fontSize: "12pt" }}>
@@ -657,14 +777,16 @@ export default function MultiTeamScoreSheet({
           onClick={() => setOpenAreYouSure(true)}
           disabled={!allFieldsFilled()}
           sx={{
-            mt: 3,
+            mt: { xs: 2, sm: 3 },
             bgcolor: theme.palette.success.main,
             "&:hover": { bgcolor: theme.palette.success.dark },
             color: "#fff",
-            minWidth: 200,
-            height: 44,
+            minWidth: { xs: "100%", sm: 200 },
+            height: { xs: 40, sm: 44 },
             textTransform: "none",
             borderRadius: 2,
+            fontSize: { xs: "0.9rem", sm: "1rem" },
+            fontWeight: 600,
           }}
         >
           Submit All
@@ -676,7 +798,6 @@ export default function MultiTeamScoreSheet({
           handleClose={() => setOpenAreYouSure(false)}
           title="Are you sure you want to submit scores for all teams?"
           handleSubmit={() => handleSubmit()}
-          error={scoreSheetError}
         />
       </Container>
     </>

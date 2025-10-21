@@ -6,6 +6,7 @@ import theme from "../../theme";
 interface ContestResultsRow {
   id: number;
   team_name: string;
+  school_name: string;
   team_rank: number;
   total_score: number;
   coachName: string;

@@ -1,13 +1,4 @@
-/**
- * TeamModal Component
- * 
- * Modal for creating and editing teams with modern theme styling.
- * Features:
- * - Clean white background with subtle borders
- * - Green success theme for buttons
- * - Consistent typography with bold titles
- * - Modern form styling with proper spacing
- */
+// TeamModal Component - Modal for creating and editing teams
 import {
   Button,
   FormControl,
@@ -32,6 +23,7 @@ export interface ITeamModalProps {
   teamData?: {
     id: number;
     team_name: string;
+    school_name: string;
     clusterid: number;
     username: string;
     first_name: string;
@@ -43,6 +35,7 @@ export interface ITeamModalProps {
 export default function TeamModal(props: ITeamModalProps) {
   const { handleClose, open, mode, clusters, contestId, teamData } = props;
   const [teamName, setTeamName] = useState("");
+  const [schoolName, setSchoolName] = useState("");
   const [cluster, setCluster] = useState(-1);
   const [coachFirstName, setCoachFirstName] = useState("");
   const [coachLastName, setCoachLastName] = useState("");
@@ -52,16 +45,15 @@ export default function TeamModal(props: ITeamModalProps) {
 
   const title = mode === "new" ? "New Team" : "Edit Team";
 
-  /**
-   * Create a new team with coach account and assign to contest/cluster
-   * Initializes all scores to 0 and creates coach login credentials
-   */
+  // Create a new team with coach account and assign to contest/cluster
+  // Initializes all scores to 0 and creates coach login credentials
   const handleCreateTeam = async () => {
     if (contestId) {
       try {
         // Create team with initial scores and coach information
         await createTeam({
           team_name: teamName,
+          school_name: schoolName || "NA",
           journal_score: 0,
           presentation_score: 0,
           machinedesign_score: 0,
@@ -119,16 +111,15 @@ export default function TeamModal(props: ITeamModalProps) {
     }
   };
 
-  /**
-   * Update existing team information and coach details
-   * Preserves team ID while updating name, cluster, and coach information
-   */
+  // Update existing team information and coach details
+  // Preserves team ID while updating name, cluster, and coach information
   const handleEditTeam = async () => {
     try {
       // Update team with current form values
       await editTeam({
         id: teamData?.id ?? 0,
         team_name: teamName,
+        school_name: schoolName || "NA",
         clusterid: cluster,
         username: coachEmail,
         first_name: coachFirstName,
@@ -158,6 +149,7 @@ export default function TeamModal(props: ITeamModalProps) {
     setCoachFirstName("");
     setCoachLastName("");
     setTeamName("");
+    setSchoolName("");
   };
 
   useEffect(() => {
@@ -166,6 +158,7 @@ export default function TeamModal(props: ITeamModalProps) {
       setCoachLastName(teamData.last_name);
       setCoachEmail(teamData.username);
       setTeamName(teamData.team_name);
+      setSchoolName(teamData.school_name);
       setCluster(teamData.clusterid);
     }
   }, [teamData]);
@@ -204,6 +197,14 @@ export default function TeamModal(props: ITeamModalProps) {
           value={teamName}
           onChange={(e: any) => setTeamName(e.target.value)}
           sx={{ mt: 1, width: 300 }}
+        />
+        <TextField
+          label="School Name"
+          variant="outlined"
+          value={schoolName}
+          onChange={(e: any) => setSchoolName(e.target.value)}
+          sx={{ mt: 3, width: 300 }}
+          placeholder="School Name"
         />
         <FormControl
           required
@@ -248,18 +249,18 @@ export default function TeamModal(props: ITeamModalProps) {
           onChange={(e: any) => setCoachEmail(e.target.value)}
           sx={{ mt: 3, width: 300 }}
         />
-        {/* Submit button - updated to use modern green success theme */}
+        
         <Button
           type="submit"
           sx={{
             width: 150,
-            height: 44,                                    // Consistent height (was 35)
-            bgcolor: theme.palette.success.main,          // Green theme (was primary.main)
-            "&:hover": { bgcolor: theme.palette.success.dark }, // Hover effect
-            color: "#fff",                                // White text (was secondary.main)
+            height: 44,
+            bgcolor: theme.palette.success.main,
+            "&:hover": { bgcolor: theme.palette.success.dark },
+            color: "#fff",
             mt: 3,
-            textTransform: "none",                        // No uppercase transformation
-            borderRadius: 2,                              // Modern border radius
+            textTransform: "none",
+            borderRadius: 2,
           }}
         >
           {buttonText}

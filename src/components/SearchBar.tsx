@@ -56,7 +56,7 @@ const SearchBar = ({ judges = [], onJudgeSelect }: SearchBarProps) => {
                             onClick={() => {
                                 setSearchTerm(`${judge.last_name} ${judge.first_name}`)
                                 setShowDropdown(false)
-                                onJudgeSelect?.(judge) // Only calls if onJudgeSelect exists
+                                onJudgeSelect?.(judge) 
                             }}
                         >
                             {judge.last_name} {judge.first_name} 

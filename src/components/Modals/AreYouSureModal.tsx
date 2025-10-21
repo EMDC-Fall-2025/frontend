@@ -43,13 +43,13 @@ export default function AreYouSureModal(props: IAreYouSureModalProps) {
           onClick={handleSubmitModal}
           sx={{
             width: 90,
-            height: 44,                                    // Consistent height (was 35)
-            bgcolor: theme.palette.success.main,          // Green theme (was primary.main)
-            "&:hover": { bgcolor: theme.palette.success.dark }, // Hover effect
-            color: "#fff",                                // White text (was secondary.main)
+            height: 44,
+            bgcolor: theme.palette.success.main,
+            "&:hover": { bgcolor: theme.palette.success.dark },
+            color: "#fff",
             mt: 2,
-            textTransform: "none",                        // No uppercase transformation
-            borderRadius: 2,                              // Modern border radius
+            textTransform: "none",
+            borderRadius: 2,
           }}
         >
           Yes
@@ -59,13 +59,13 @@ export default function AreYouSureModal(props: IAreYouSureModalProps) {
           onClick={handleClose}
           sx={{
             width: 90,
-            height: 44,                                    // Consistent height (was 35)
-            bgcolor: theme.palette.grey[500],             // Grey theme for cancel
-            "&:hover": { bgcolor: theme.palette.grey[600] }, // Hover effect
-            color: "#fff",                                // White text
+            height: 44,
+            bgcolor: theme.palette.grey[500],
+            "&:hover": { bgcolor: theme.palette.grey[600] },
+            color: "#fff",
             mt: 2,
-            textTransform: "none",                        // No uppercase transformation
-            borderRadius: 2,                              // Modern border radius
+            textTransform: "none",
+            borderRadius: 2,
           }}
         >
           No

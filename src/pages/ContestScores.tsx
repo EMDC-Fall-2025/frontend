@@ -81,6 +81,7 @@ export default function ContestScores() {
   const rows = teamsByContest.map((team) => ({
     id: team.id,
     team_name: team.team_name,
+    school_name: (team as any).school_name || "",
     team_rank: team.team_rank || 0,
     total_score: team.total_score,
     coachName: coachNames[team.id] || "N/A",

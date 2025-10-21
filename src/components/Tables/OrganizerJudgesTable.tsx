@@ -18,6 +18,7 @@ import { useMapClusterJudgeStore } from "../../store/map_stores/mapClusterToJudg
 import { useJudgeStore } from "../../store/primary_stores/judgeStore";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckIcon from "@mui/icons-material/Check";
+import toast from "react-hot-toast";
 import ClusterModal from "../Modals/ClusterModal";
 import { Cluster, Judge, JudgeData } from "../../types";
 import AreYouSureModal from "../Modals/AreYouSureModal";
@@ -98,7 +99,8 @@ function JudgeRow(props: { row: ReturnType<typeof createDataJudge> }) {
               p: 0,
               display: "flex",
               alignItems: "center",
-              gap: 1.5,
+              gap: { xs: 0.5, sm: 1, md: 1.5 },
+              flexWrap: { xs: "wrap", sm: "nowrap" },
             }}
           >
             {row.viewEditScores}
@@ -150,14 +152,29 @@ function JudgesTable(props: IJudgesTableProps) {
   const [openJudgeModal, setOpenJudgeModal] = useState(false);
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
   const [judgeData, setJudgeData] = useState<JudgeData | undefined>(undefined);
-  const { submissionStatus } = useJudgeStore();
+  const { submissionStatus, checkAllScoreSheetsSubmitted } = useJudgeStore();
   const [judgeId, setJudgeId] = useState(0);
-  const { fetchJudgesByClusterId } = useMapClusterJudgeStore();
+  const { fetchJudgesByClusterId, removeJudgeFromCluster, fetchClustersForJudges } = useMapClusterJudgeStore();
 
   const { judgeClusters } = useMapClusterJudgeStore();
-  const { deleteJudge, judgeError } = useJudgeStore();
+
 
   const titles = ["Lead", "Technical", "General", "Journal"];
+
+  // Ensure we compute the all-submitted status for each judge when data changes
+  React.useEffect(() => {
+    if (judges && judges.length > 0) {
+      checkAllScoreSheetsSubmitted(judges as any);
+    }
+    
+  }, [judges]);
+
+  // Fetch cluster information for judges when judges data changes
+  React.useEffect(() => {
+    if (judges && judges.length > 0) {
+      fetchClustersForJudges(judges as any);
+    }
+  }, [judges, fetchClustersForJudges]);
 
   const handleOpenJudgeModal = (judgeData: JudgeData) => {
     setJudgeData(judgeData);
@@ -170,8 +187,56 @@ function JudgesTable(props: IJudgesTableProps) {
   };
 
   const handleDelete = async (judgeId: number) => {
-    await deleteJudge(judgeId);
-    await fetchJudgesByClusterId(judgeClusters[judgeId].id);
+    try {
+      // Get the judge's cluster information
+      const judgeCluster = judgeClusters[judgeId];
+      console.log("DEBUG: judgeClusters data:", judgeClusters);
+      console.log("DEBUG: Looking for judgeId:", judgeId);
+      console.log("DEBUG: Found judgeCluster:", judgeCluster);
+      
+      if (!judgeCluster) {
+        // Fallback: try to get cluster info from the judges data
+        console.log("DEBUG: judgeClusters not found, trying fallback method");
+        
+        // Find the judge in the judges array to get cluster info
+        const judge = judges.find(j => j.id === judgeId);
+        if (!judge) {
+          toast.error("Could not find judge information");
+          return;
+        }
+        
+        // Try to get cluster from the judge's current cluster assignment
+        // This is a fallback - ideally the judgeClusters should be populated
+        toast.error("Cluster information not loaded. Please refresh the page and try again.");
+        return;
+      }
+      
+      console.log(`Attempting to remove judge ${judgeId} from cluster ${judgeCluster.id}`);
+      
+      // Remove judge from the specific cluster only (not from the entire contest)
+      const response = await removeJudgeFromCluster(judgeId, judgeCluster.id);
+      console.log("Remove judge from cluster response:", response);
+      
+      // Refresh judges for this specific cluster to reflect removal
+      await fetchJudgesByClusterId(judgeCluster.id);
+      
+      toast.success(`Judge removed from ${judgeCluster.cluster_name} cluster successfully!`);
+    } catch (error: any) {
+      console.error("Error removing judge from cluster:", error);
+      
+      // Show more specific error messages
+      let errorMessage = "Failed to remove judge from cluster. Please try again.";
+      
+      if (error?.response?.data?.error) {
+        errorMessage = `Failed to remove judge: ${error.response.data.error}`;
+      } else if (error?.response?.data?.detail) {
+        errorMessage = `Failed to remove judge: ${error.response.data.detail}`;
+      } else if (error?.message) {
+        errorMessage = `Failed to remove judge: ${error.message}`;
+      }
+      
+      toast.error(errorMessage);
+    }
   };
 
   const handleCloseJudgeModal = () => {
@@ -217,9 +282,23 @@ function JudgesTable(props: IJudgesTableProps) {
         sx={{
           textTransform: "none",
           fontWeight: 600,
-          px: 2.25,
-          py: 0.75,
-          borderRadius: 1.5,
+          px: { xs: 1.5, sm: 2, md: 2.5 },
+          py: { xs: 0.6, sm: 0.8, md: 1 },
+          borderRadius: 2,
+          fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
+          minWidth: { xs: "90px", sm: "110px", md: "130px" },
+          height: { xs: "32px", sm: "36px", md: "40px" },
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#4caf50",
+          color: "white",
+          "&:hover": {
+            backgroundColor: "#45a049",
+            transform: "translateY(-1px)",
+            boxShadow: "0 4px 8px rgba(76,175,80,0.25)",
+          },
+          transition: "all 0.2s ease-in-out",
         }}
       >
         Edit Judge
@@ -233,12 +312,27 @@ function JudgesTable(props: IJudgesTableProps) {
           navigate(`/judging/${judge.id}/`);
         }}
         sx={{
-          mr: 2,
+          mr: { xs: 0.5, sm: 1, md: 2 },
           textTransform: "none",
           fontWeight: 600,
-          px: 2.25,
-          py: 0.75,
-          borderRadius: 1.5,
+          px: { xs: 1.5, sm: 2, md: 2.5 },
+          py: { xs: 0.6, sm: 0.8, md: 1 },
+          borderRadius: 2,
+          fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
+          minWidth: { xs: "90px", sm: "110px", md: "130px" },
+          height: { xs: "32px", sm: "36px", md: "40px" },
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderColor: "#4caf50",
+          color: "#4caf50",
+          "&:hover": {
+            backgroundColor: "#4caf50",
+            color: "white",
+            transform: "translateY(-1px)",
+            boxShadow: "0 4px 8px rgba(76,175,80,0.25)",
+          },
+          transition: "all 0.2s ease-in-out",
         }}
       >
         View/Edit Scores
@@ -246,12 +340,27 @@ function JudgesTable(props: IJudgesTableProps) {
       <Button
         variant="outlined"
         sx={{
-          ml: 2,
+          ml: { xs: 0.5, sm: 1, md: 2 },
           textTransform: "none",
           fontWeight: 600,
-          px: 2.25,
-          py: 0.75,
-          borderRadius: 1.5,
+          px: { xs: 1.5, sm: 2, md: 2.5 },
+          py: { xs: 0.6, sm: 0.8, md: 1 },
+          borderRadius: 2,
+          fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
+          minWidth: { xs: "90px", sm: "110px", md: "130px" },
+          height: { xs: "32px", sm: "36px", md: "40px" },
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderColor: "#d32f2f",
+          color: "#d32f2f",
+          "&:hover": {
+            backgroundColor: "#d32f2f",
+            color: "white",
+            transform: "translateY(-1px)",
+            boxShadow: "0 4px 8px rgba(211,47,47,0.25)",
+          },
+          transition: "all 0.2s ease-in-out",
         }}
         onClick={(e) => {
           e.stopPropagation();
@@ -266,12 +375,15 @@ function JudgesTable(props: IJudgesTableProps) {
 
   return (
     <TableContainer component={Box}>
-      <Table
-        sx={{
-          minWidth: 650,
-          "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 },
-        }}
-      >
+        <Table
+          sx={{
+            "& .MuiTableCell-root": { 
+              fontSize: { xs: "0.7rem", sm: "0.85rem", md: "0.95rem" }, 
+              py: { xs: 0.5, sm: 0.75, md: 1.25 },
+              px: { xs: 0.5, sm: 0.75, md: 1 }
+            },
+          }}
+        >
         <TableBody>
           {rows.map((row, index) => (
             <JudgeRow key={index} row={row} />
@@ -291,7 +403,6 @@ function JudgesTable(props: IJudgesTableProps) {
         handleClose={() => setOpenAreYouSure(false)}
         title="Are you sure you want to delete this judge?"
         handleSubmit={() => handleDelete(judgeId)}
-        error={judgeError}
       />
     </TableContainer>
   );

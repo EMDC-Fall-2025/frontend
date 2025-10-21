@@ -12,7 +12,6 @@ import ContestTable from "../components/Tables/ContestTable";
 
 
 export default function Contests() {
-  // Zustand store for contests
   const { allContests, fetchAllContests, isLoadingContest } = useContestStore();
   const navigate = useNavigate();
 
@@ -57,6 +56,7 @@ export default function Contests() {
       </Stack>
 
       <Container
+        maxWidth="lg"
         sx={{
           border: `1px solid ${theme.palette.grey[300]}`,
           borderRadius: 3,

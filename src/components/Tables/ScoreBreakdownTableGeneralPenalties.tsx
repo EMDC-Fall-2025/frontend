@@ -14,15 +14,10 @@ import theme from "../../theme";
  * Public Score Breakdown — General Penalties table
  * - Reads penalty breakdown from the score sheet store (already populated upstream)
  * - Renders a read-only table of penalties, types, point values, and deducted points
- * - Styling aligns with Admin/Public cards: white surface, rounded corners, thin gray borders
  */
 export default function ScoreBreakdownTableGeneralPenalties() {
   const { scoreSheetBreakdown } = useScoreSheetStore();
 
-  /**
-   * Simple row renderer for one penalty line.
-   * NOTE: Logic unchanged — purely presentational.
-   */
   const PenaltiesRow: React.FC<{
     text: string;
     field: string;
@@ -33,46 +28,94 @@ export default function ScoreBreakdownTableGeneralPenalties() {
       <TableRow
         sx={{
           "&:hover td": {
-            // subtle full-row hover to match the theme
             backgroundColor: "rgba(46,125,50,0.04)",
           },
         }}
       >
         {/* Penalty name */}
-        <TableCell sx={{ py: 1.25 }}>
-          <Typography sx={{ fontWeight: 600 }}>{text}</Typography>
+        <TableCell sx={{ 
+          py: { xs: 0.75, sm: 1.25 },
+          minWidth: { xs: "120px", sm: "150px" }
+        }}>
+          <Typography sx={{ 
+            fontWeight: 600,
+            fontSize: { xs: "0.8rem", sm: "0.95rem" }
+          }}>
+            {text}
+          </Typography>
         </TableCell>
 
         {/* Penalty type */}
-        <TableCell sx={{ py: 1.25 }}>
-          <Typography color="text.secondary">{penaltyType}</Typography>
+        <TableCell sx={{ 
+          py: { xs: 0.75, sm: 1.25 },
+          minWidth: { xs: "100px", sm: "120px" }
+        }}>
+          <Typography 
+            color="text.secondary"
+            sx={{ fontSize: { xs: "0.8rem", sm: "0.95rem" } }}
+          >
+            {penaltyType}
+          </Typography>
         </TableCell>
 
         {/* Point value (numeric) */}
-        <TableCell sx={{ py: 1.25, textAlign: "right", whiteSpace: "nowrap" }}>
-          <Typography>{pointValue}</Typography>
+        <TableCell sx={{ 
+          py: { xs: 0.75, sm: 0.25 }, 
+          textAlign: "right", 
+          whiteSpace: "nowrap",
+          minWidth: "auto",
+          width: "auto",
+          padding: { xs: "4px", sm: "6px" }
+        }}>
+          <Typography sx={{ fontSize: { xs: "0.8rem", sm: "0.95rem" } }}>
+            {pointValue}
+          </Typography>
         </TableCell>
 
         {/* Points deducted (list from store) */}
-        <TableCell sx={{ py: 1.25 }}>
-          {scoreSheetBreakdown &&
+        <TableCell sx={{ 
+          py: { xs: 0.75, sm: 1.25 },
+          minWidth: { xs: "120px", sm: "140px", md: "160px" },
+          maxWidth: { xs: "180px", sm: "220px", md: "250px" },
+          wordWrap: "break-word",
+          overflow: "hidden"
+        }}>
+          <Typography sx={{ 
+            fontSize: { xs: "0.75rem", sm: "0.9rem" },
+            wordWrap: "break-word",
+            overflow: "hidden",
+            textOverflow: "ellipsis"
+          }}>
+            {scoreSheetBreakdown &&
+            scoreSheetBreakdown[ScoreSheetType.GeneralPenalties] &&
             scoreSheetBreakdown[ScoreSheetType.GeneralPenalties][
               GeneralPenaltiesScoreSheetFields[
                 field as keyof typeof GeneralPenaltiesScoreSheetFields
               ]
-            ].join(", ")}
+            ] &&
+            scoreSheetBreakdown[ScoreSheetType.GeneralPenalties][
+              GeneralPenaltiesScoreSheetFields[
+                field as keyof typeof GeneralPenaltiesScoreSheetFields
+              ]
+            ].length > 0
+              ? scoreSheetBreakdown[ScoreSheetType.GeneralPenalties][
+                  GeneralPenaltiesScoreSheetFields[
+                    field as keyof typeof GeneralPenaltiesScoreSheetFields
+                  ]
+                ].join(", ")
+              : "0"}
+          </Typography>
         </TableCell>
       </TableRow>
     );
   };
 
-  // Show spinner while breakdown is not available yet
+
   return scoreSheetBreakdown ? (
     <TableContainer
-      // Card-like surface to match Admin/Public cards
       component={Paper}
       sx={{
-        m: 5,
+        m: { xs: 2, sm: 5 },
         maxWidth: "90vw",
         borderRadius: 3,
         border: `1px solid ${theme.palette.grey[300]}`,
@@ -84,12 +127,17 @@ export default function ScoreBreakdownTableGeneralPenalties() {
         sx={{
           "& td, & th": { borderColor: theme.palette.grey[200] },
           tableLayout: "auto",
+          "& .MuiTableCell-root": {
+            fontSize: { xs: "0.8rem", sm: "0.95rem" },
+            py: { xs: 0.75, sm: 1.25 },
+            px: { xs: 0.5, sm: 1 }
+          }
         }}
       >
         {/* Header row */}
         <TableHead
           sx={{
-            backgroundColor: theme.palette.grey[50],
+            backgroundColor: theme.palette.error.light,
             "& th": {
               fontWeight: 700,
               color: theme.palette.text.primary,
@@ -98,12 +146,46 @@ export default function ScoreBreakdownTableGeneralPenalties() {
           }}
         >
           <TableRow>
-            <TableCell>Penalty</TableCell>
-            <TableCell>Penalty Type</TableCell>
-            <TableCell sx={{ textAlign: "right" }}>
-              Point Value (Per occurrence if applicable)
+            <TableCell sx={{ 
+              fontWeight: 600,
+              fontSize: { xs: "0.8rem", sm: "0.95rem" },
+              minWidth: { xs: "120px", sm: "150px" }
+            }}>
+              Penalty
             </TableCell>
-            <TableCell>Points Deducted</TableCell>
+            <TableCell sx={{ 
+              fontWeight: 600,
+              fontSize: { xs: "0.8rem", sm: "0.95rem" },
+              minWidth: { xs: "100px", sm: "120px" }
+            }}>
+              Penalty Type
+            </TableCell>
+            <TableCell sx={{ 
+              textAlign: "right",
+              fontWeight: 600,
+              fontSize: { xs: "0.8rem", sm: "0.95rem" },
+              minWidth: "auto",
+              width: "auto",
+              whiteSpace: "nowrap",
+              padding: { xs: "4px", sm: "6px" }
+            }}>
+              Points
+            </TableCell>
+            <TableCell sx={{ 
+              fontWeight: 600,
+              fontSize: { xs: "0.7rem", sm: "0.8rem", md: "0.95rem" },
+              minWidth: { xs: "120px", sm: "140px", md: "160px" },
+              maxWidth: { xs: "180px", sm: "220px", md: "250px" },
+              whiteSpace: { xs: "normal", sm: "nowrap" },
+              lineHeight: { xs: 1.2, sm: 1.3 }
+            }}>
+              <Box sx={{ 
+                display: { xs: "block", sm: "inline" },
+                textAlign: { xs: "left", sm: "left" }
+              }}>
+                Deducted
+              </Box>
+            </TableCell>
           </TableRow>
         </TableHead>
 
@@ -111,7 +193,7 @@ export default function ScoreBreakdownTableGeneralPenalties() {
         <TableBody>
           {generalPenaltiesQuestions.map((penalty) => (
             <PenaltiesRow
-              key={penalty.field} // key for stable rendering (styling-only; no logic change)
+              key={penalty.field}
               text={penalty.questionText}
               field={penalty.field}
               pointValue={penalty.pointValue}

@@ -5,7 +5,7 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import { Box, Link, Typography, CircularProgress, Alert } from "@mui/material";
+import { Box, Link, Typography, Alert } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useMapContestOrganizerStore } from "../../store/map_stores/mapContestToOrganizerStore";
 import { useAuthStore } from "../../store/primary_stores/authStore";
@@ -166,7 +166,7 @@ export default function OrganizerContestTable(
 
   let rows: any[] = [];
 
-  // 1) When building rows for CURRENT contests: make the action links green-themed
+  //action links green when active
 if (type === "current" && contests) {
   rows = contests
     .filter((contest) => !contest.is_tabulated)
@@ -196,7 +196,7 @@ if (type === "current" && contests) {
             opacity: disabledCond ? 0.6 : 1,
             "&:hover": disabledCond
               ? {}
-              : { backgroundColor: "rgba(46,125,50,0.06)" }, // success green wash
+              : { backgroundColor: "rgba(46,125,50,0.06)" },
           }}
         >
           {buttonText}
@@ -262,7 +262,7 @@ if (type === "current" && contests) {
             alignItems="center"
             height="100%"
           >
-            <CircularProgress />
+            
           </Box>
         ) : rows.length === 0 ? (
           <>
@@ -335,15 +335,15 @@ if (type === "current" && contests) {
             <TableBody>
     {rows.map((row, index) => (
       <TableRow key={index} sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
-        {/* Contest Name cell below the title: use heading font + bolder weight */}
+        {/* Contest Name cell */}
         <TableCell
           align="left"
           component="th"
           scope="row"
           sx={(theme) => ({
             fontWeight: 500,
-            fontFamily: theme.typography.h1.fontFamily, // match your title font
-            fontSize: "1rem", // slightly larger than body for emphasis
+            fontFamily: theme.typography.h1.fontFamily, 
+            fontSize: "1rem", 
           })}
         >
           {row?.contestName}
@@ -374,7 +374,7 @@ if (type === "current" && contests) {
           handleClose={() => setStartAreYouSure(false)}
           handleSubmit={() => handleEditContest(ContestAction.Open)}
           title="Are you sure you want to start the contest?"
-          error={contestError}
+    
         />
 
         {/* Modal for ending contest */}
@@ -383,7 +383,7 @@ if (type === "current" && contests) {
           handleClose={() => setEndAreYouSure(false)}
           handleSubmit={() => handleEditContest(ContestAction.Close)}
           title="Are you sure you want to end the contest?"
-          error={contestError}
+        
         />
 
         {/* Modal for reopening contest */}
@@ -392,7 +392,7 @@ if (type === "current" && contests) {
           handleClose={() => setReopenAreYouSure(false)}
           handleSubmit={() => handleEditContest(ContestAction.Reopen)}
           title="Are you sure you want to reopen the contest?"
-          error={contestError}
+        
         />
       </TableContainer>
       {mapScoreSheetError && (

@@ -14,10 +14,11 @@ import {
   Card,
   CardContent,
   Grid,
+  Button,
 } from "@mui/material";
 import theme from "../theme";
 import OrganizerContestTable from "../components/Tables/OrganizerContestTable";
-import ContestOverviewTable from "./ContestOverview";
+import ContestOverviewTable from "../components/Tables/ContestOverview";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import useMapContestOrganizerStore from "../store/map_stores/mapContestToOrganizerStore";
 import useMapScoreSheetStore from "../store/map_stores/mapScoreSheetStore";
@@ -27,13 +28,16 @@ import CampaignIcon from "@mui/icons-material/Campaign";
 import HistoryIcon from "@mui/icons-material/History";
 import GavelIcon from "@mui/icons-material/Gavel";
 import Ranking from "../components/Tables/Rankings";
-import { Trophy } from "lucide-react";
+import { AwardIcon, Trophy } from "lucide-react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { AddIcCallOutlined, Event, EventAvailable } from "@mui/icons-material";
 
 export default function Organizer() {
   const [value, setValue] = useState("1");
   const { fetchContestsByOrganizerId, contests } = useMapContestOrganizerStore();
   const { allSheetsSubmittedForContests } = useMapScoreSheetStore();
   const { role } = useAuthStore();
+  const navigate = useNavigate()
 
   const organizerId = role ? role.user.id : null;
 
@@ -78,16 +82,24 @@ export default function Organizer() {
 
   return (
     <Box sx={{ pb: 8, backgroundColor: "#fafafa", minHeight: "100vh" }}>
-      <Container maxWidth="lg">
+      <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 } }}>
         {/* Heading */}
         <Stack spacing={1} sx={{ mt: 4, mb: 3 }}>
           <Typography
             variant="h4"
-            sx={{ fontWeight: 800, color: theme.palette.success.main }}
+            sx={{
+              fontWeight: 800,
+              color: theme.palette.success.main,
+              fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" }
+            }}
           >
             Organizer Dashboard
           </Typography>
-          <Typography variant="subtitle1" color="text.secondary">
+          <Typography
+            variant="subtitle1"
+            color="text.secondary"
+            sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
+          >
             {role?.user?.first_name} {role?.user?.last_name}
           </Typography>
         </Stack>
@@ -98,6 +110,24 @@ export default function Organizer() {
             <StatCard value={contests.length} label="Total Contests" />
           </Grid>
         </Grid>
+        <Button
+          onClick={() => navigate('/organizerAwards/')}
+          variant="contained"
+          startIcon={<AwardIcon />}
+          sx={{
+            textTransform: "none",
+            borderRadius: 2,
+            px: { xs: 2, sm: 2.5 },
+            py: { xs: 1, sm: 1.5 },
+            mb: 2,
+            bgcolor: theme.palette.success.main,
+            "&:hover": { bgcolor: theme.palette.success.dark },
+            fontSize: { xs: "0.875rem", sm: "1rem" },
+            width: { xs: "100%", sm: "auto" }
+          }}
+        >
+          Assign Awards
+        </Button>
 
         {/* Tab Section */}
         <TabContext value={value}>
@@ -114,15 +144,24 @@ export default function Organizer() {
           >
             <TabList
               onChange={handleChange}
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
               sx={{
                 "& .MuiTab-root": {
                   textTransform: "none",
                   fontWeight: 600,
                   minHeight: 56,
+                  minWidth: { xs: "auto", sm: 160 },
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                  px: { xs: 1, sm: 2 },
                 },
                 "& .MuiTabs-indicator": {
                   height: 3,
                   backgroundColor: theme.palette.success.main,
+                },
+                "& .MuiTabs-scrollButtons": {
+                  color: theme.palette.success.main,
                 },
               }}
             >
@@ -213,7 +252,7 @@ export default function Organizer() {
           >
             <Box sx={{ px: 3, py: 2 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                Contest Overview
+                Overall stats
               </Typography>
             </Box>
             <Divider />

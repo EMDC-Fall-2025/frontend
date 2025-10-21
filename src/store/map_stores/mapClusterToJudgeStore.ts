@@ -18,6 +18,8 @@ interface MapClusterJudgeState {
     mapId: number,
     clusterId: number
   ) => Promise<void>;
+  removeJudgeFromContest: (judgeId: number, contestId: number) => Promise<void>;
+  removeJudgeFromCluster: (judgeId: number, clusterId: number) => Promise<void>;
   clearJudgesByClusterId: () => void;
   clearCluster: () => void;
   clearJudgeClusters: () => void;
@@ -195,6 +197,40 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
           }));
         } catch (error) {
           const errorMessage = "Error deleting cluster-judge mapping";
+          set({ mapClusterJudgeError: errorMessage });
+          throw new Error(errorMessage);
+        } finally {
+          set({ isLoadingMapClusterJudge: false });
+        }
+      },
+
+      removeJudgeFromContest: async (judgeId: number, contestId: number) => {
+        set({ isLoadingMapClusterJudge: true });
+        try {
+          const token = localStorage.getItem("token");
+          await axios.delete(`/api/mapping/contestToJudge/remove/${judgeId}/${contestId}/`, {
+            headers: { Authorization: `Token ${token}` },
+          });
+          set({ mapClusterJudgeError: null });
+        } catch (error) {
+          const errorMessage = "Error removing judge from contest";
+          set({ mapClusterJudgeError: errorMessage });
+          throw new Error(errorMessage);
+        } finally {
+          set({ isLoadingMapClusterJudge: false });
+        }
+      },
+
+      removeJudgeFromCluster: async (judgeId: number, clusterId: number) => {
+        set({ isLoadingMapClusterJudge: true });
+        try {
+          const token = localStorage.getItem("token");
+          await axios.delete(`/api/mapping/clusterToJudge/remove/${judgeId}/${clusterId}/`, {
+            headers: { Authorization: `Token ${token}` },
+          });
+          set({ mapClusterJudgeError: null });
+        } catch (error) {
+          const errorMessage = "Error removing judge from cluster";
           set({ mapClusterJudgeError: errorMessage });
           throw new Error(errorMessage);
         } finally {

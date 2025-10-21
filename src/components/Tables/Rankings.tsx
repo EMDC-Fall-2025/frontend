@@ -1,51 +1,113 @@
-import { Button, Box, Checkbox, Collapse, IconButton, Input, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha } from "@mui/material";
-import React, { useState } from "react";
+import { Button, Box, Checkbox, Collapse, IconButton, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, Chip } from "@mui/material";
+import  { useEffect, useState } from "react";
 import theme from "../../theme";
 import { TriangleIcon, Trophy} from "lucide-react";
+import { useAuthStore } from "../../store/primary_stores/authStore";
+import { useRankingsStore } from "../../store/primary_stores/rankingsStore";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
-
-
-const fakeData = {
-    clusters: [
-      {
-        id: 1,
-        name: "Cluster A",
-        teams: [
-
-          { id: 2, name: "Team Beta", totalScore: 89.2, rank: 2, scores: { presentation: 22, journal: 23, mdo: 24, penalties: 20.2 } },
-          { id: 3, name: "Team Gamma", totalScore: 87.8, rank: 3, scores: { presentation: 21, journal: 22, mdo: 23, penalties: 21.8 } },
-          { id: 1, name: "Team Alpha", totalScore: 95.5, rank: 1, scores: { presentation: 23, journal: 24, mdo: 25, penalties: 23.5 } },
-          { id: 4, name: "Team Delta", totalScore: 82.1, rank: 4, scores: { presentation: 20, journal: 21, mdo: 22, penalties: 19.1 } }
-        ]
-      },
-      {
-        id: 2,
-        name: "Cluster B", 
-        teams: [
-          { id: 5, name: "Team Echo", totalScore: 93.7, rank: 1, scores: { presentation: 24, journal: 23, mdo: 24, penalties: 22.7 } },
-          { id: 8, name: "Team Hotel", totalScore: 85.4, rank: 4, scores: { presentation: 21, journal: 22, mdo: 21, penalties: 21.4 } },
-          { id: 6, name: "Team Foxtrot", totalScore: 91.3, rank: 2, scores: { presentation: 23, journal: 24, mdo: 23, penalties: 21.3 } },
-          { id: 7, name: "Team Golf", totalScore: 88.9, rank: 3, scores: { presentation: 22, journal: 23, mdo: 22, penalties: 21.9 } },
-          
-        ]
-      },
-      {
-        id: 3,
-        name: "Cluster C",
-        teams: [
-          { id: 9, name: "Team India", totalScore: 96.2, rank: 1, scores: { presentation: 25, journal: 24, mdo: 25, penalties: 22.2 } },
-          { id: 10, name: "Team Juliet", totalScore: 90.8, rank: 2, scores: { presentation: 23, journal: 23, mdo: 24, penalties: 20.8 } },
-          { id: 11, name: "Team Kilo", totalScore: 86.5, rank: 3, scores: { presentation: 22, journal: 22, mdo: 23, penalties: 19.5 } },
-          { id: 12, name: "Team Lima", totalScore: 83.7, rank: 4, scores: { presentation: 21, journal: 21, mdo: 22, penalties: 19.7 } }
-        ]
-      }
-    ]
-  };
-
-  const Ranking = () => {
+// Rankings component for displaying team rankings by cluster
+const Ranking = () => {
+    const navigate = useNavigate();
     const [selectedTeams, setSelectedTeams] = useState<number[]>([])
     const [openCluster, setOpenCluster] = useState<Set<number>>(new Set())
-  
+    const { isAuthenticated, role, token } = useAuthStore()
+
+    const [contests, setContests] = useState<any[]>([])
+    const [clusters, setClusters] = useState<any[]>([])
+    const [selectedContest, setSelectedContest] = useState<any>(null)
+
+    const { advanceToChampionship, undoChampionshipAdvancement } = useRankingsStore()
+
+    // Load contests for organizer
+    useEffect(() => {
+      const fetchContests = async () => {
+        try {
+          if (!isAuthenticated || !token) {
+            console.error('Please log in to view rankings')
+            return
+          }
+          const organizerId = role?.user?.id
+          if (!organizerId) {
+            console.error('Organizer ID not found')
+            return
+          }
+          const { data } = await axios.get(`/api/mapping/contestToOrganizer/getByOrganizer/${organizerId}/`, {
+            headers: { Authorization: `Token ${token}` }
+          })
+          const contestsData = data?.Contests ?? []
+          setContests(contestsData)
+          if (contestsData.length > 0) setSelectedContest(contestsData[0])
+          else console.error('No contests found for this organizer')
+        } catch (e) {
+          console.error('Failed to load contests:', e)
+        }
+      }
+      if (isAuthenticated) fetchContests()
+    }, [isAuthenticated, role, token])
+
+    // Load clusters and teams for selected contest
+    useEffect(() => {
+      const fetchClusters = async () => {
+        if (!selectedContest || !token) return
+        try {
+          const { data: clusterResp } = await axios.get(`/api/mapping/clusterToContest/getAllClustersByContest/${selectedContest.id}/`, {
+            headers: { Authorization: `Token ${token}` }
+          })
+          const clusterData = (clusterResp?.Clusters ?? []).map((c: any) => ({ id: c.id, cluster_name: c.cluster_name ?? c.name, teams: [] }))
+          const withTeams = await Promise.all(
+            clusterData.map(async (cluster: any) => {
+              try {
+                const { data: teamResp } = await axios.get(`/api/mapping/clusterToTeam/getAllTeamsByCluster/${cluster.id}/`, {
+                  headers: { Authorization: `Token ${token}` }
+                })
+                const teams = (teamResp?.Teams ?? []).map((t: any) => ({ id: t.id, team_name: t.team_name ?? t.name, school_name: t.school_name ?? 'N/A', total_score: t.total_score ?? 0 }))
+                const ranked = teams
+                  .sort((a: any, b: any) => (b.total_score ?? 0) - (a.total_score ?? 0))
+                  .map((t: any, i: number) => ({ ...t, cluster_rank: i + 1 }))
+
+                // derive per-team status without changing ranking logic
+                const teamsWithStatus = await Promise.all(
+                  ranked.map(async (t: any) => {
+                    try {
+                      const { data: s } = await axios.get(`/api/mapping/scoreSheet/allSubmittedForTeam/${t.id}/`, {
+                        headers: { Authorization: `Token ${token}` }
+                      })
+                      const total = t.total_score ?? 0
+                      const status = (s?.allSubmitted && total > 0)
+                        ? 'completed'
+                        : ((s?.submittedCount > 0 || total > 0) ? 'in_progress' : 'not_started')
+                      return { ...t, status }
+                    } catch {
+                      return { ...t, status: 'not_started' as const }
+                    }
+                  })
+                )
+
+                return { ...cluster, teams: teamsWithStatus }
+              } catch {
+                return { ...cluster, teams: [] }
+              }
+            })
+          )
+          setClusters(withTeams)
+        } catch (e) {
+          console.error('Failed to load contest data:', e)
+        }
+      }
+      fetchClusters()
+    }, [selectedContest, token])
+
+    // autoselect
+    useEffect(() => {
+      if (!selectedContest && contests.length > 0) {
+        setSelectedContest(contests[0])
+      }
+    }, [contests, selectedContest])
+
+
     const toggleCluster = (id: number) => {
       setOpenCluster((prev) => {
         const next = new Set(prev)
@@ -53,36 +115,96 @@ const fakeData = {
         return next
       })
     }
-  
+
     const handleSelect = (teamId: number) => {
       setSelectedTeams((prev) => (prev.includes(teamId) ? prev.filter((id) => id !== teamId) : [...prev, teamId]))
     }
-  
-    return (
 
-      <Box sx={{ maxWidth: 900, mx: "auto", px: 2 }}>
+    const handleAdvanceToChampionship = async () => {
+      if (!selectedContest || selectedTeams.length === 0) {
+        console.error('No contest selected or no teams selected')
+        return
+      }
 
-        <Box sx={{ mb: 4, mt: 3 }}>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 700,
-              mb: 3,
-              color: theme.palette.text.primary,
-              borderLeft: `4px solid ${theme.palette.success.main}`,
-              pl: 2,
-            }}
-          >
-            Team Rankings
-          </Typography>
-
-          {/* Stats Card */}
+      try {
+        // Call the championship advancement API
+        await advanceToChampionship(selectedContest.id, selectedTeams)
         
+        toast(`Successfully advanced ${selectedTeams.length} teams to championship!`)
+        setSelectedTeams([]) // Clear selection
+      } catch (error) {
+        console.error('Error advancing to championship:', error)
+        alert('Error advancing to championship. Please try again.')
+      }
+    }
+
+    const handleUndoChampionshipAdvancement = async () => {
+      if (!selectedContest) {
+        console.error('No contest selected')
+        return
+      }
+
+      try {
+        console.log('Undoing championship advancement for contest:', selectedContest.id)
+        
+        // Call the undo championship advancement API
+        await undoChampionshipAdvancement(selectedContest.id)
+        
+        toast('Successfully undone championship advancement!')
+      } catch (error) {
+        console.error('Error undoing championship advancement:', error)
+        alert('Error undoing championship advancement. Please try again.')
+      }
+    }
+
+    return (
+      <Box sx={{ maxWidth: 900, px: { xs: 1, sm: 2 }, mb: 4, mt: 3 }}>
+        {/* contest selection */}
+        {contests.length > 0 && (
+          <Paper elevation={1} sx={{ p: { xs: 1.5, sm: 2 }, mb: 3, borderRadius: 2, border: `1px solid ${theme.palette.grey[200]}` }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                mb: 2, 
+                fontWeight: 600,
+                fontSize: { xs: "1rem", sm: "1.25rem" }
+              }}
+            >
+              Select Contest
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {contests.map((contest) => (
+                <Button
+                  key={contest.id}
+                  variant={selectedContest?.id === contest.id ? "contained" : "outlined"}
+                  onClick={() => setSelectedContest(contest)}
+                  sx={{
+                    bgcolor: selectedContest?.id === contest.id ? theme.palette.success.main : 'transparent',
+                    color: selectedContest?.id === contest.id ? 'white' : theme.palette.success.main,
+                    borderColor: theme.palette.success.main,
+                    '&:hover': {
+                      bgcolor: selectedContest?.id === contest.id ? theme.palette.success.dark : theme.palette.success.light,
+                      color: 'white'
+                    },
+                    textTransform: 'none',
+                    borderRadius: 2,
+                    px: { xs: 2, sm: 3 },
+                    py: { xs: 0.5, sm: 1 },
+                    fontSize: { xs: "0.75rem", sm: "0.875rem" }
+                  }}
+                >
+                  {contest.contest_name|| contest.name}
+                </Button>
+              ))}
+            </Box>
+          </Paper>
+        )}
+        {/* Stats Card */}
         <Paper
             elevation={1}
             sx={{
             flex: 1,
-            p: 2.5,
+            p: { xs: 1.5, sm: 2 },
             borderRadius: 2,
             border: `1px solid ${theme.palette.grey[200]}`,
             bgcolor: "white",
@@ -90,70 +212,215 @@ const fakeData = {
         >
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                <Typography 
+                  variant="caption" 
+                  color="text.secondary" 
+                  sx={{ 
+                    mb: 0.5,
+                    fontSize: { xs: "0.7rem", sm: "0.75rem" }
+                  }}
+                >
                 Selected Teams
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.success.main }}>
+                <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    fontWeight: 700, 
+                    color: theme.palette.success.main,
+                    fontSize: { xs: "1.5rem", sm: "2.125rem" }
+                  }}
+                >
                 {selectedTeams.length}
                 </Typography>
             </Box>
-            <Box sx={{ color: theme.palette.grey[400] }}>
-                <Trophy size={24} />
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Box sx={{ color: theme.palette.grey[400] }}>
+                <Trophy size={20} />
+              </Box>
+              {selectedContest && (
+                <>
+                  {/* Check if championship advancement has been done by looking for teams with advanced_to_championship flag */}
+                  {(() => {
+                    // Method 1: Check for teams with advanced_to_championship flag
+                    const hasAdvancedTeams = clusters.some(cluster => {
+                      return cluster.teams && cluster.teams.some((team: any) => {
+                        return team.advanced_to_championship === true;
+                      });
+                    });
+                    
+                    // Method 2: Check for championship/redesign clusters (fallback)
+                    const hasChampionshipClusters = clusters.some(cluster => {
+                      const isChampionship = cluster.cluster_type === 'championship' || 
+                                           cluster.cluster_name?.toLowerCase().includes('championship');
+                      const isRedesign = cluster.cluster_type === 'redesign' || 
+                                       cluster.cluster_name?.toLowerCase().includes('redesign');
+                      return isChampionship || isRedesign;
+                    });
+                    
+                    const hasAdvanced = hasAdvancedTeams || hasChampionshipClusters;
+                    
+                    // For debugging: Show both buttons temporarily
+                    return (
+                      <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                        {hasAdvanced && (
+                          <Button
+                            variant="outlined"
+                            onClick={() => handleUndoChampionshipAdvancement()}
+                            sx={{
+                              borderColor: theme.palette.error.main,
+                              color: theme.palette.error.main,
+                              "&:hover": { 
+                                borderColor: theme.palette.error.dark,
+                                bgcolor: theme.palette.error.light,
+                                color: theme.palette.error.dark
+                              },
+                              textTransform: "none",
+                              borderRadius: 2,
+                              fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                              px: { xs: 1.5, sm: 2 },
+                              py: { xs: 0.5, sm: 1 }
+                            }}
+                          >
+                            Undo Championship
+                          </Button>
+                        )}
+                        
+                        {selectedTeams.length > 0 && (
+                          <Button
+                            variant="contained"
+                            onClick={() => {
+                              handleAdvanceToChampionship()
+                            }}
+                            sx={{
+                              bgcolor: theme.palette.success.main,
+                              "&:hover": { bgcolor: theme.palette.success.dark },
+                              color: "white",
+                              textTransform: "none",
+                              borderRadius: 2,
+                              fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                              px: { xs: 1.5, sm: 2 },
+                              py: { xs: 0.5, sm: 1 }
+                            }}
+                          >
+                            Advance to Championship
+                          </Button>
+                        )}
+                      </Box>
+                    );
+                  })()}
+                </>
+              )}
             </Box>
             </Box>
             </Paper>
        
+        {/*  spacing between stats card and clusters */}
+        <Box sx={{ mb: 3 }} />
   
-           </Box>
-  
-        {fakeData.clusters.map((cluster) => {
+        {clusters.map((cluster) => {
           const isOpen = openCluster.has(cluster.id)
           return (
-            <TableContainer
+            <Paper
                 key={cluster.id}
-                component={Paper}
                 elevation={0}
                 sx={{
                     borderRadius: 2,
                     border: `1px solid ${theme.palette.grey[200]}`,
-                    overflow: "hidden",
                     mb: 2,
+                    maxWidth: "100%",
+                    width: "100%",
+                    overflow: "hidden"
                 }}
                 >
-        <Table>
-    {/* Cluster header row */}
-    <TableRow sx={{ bgcolor: theme.palette.grey[200], borderBottom: `1px solid ${theme.palette.divider}` }}>
-      <TableCell colSpan={5} sx={{ py: 1.5 }}>
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <IconButton
-              size="small"
-              onClick={() => toggleCluster(cluster.id)}
-              sx={{
-                mr: 1,
-                transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-                transition: "transform 150ms",
-              }}
-            >
-              <TriangleIcon color={theme.palette.success.main} fill="none" size={16} strokeWidth={2} />
-            </IconButton>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: 16 }}>
-              {cluster.name}
-            </Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
-            <Typography variant="caption" color="text.secondary">Teams</Typography>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>{cluster.teams.length}</Typography>
+        {/* Fixed Cluster Header - Not Scrollable */}
+        <Box 
+          sx={{ 
+            bgcolor: theme.palette.grey[200], 
+            borderBottom: `1px solid ${theme.palette.divider}`, 
+            py: { xs: 1, sm: 1.5 }, 
+            px: { xs: 1, sm: 2 },
+            cursor: "pointer"
+          }} 
+          onClick={() => toggleCluster(cluster.id)}
+        >
+          <Box sx={{ 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "space-between", 
+            flexWrap: "nowrap", 
+            gap: 1,
+            minWidth: 0  // Allow flex items to shrink
+          }}>
+            <Box sx={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: 1, 
+              minWidth: 0,
+              flex: 1  // Take available space
+            }}>
+              <IconButton
+                size="small"
+                onClick={(e) => {e.stopPropagation();toggleCluster(cluster.id) } }
+                sx={{
+                  mr: 1,
+                  transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                  transition: "transform 150ms",
+                  p: { xs: 0.5, sm: 1 },
+                  flexShrink: 0  // Don't shrink the button
+                }}
+              >
+                <TriangleIcon color={theme.palette.success.main} fill="none" size={16} strokeWidth={2} />
+              </IconButton>
+              <Typography 
+                variant="subtitle1" 
+                sx={{ 
+                  fontWeight: 700, 
+                  fontSize: { xs: "0.7rem", sm: "0.9rem" },
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  minWidth: 0,
+                  flex: 1  // Allow text to shrink
+                }}
+              >
+                {cluster.cluster_name}
+              </Typography>
+            </Box>
+            <Box sx={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: 0.25,
+              flexShrink: 0,  
+              ml: 0.5
+            }}>
+              <Typography 
+                variant="caption" 
+                color="text.secondary"
+                sx={{ 
+                  fontSize: { xs: "0.6rem", sm: "0.7rem" },
+                  whiteSpace: "nowrap"
+                }}
+              >
+                Teams
+              </Typography>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 700,
+                  fontSize: { xs: "0.7rem", sm: "1.1rem" },
+                  whiteSpace: "nowrap"
+                }}
+              >
+                {cluster.teams?.length?? 0}
+              </Typography>
+            </Box>
           </Box>
         </Box>
-      </TableCell>
-    </TableRow>
 
-    {/* Collapsible content row */}
-    <TableRow>
-      <TableCell colSpan={5} sx={{ p: 0 }}>
+        {/* Scrollable Table Content */}
         <Collapse in={isOpen} timeout="auto" unmountOnExit>
-          <Table>
+          <TableContainer sx={{ overflow: "auto", maxWidth: "100%" }}>
+            <Table sx={{ minWidth: { xs: 400, sm: 650 } }}>
             <TableHead>
               <TableRow
                 sx={{
@@ -161,68 +428,143 @@ const fakeData = {
                     fontWeight: 700,
                     bgcolor: (t) => alpha(t.palette.success.main, 0.04),
                     borderBottomColor: "grey.300",
-                    fontSize: "0.95rem",
-                    py: 1.25,
+                    fontSize: { xs: "0.65rem", sm: "0.95rem" },
+                    py: { xs: 0.5, sm: 1.25 },
+                    px: { xs: 0.25, sm: 1 },
                   },
                 }}
               >
-                <TableCell />
-                <TableCell>Rank</TableCell>
-                <TableCell>Team Name</TableCell>
-                <TableCell>Total Score</TableCell>
+                <TableCell align="center">Select</TableCell>
+                <TableCell align="center">Rank</TableCell>
+                <TableCell align="left">Team Name</TableCell>
+                <TableCell align="left">School</TableCell>
+                <TableCell align="center">Total Score</TableCell>
+                <TableCell align="center">Status</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {cluster.teams
-                .sort((a, b) => a.rank - b.rank)
-                .map((team) => (
+                {/* asscending for rank */}
+                {(cluster.teams ?? [])
+                  .sort((a: any, b: any) => (a.cluster_rank || 0) - (b.cluster_rank || 0))
+                .map((team: any) => (
                   <TableRow
                     key={team.id}
                     sx={{
                       "&:hover": { backgroundColor: "rgba(46,125,50,0.06)" },
                       borderBottom: `1px solid ${theme.palette.grey[200]}`,
-                      "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 },
+                      "& .MuiTableCell-root": { 
+                        fontSize: { xs: "0.7rem", sm: "0.95rem" }, 
+                        py: { xs: 0.5, sm: 1.25 },
+                        px: { xs: 0.25, sm: 1 }
+                      },
                     }}
                   >
-                    <TableCell>
+                    <TableCell align="center">
                       <Checkbox
                         color="success"
                         checked={selectedTeams.includes(team.id)}
                         onChange={() => handleSelect(team.id)}
+                        size="small"
                       />
                     </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        {team.rank <= 4 && (
+                    <TableCell align="center">
+                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                        {(team.cluster_rank ?? 0) <= 4 && (
                           <Trophy
-                            size={18}
+                            size={16}
                             color={theme.palette.success.main}
                             fill={theme.palette.success.main}
                           />
                         )}
-                        <Typography>#{team.rank}</Typography>
+                        <Typography sx={{ fontSize: { xs: "0.7rem", sm: "0.875rem" } }}>
+                          #{team.cluster_rank ?? 'N/A'}
+                        </Typography>
                       </Box>
                     </TableCell>
-                    <TableCell>{team.name}</TableCell>
+                    <TableCell align="left">
+                      <Typography sx={{ 
+                        fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                        fontWeight: 600,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        maxWidth: { xs: "100px", sm: "200px" }
+                      }}>
+                        {team.team_name}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="left">
+                      <Typography sx={{ 
+                        fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        maxWidth: { xs: "100px", sm: "200px" }
+                      }}>
+                        {team.school_name}
+                      </Typography>
+                    </TableCell>
                     <TableCell
+                      align="center"
                       sx={{
                         fontWeight: 600,
-        
+                        fontSize: { xs: "0.7rem", sm: "0.875rem" }
                       }}
                     >
-                      {team.totalScore}
+                      {team.total_score ?? 0}
+                    </TableCell>
+                    <TableCell align="center">
+                      {team.status === 'completed' ? (
+                        <Chip 
+                          size="small" 
+                          label="Completed" 
+                          color="success" 
+                          sx={{ 
+                            fontWeight: 600,
+                            fontSize: { xs: "0.55rem", sm: "0.75rem" }
+                          }} 
+                        />
+                      ) : team.status === 'in_progress' ? (
+                        <Chip 
+                          size="small" 
+                          label="In Progress" 
+                          color="warning" 
+                          sx={{ 
+                            fontWeight: 600,
+                            fontSize: { xs: "0.55rem", sm: "0.75rem" }
+                          }} 
+                        />
+                      ) : (
+                        <Chip 
+                          size="small" 
+                          label="Not Started" 
+                          color="default" 
+                          sx={{ 
+                            bgcolor: theme.palette.grey[300], 
+                            fontWeight: 600,
+                            fontSize: { xs: "0.55rem", sm: "0.75rem" }
+                          }} 
+                        />
+                      )}
                     </TableCell>
                     <TableCell align="right">
                       <Button
                         variant="contained"
                         size="small"
+                        onClick={() => navigate(`/results/${selectedContest?.id}`, {
+                          state: { teamId: team.id, clusterId: cluster.id }
+                        })}
                         sx={{
                           bgcolor: theme.palette.success.main,
                           "&:hover": { bgcolor: theme.palette.success.dark },
                           color: "#fff",
                           textTransform: "none",
                           borderRadius: 2,
+                          fontSize: { xs: "0.55rem", sm: "0.75rem" },
+                          px: { xs: 0.75, sm: 2 },
+                          py: { xs: 0.25, sm: 0.5 },
+                          minWidth: { xs: "auto", sm: "auto" }
                         }}
                       >
                         View Results
@@ -232,15 +574,13 @@ const fakeData = {
                 ))}
             </TableBody>
           </Table>
+          </TableContainer>
         </Collapse>
-      </TableCell>
-    </TableRow>
-  </Table>
-</TableContainer>
+      </Paper>
           )
         })}
       </Box>
     )
-  }
-  
-  export default Ranking
+}
+
+export default Ranking

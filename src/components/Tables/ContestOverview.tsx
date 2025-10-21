@@ -8,30 +8,34 @@ import {
   Grid,
   Chip,
 } from "@mui/material";
-import axios from "axios";
-import { useContestStore } from "../store/primary_stores/contestStore";
-import { useMapContestOrganizerStore } from "../store/map_stores/mapContestToOrganizerStore";
-import { useAuthStore } from "../store/primary_stores/authStore";
-import theme from "../theme";
-import { Judge, Contest } from "../types";
+import { useContestStore } from "../../store/primary_stores/contestStore";
+import { useMapContestOrganizerStore } from "../../store/map_stores/mapContestToOrganizerStore";
+import { useMapContestJudgeStore } from "../../store/map_stores/mapContestToJudgeStore";
+import { useMapClusterToContestStore } from "../../store/map_stores/mapClusterToContestStore";
+import { useAuthStore } from "../../store/primary_stores/authStore";
+import theme from "../../theme";
+import { Contest } from "../../types";
 
 interface ContestOverviewTableProps {
   contests?: Contest[]; 
 }
 
 export default function ContestOverviewTable({ contests: propContests }: ContestOverviewTableProps = {}) {
-  // Store hooks for data management
   const { allContests, fetchAllContests } = useContestStore();
   const { contests: organizerContests, fetchContestsByOrganizerId } = useMapContestOrganizerStore();
+  const { contest: judgeContest, getContestByJudgeId, contestJudges, fetchJudgesForMultipleContests } = useMapContestJudgeStore();
+  const { contestClusters, fetchClustersForMultipleContests } = useMapClusterToContestStore();
   const { role } = useAuthStore();
 
-  // Local state for managing contest-specific data
-  const [contestJudges, setContestJudges] = useState<{[key: number]: Judge[]}>({});
   const [isLoading, setIsLoading] = useState(false);
 
   // Determine which contests to display based on user role
-  // Organizers see only their assigned contests, admins see all contests
-  const contests = propContests || (role?.user_type === 2 ? organizerContests : allContests);
+  // Organizers see only their assigned contests, judges see their assigned contest, admins see all contests
+  const contests = propContests || (
+    role?.user_type === 2 ? organizerContests : 
+    role?.user_type === 3 ? (judgeContest ? [judgeContest] : []) : 
+    allContests
+  );
 
   // Load contest data based on user role
   useEffect(() => {
@@ -41,94 +45,54 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
         if (role?.user_type === 2 && role?.user?.id) {
           // For organizers, fetch only their assigned contests
           await fetchContestsByOrganizerId(role.user.id);
+        } else if (role?.user_type === 3 && role?.user?.id) {
+          // For judges, fetch their assigned contest
+          await getContestByJudgeId(role.user.id);
         } else {
           // For admins, fetch all available contests
           await fetchAllContests();
         }
       } catch (error) {
-        console.warn("Backend not available - using mock contest data");
-        // Graceful fallback when backend is unavailable
+        console.warn("Backend not available");
       } finally {
         setIsLoading(false);
       }
     };
 
     loadData();
-  }, [fetchAllContests, fetchContestsByOrganizerId, role]);
+  }, [fetchAllContests, fetchContestsByOrganizerId, getContestByJudgeId, role]);
 
   // Fetch judges for each contest to display accurate judge counts
   useEffect(() => {
     if (contests.length > 0) {
       const loadContestJudges = async () => {
-        const judgesMap: {[key: number]: Judge[]} = {};
-        
-        // Fetch judges for each contest individually to avoid data conflicts
-        for (const contest of contests) {
-          try {
-            const token = localStorage.getItem("token");
-            const response = await axios.get(
-              `/api/mapping/judgeToContest/getAllJudges/${contest.id}/`,
-              {
-                headers: {
-                  Authorization: `Token ${token}`,
-                },
-              }
-            );
-            const currentJudges = response.data.Judges || [];
-            judgesMap[contest.id] = currentJudges;
-          } catch (error) {
-            console.warn(`Backend not available for contest ${contest.id}`);
-            // Graceful fallback - show empty array when API fails
-            judgesMap[contest.id] = [];
-          }
+        try {
+          const contestIds = contests.map(contest => contest.id);
+          await fetchJudgesForMultipleContests(contestIds);
+        } catch (error) {
+          console.warn("Failed to fetch judges for contests");
         }
-        
-        setContestJudges(judgesMap);
       };
 
       loadContestJudges();
     }
-  }, [contests]);
+  }, [contests, fetchJudgesForMultipleContests]);
 
-  // State for managing cluster data per contest
-  const [contestClusters, setContestClusters] = useState<{[key: number]: any[]}>({});
-  const [clustersLoaded, setClustersLoaded] = useState(false);
-  
   // Fetch clusters for each contest to display accurate cluster information
   useEffect(() => {
-    if (contests.length > 0 && !clustersLoaded) {
+    if (contests.length > 0) {
       const loadContestClusters = async () => {
-        const clustersMap: {[key: number]: any[]} = {};
-        
-        // Fetch clusters for each contest individually to avoid data conflicts
-        for (const contest of contests) {
-          try {
-            const token = localStorage.getItem("token");
-            const response = await axios.get(
-              `/api/mapping/clusterToContest/getAllClustersByContest/${contest.id}/`,
-              {
-                headers: {
-                  Authorization: `Token ${token}`,
-                  "Content-Type": "application/json",
-                },
-              }
-            );
-            const currentClusters = response.data.Clusters || [];
-            clustersMap[contest.id] = currentClusters;
-          } catch (error) {
-            console.warn(`Backend not available for contest ${contest.id}`);
-            // Graceful fallback - show empty array when API fails
-            clustersMap[contest.id] = [];
-          }
+        try {
+          const contestIds = contests.map(contest => contest.id);
+          await fetchClustersForMultipleContests(contestIds);
+        } catch (error) {
+          console.warn("Failed to fetch clusters for contests");
         }
-        
-        setContestClusters(clustersMap);
-        setClustersLoaded(true);
       };
 
       loadContestClusters();
     }
-  }, [contests, clustersLoaded]);
+  }, [contests, fetchClustersForMultipleContests]);
 
   // Show loading state while data is being fetched
   if (isLoading) {
@@ -139,7 +103,6 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
     );
   }
 
-  // Show message when no contests are available
   if (contests.length === 0) {
     return (
       <Box>

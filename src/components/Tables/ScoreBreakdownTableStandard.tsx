@@ -26,17 +26,72 @@ export default function ScoreBreakdownTableStandard(
 
   return scoreSheetBreakdown ? (
     <TableContainer
-      sx={{ m: 5, minWidth: 550, maxWidth: "90vw" }}
+      sx={{ 
+        m: { xs: 2, sm: 5 }, 
+        minWidth: { xs: 400, sm: 550 }, 
+        maxWidth: "90vw",
+        overflow: { xs: "auto", sm: "hidden" },
+        "&::-webkit-scrollbar": {
+          height: "8px",
+        },
+        "&::-webkit-scrollbar-track": {
+          backgroundColor: "#f1f1f1",
+          borderRadius: "4px",
+        },
+        "&::-webkit-scrollbar-thumb": {
+          backgroundColor: "#c1c1c1",
+          borderRadius: "4px",
+        },
+        "&::-webkit-scrollbar-thumb:hover": {
+          backgroundColor: "#a8a8a8",
+        },
+      }}
       component={Box}
     >
-      <Table>
+      <Table sx={{
+        "& .MuiTableCell-root": {
+          fontSize: { xs: "0.8rem", sm: "0.95rem" },
+          py: { xs: 0.75, sm: 1.25 },
+          px: { xs: 0.5, sm: 1 }
+        }
+      }}>
         <TableHead>
           <TableRow>
-            <TableCell>Category</TableCell>
-            <TableCell>Criteria 1</TableCell>
-            <TableCell>Criteria 2</TableCell>
-            <TableCell>Criteria 3</TableCell>
-            <TableCell>Scores</TableCell>
+            <TableCell sx={{ 
+              fontWeight: 600,
+              fontSize: { xs: "0.8rem", sm: "0.95rem" },
+              minWidth: { xs: "120px", sm: "150px" }
+            }}>
+              Category
+            </TableCell>
+            <TableCell sx={{ 
+              fontWeight: 600,
+              fontSize: { xs: "0.8rem", sm: "0.95rem" },
+              minWidth: { xs: "100px", sm: "120px" }
+            }}>
+              Criteria 1
+            </TableCell>
+            <TableCell sx={{ 
+              fontWeight: 600,
+              fontSize: { xs: "0.8rem", sm: "0.95rem" },
+              minWidth: { xs: "100px", sm: "120px" }
+            }}>
+              Criteria 2
+            </TableCell>
+            <TableCell sx={{ 
+              fontWeight: 600,
+              fontSize: { xs: "0.8rem", sm: "0.95rem" },
+              minWidth: { xs: "100px", sm: "120px" }
+            }}>
+              Criteria 3
+            </TableCell>
+            <TableCell sx={{ 
+              fontWeight: 600,
+              fontSize: { xs: "0.8rem", sm: "0.95rem" },
+              minWidth: { xs: "80px", sm: "100px" }
+            }}>
+              Scores
+            </TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -45,8 +100,25 @@ export default function ScoreBreakdownTableStandard(
               key={question.id}
               sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
             >
-              <TableCell component="th" scope="row">
-                {question.questionText}
+              <TableCell 
+                component="th" 
+                scope="row"
+                sx={{
+                  fontWeight: 600,
+                  fontSize: { xs: "0.8rem", sm: "0.95rem" },
+                  minWidth: { xs: "120px", sm: "150px" },
+                  maxWidth: { xs: "150px", sm: "200px" }
+                }}
+              >
+                <Typography 
+                  sx={{ 
+                    fontSize: { xs: "0.8rem", sm: "0.95rem" },
+                    fontWeight: 600,
+                    lineHeight: 1.3
+                  }}
+                >
+                  {question.questionText}
+                </Typography>
               </TableCell>
               {question.id == 9 && (
                 <>
@@ -114,21 +186,57 @@ export default function ScoreBreakdownTableStandard(
               )}
               {(type == 2 || question.id != 4) && question.id != 9 ? (
                 <>
-                  <TableCell>
-                    <Typography sx={{ mb: 1 }}>{question.criteria1}</Typography>
-                    <Typography sx={{ fontWeight: "bold" }}>
+                  <TableCell sx={{ 
+                    minWidth: { xs: "100px", sm: "120px" },
+                    maxWidth: { xs: "120px", sm: "150px" }
+                  }}>
+                    <Typography sx={{ 
+                      mb: { xs: 0.5, sm: 1 },
+                      fontSize: { xs: "0.75rem", sm: "0.9rem" },
+                      lineHeight: 1.3
+                    }}>
+                      {question.criteria1}
+                    </Typography>
+                    <Typography sx={{ 
+                      fontWeight: "bold",
+                      fontSize: { xs: "0.8rem", sm: "0.95rem" }
+                    }}>
                       {question.criteria1Points}
                     </Typography>
                   </TableCell>
-                  <TableCell>
-                    <Typography sx={{ mb: 1 }}>{question.criteria2}</Typography>
-                    <Typography sx={{ fontWeight: "bold" }}>
+                  <TableCell sx={{ 
+                    minWidth: { xs: "100px", sm: "120px" },
+                    maxWidth: { xs: "120px", sm: "150px" }
+                  }}>
+                    <Typography sx={{ 
+                      mb: { xs: 0.5, sm: 1 },
+                      fontSize: { xs: "0.75rem", sm: "0.9rem" },
+                      lineHeight: 1.3
+                    }}>
+                      {question.criteria2}
+                    </Typography>
+                    <Typography sx={{ 
+                      fontWeight: "bold",
+                      fontSize: { xs: "0.8rem", sm: "0.95rem" }
+                    }}>
                       {question.criteria2Points}
                     </Typography>
                   </TableCell>
-                  <TableCell>
-                    <Typography sx={{ mb: 1 }}>{question.criteria3}</Typography>
-                    <Typography sx={{ fontWeight: "bold" }}>
+                  <TableCell sx={{ 
+                    minWidth: { xs: "100px", sm: "120px" },
+                    maxWidth: { xs: "120px", sm: "150px" }
+                  }}>
+                    <Typography sx={{ 
+                      mb: { xs: 0.5, sm: 1 },
+                      fontSize: { xs: "0.75rem", sm: "0.9rem" },
+                      lineHeight: 1.3
+                    }}>
+                      {question.criteria3}
+                    </Typography>
+                    <Typography sx={{ 
+                      fontWeight: "bold",
+                      fontSize: { xs: "0.8rem", sm: "0.95rem" }
+                    }}>
                       {question.criteria3Points}
                     </Typography>
                   </TableCell>
@@ -136,42 +244,120 @@ export default function ScoreBreakdownTableStandard(
               ) : (
                 question.id != 9 && (
                   <>
-                    <TableCell>
-                      <Typography sx={{ mb: 1 }}>Jr:</Typography>
-                      <Typography sx={{ mb: 1 }}>
+                    <TableCell sx={{ 
+                      minWidth: { xs: "100px", sm: "120px" },
+                      maxWidth: { xs: "120px", sm: "150px" }
+                    }}>
+                      <Typography sx={{ 
+                        mb: { xs: 0.25, sm: 0.5 },
+                        fontSize: { xs: "0.7rem", sm: "0.8rem" },
+                        fontWeight: 600
+                      }}>
+                        Jr:
+                      </Typography>
+                      <Typography sx={{ 
+                        mb: { xs: 0.5, sm: 1 },
+                        fontSize: { xs: "0.7rem", sm: "0.8rem" },
+                        lineHeight: 1.2
+                      }}>
                         {question.criteria1Junior}
                       </Typography>
-                      <Typography sx={{ mb: 1 }}>Sr:</Typography>
-                      <Typography sx={{ mb: 1 }}>
+                      <Typography sx={{ 
+                        mb: { xs: 0.25, sm: 0.5 },
+                        fontSize: { xs: "0.7rem", sm: "0.8rem" },
+                        fontWeight: 600
+                      }}>
+                        Sr:
+                      </Typography>
+                      <Typography sx={{ 
+                        mb: { xs: 0.5, sm: 1 },
+                        fontSize: { xs: "0.7rem", sm: "0.8rem" },
+                        lineHeight: 1.2
+                      }}>
                         {question.criteria1Senior}
                       </Typography>
-                      <Typography sx={{ fontWeight: "bold" }}>
+                      <Typography sx={{ 
+                        fontWeight: "bold",
+                        fontSize: { xs: "0.8rem", sm: "0.95rem" }
+                      }}>
                         {question.criteria1Points}
                       </Typography>
                     </TableCell>
-                    <TableCell>
-                      <Typography sx={{ mb: 1 }}>Jr:</Typography>
-                      <Typography sx={{ mb: 1 }}>
+                    <TableCell sx={{ 
+                      minWidth: { xs: "100px", sm: "120px" },
+                      maxWidth: { xs: "120px", sm: "150px" }
+                    }}>
+                      <Typography sx={{ 
+                        mb: { xs: 0.25, sm: 0.5 },
+                        fontSize: { xs: "0.7rem", sm: "0.8rem" },
+                        fontWeight: 600
+                      }}>
+                        Jr:
+                      </Typography>
+                      <Typography sx={{ 
+                        mb: { xs: 0.5, sm: 1 },
+                        fontSize: { xs: "0.7rem", sm: "0.8rem" },
+                        lineHeight: 1.2
+                      }}>
                         {question.criteria2Junior}
                       </Typography>
-                      <Typography sx={{ mb: 1 }}>Sr:</Typography>
-                      <Typography sx={{ mb: 1 }}>
+                      <Typography sx={{ 
+                        mb: { xs: 0.25, sm: 0.5 },
+                        fontSize: { xs: "0.7rem", sm: "0.8rem" },
+                        fontWeight: 600
+                      }}>
+                        Sr:
+                      </Typography>
+                      <Typography sx={{ 
+                        mb: { xs: 0.5, sm: 1 },
+                        fontSize: { xs: "0.7rem", sm: "0.8rem" },
+                        lineHeight: 1.2
+                      }}>
                         {question.criteria2Senior}
                       </Typography>
-                      <Typography sx={{ fontWeight: "bold" }}>
+                      <Typography sx={{ 
+                        fontWeight: "bold",
+                        fontSize: { xs: "0.8rem", sm: "0.95rem" }
+                      }}>
                         {question.criteria2Points}
                       </Typography>
                     </TableCell>
-                    <TableCell>
-                      <Typography sx={{ mb: 1 }}>Jr:</Typography>
-                      <Typography sx={{ mb: 1 }}>
+                    <TableCell sx={{ 
+                      minWidth: { xs: "100px", sm: "120px" },
+                      maxWidth: { xs: "120px", sm: "150px" }
+                    }}>
+                      <Typography sx={{ 
+                        mb: { xs: 0.25, sm: 0.5 },
+                        fontSize: { xs: "0.7rem", sm: "0.8rem" },
+                        fontWeight: 600
+                      }}>
+                        Jr:
+                      </Typography>
+                      <Typography sx={{ 
+                        mb: { xs: 0.5, sm: 1 },
+                        fontSize: { xs: "0.7rem", sm: "0.8rem" },
+                        lineHeight: 1.2
+                      }}>
                         {question.criteria3Junior}
                       </Typography>
-                      <Typography sx={{ mb: 1 }}>Sr:</Typography>
-                      <Typography sx={{ mb: 1 }}>
+                      <Typography sx={{ 
+                        mb: { xs: 0.25, sm: 0.5 },
+                        fontSize: { xs: "0.7rem", sm: "0.8rem" },
+                        fontWeight: 600
+                      }}>
+                        Sr:
+                      </Typography>
+                      <Typography sx={{ 
+                        mb: { xs: 0.5, sm: 1 },
+                        fontSize: { xs: "0.7rem", sm: "0.8rem" },
+                        lineHeight: 1.2
+                      }}>
                         {question.criteria3Senior}
                       </Typography>
-                      <Typography sx={{ fontWeight: "bold" }}>
+                      <Typography sx={{ 
+                        fontWeight: "bold",
+                        fontSize: { xs: "0.8rem", sm: "0.95rem" }
+                      }}>
                         {question.criteria3Points}
                       </Typography>
                     </TableCell>
@@ -181,33 +367,60 @@ export default function ScoreBreakdownTableStandard(
               {question.id != 9 && (
                 <>
                   {type === ScoreSheetType.Presentation && (
-                    <TableCell>
-                      {scoreSheetBreakdown &&
-                        scoreSheetBreakdown[ScoreSheetType.Presentation][
-                          PresentationScoreSheetFields[
-                            question.field as keyof typeof PresentationScoreSheetFields
-                          ]
-                        ].join(", ")}
+                    <TableCell sx={{ 
+                      minWidth: { xs: "80px", sm: "100px" },
+                      maxWidth: { xs: "100px", sm: "120px" }
+                    }}>
+                      <Typography sx={{ 
+                        fontSize: { xs: "0.8rem", sm: "0.95rem" },
+                        fontWeight: 600,
+                        textAlign: "center"
+                      }}>
+                        {scoreSheetBreakdown &&
+                          scoreSheetBreakdown[ScoreSheetType.Presentation][
+                            PresentationScoreSheetFields[
+                              question.field as keyof typeof PresentationScoreSheetFields
+                            ]
+                          ].join(", ")}
+                      </Typography>
                     </TableCell>
                   )}
                   {type === ScoreSheetType.Journal && (
-                    <TableCell>
-                      {scoreSheetBreakdown &&
-                        scoreSheetBreakdown[ScoreSheetType.Journal][
-                          JournalScoreSheetFields[
-                            question.field as keyof typeof JournalScoreSheetFields
-                          ]
-                        ].join(", ")}
+                    <TableCell sx={{ 
+                      minWidth: { xs: "80px", sm: "100px" },
+                      maxWidth: { xs: "100px", sm: "120px" }
+                    }}>
+                      <Typography sx={{ 
+                        fontSize: { xs: "0.8rem", sm: "0.95rem" },
+                        fontWeight: 600,
+                        textAlign: "center"
+                      }}>
+                        {scoreSheetBreakdown &&
+                          scoreSheetBreakdown[ScoreSheetType.Journal][
+                            JournalScoreSheetFields[
+                              question.field as keyof typeof JournalScoreSheetFields
+                            ]
+                          ].join(", ")}
+                      </Typography>
                     </TableCell>
                   )}
                   {type === ScoreSheetType.MachineDesign && (
-                    <TableCell>
-                      {scoreSheetBreakdown &&
-                        scoreSheetBreakdown[ScoreSheetType.MachineDesign][
-                          MachineDesignScoreSheetFields[
-                            question.field as keyof typeof MachineDesignScoreSheetFields
-                          ]
-                        ].join(", ")}
+                    <TableCell sx={{ 
+                      minWidth: { xs: "80px", sm: "100px" },
+                      maxWidth: { xs: "100px", sm: "120px" }
+                    }}>
+                      <Typography sx={{ 
+                        fontSize: { xs: "0.8rem", sm: "0.95rem" },
+                        fontWeight: 600,
+                        textAlign: "center"
+                      }}>
+                        {scoreSheetBreakdown &&
+                          scoreSheetBreakdown[ScoreSheetType.MachineDesign][
+                            MachineDesignScoreSheetFields[
+                              question.field as keyof typeof MachineDesignScoreSheetFields
+                            ]
+                          ].join(", ")}
+                      </Typography>
                     </TableCell>
                   )}
                 </>
