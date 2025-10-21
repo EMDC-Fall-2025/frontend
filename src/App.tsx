@@ -20,8 +20,7 @@ import InternalResults from "./pages/InternalResults";
 import GeneralPenalties from "./pages/GeneralPenalties";
 import ScoreBreakdown from "./pages/ScoreBreakdown";
 import RunPenalties from "./pages/RunPenalties";
-import ContestPage from "./pages/ContestsPage";
-import ContestScores from "./pages/ContestScores";
+
 import AdminSpecialAwardsPage from "./pages/AdminSpecialAwards";
 import OrganizerSpecialAwards from "./pages/OrganizerSpecialAwards";
 import JudgeSpecialAwards from "./pages/JudgeSpecialAwards";
@@ -30,6 +29,11 @@ import MultiTeamPresentationScore from "./pages/PresentationMultiTeamScore"
 import MultiTeamJournalScore from "./pages/JournalMultiTeamScore";
 import MultiTeamMachineDesignScore from "./pages/MachineDesignMultiTeamScore";
 import ChampionshipScore from "./pages/ChampionshipScore";
+import ContestScores from "./pages/ContestScores";
+import Contests from "./pages/ContestsPage";
+/*import MasterScorePage from "./pages/MasterScorePage";*/
+
+
 import { Toaster } from "react-hot-toast";
 import Ranking from "./components/Tables/Rankings";
 
@@ -42,13 +46,13 @@ function App() {
       <ThemeProvider theme={theme}>
         {currentLink !== "/set-password/" &&
           currentLink !== "/forgot-password/" &&
-          currentLink !== "/login/" && 
+          currentLink !== "/login/" &&
           currentLink !== "/signup/" && <Navbar />}
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/forgot-password/" element={<ForgotPassword />} />
           <Route path="/contestresults/:contestId" element={<ContestScores />} />
-          <Route path="/rank" element={<Ranking/>}/>
+          <Route path="/rank" element={<Ranking />} />
           {isAuthenticated && role?.user_type != 4 && (
             <Route path="/judging/:judgeId/" element={<Judging />} />
           )}
@@ -99,7 +103,7 @@ function App() {
 
           {isAuthenticated && (
             <Route
-              path="/organizerAwards/" 
+              path="/organizerAwards/"
               element={<OrganizerSpecialAwards />}
             />
           )}
@@ -107,7 +111,7 @@ function App() {
 
           {isAuthenticated && (
             <Route
-              path="/championship-score/:judgeId/:contestId/" 
+              path="/championship-score/:judgeId/:contestId/"
               element={<ChampionshipScore />}
             />
           )}
@@ -120,8 +124,8 @@ function App() {
           )}
           {/* {<Route path="/judgeAwards/" element={<JudgeSpecialAwards />} />}  */}
 
-          
-          {<Route path="/contestPage/" element={<ContestPage />} />}
+
+          {<Route path="/contestPage/" element={<Contests />} />}
 
           {isAuthenticated && (
             <Route
@@ -149,7 +153,7 @@ function App() {
 
           {isAuthenticated && (
             <Route
-              path="/multi-team-presentation-score/:judgeId/:contestId/" 
+              path="/multi-team-presentation-score/:judgeId/:contestId/"
               element={<MultiTeamPresentationScore />}
             />
           )}
@@ -157,12 +161,15 @@ function App() {
           {isAuthenticated && <Route path="/logout/" element={<Logout />} />}
           {role?.user_type == 2 && (
             <Route path="/organizer/" element={<Organizer />} />
-          )}
+          )}{/*
+          {role?.user_type == 2 && (
+            <Route path="/master-score/" element={<MasterScorePage />} />
+          )}*/}
           {(role?.user_type == 1 || role?.user_type == 2) && (
             <Route path="/results/:contestId" element={<InternalResults />} />
           )}
           <Route path="/set-password/" element={<SetPassword />} />
-          
+
           {isAuthenticated && (
             <Route
               path="/manage-contest/:contestId/"
@@ -177,11 +184,11 @@ function App() {
               element={<ScoreBreakdown />}
             />
           )}
-        
+
         </Routes>
-        
-        
-        <Toaster 
+
+
+        <Toaster
           position="top-center"
           toastOptions={{
             duration: 4000,
