@@ -258,36 +258,43 @@ const Ranking = () => {
                     
                     return (
                       <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-                        {hasAdvanced ? (
+                        {hasAdvanced && (
                           <Button
                             variant="contained"
-                            color="error"
                             onClick={() => handleUndoChampionshipAdvancement()}
-                            sx={{ bgcolor: theme.palette.error.main }}
+                            sx={{
+                              bgcolor: theme.palette.error.main,
+                              "&:hover": { bgcolor: theme.palette.error.dark },
+                              color: "white",
+                              textTransform: "none",
+                              borderRadius: 2,
+                              fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                              px: { xs: 1.5, sm: 2 },
+                              py: { xs: 0.5, sm: 1 }
+                            }}
                           >
                             Undo Championship
                           </Button>
-                        ) : (
-                          selectedTeams.length > 0 && (
-                            <Button
-                              variant="contained"
-                              onClick={() => {
-                                handleAdvanceToChampionship()
-                              }}
-                              sx={{
-                                bgcolor: theme.palette.success.main,
-                                "&:hover": { bgcolor: theme.palette.success.dark },
-                                color: "white",
-                                textTransform: "none",
-                                borderRadius: 2,
-                                fontSize: { xs: "0.7rem", sm: "0.875rem" },
-                                px: { xs: 1.5, sm: 2 },
-                                py: { xs: 0.5, sm: 1 }
-                              }}
-                            >
-                              Advance to Championship
-                            </Button>
-                          )
+                        )}
+                        {selectedTeams.length > 0 && (
+                          <Button
+                            variant="contained"
+                            onClick={() => {
+                              handleAdvanceToChampionship()
+                            }}
+                            sx={{
+                              bgcolor: theme.palette.success.main,
+                              "&:hover": { bgcolor: theme.palette.success.dark },
+                              color: "white",
+                              textTransform: "none",
+                              borderRadius: 2,
+                              fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                              px: { xs: 1.5, sm: 2 },
+                              py: { xs: 0.5, sm: 1 }
+                            }}
+                          >
+                            Advance to Championship
+                          </Button>
                         )}
                       </Box>
                     );

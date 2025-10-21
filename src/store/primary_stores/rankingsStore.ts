@@ -166,7 +166,7 @@ export const useRankingsStore = create<RankingsState>()(
           };
           
           const response = await axios.post(
-            `/api/tabulation/advanceToChampionship/`,
+            `/api/advance/advanceToChampionship/`,
             requestData,
             {
               headers: { Authorization: `Token ${token}` }
@@ -199,7 +199,7 @@ export const useRankingsStore = create<RankingsState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.post(
-            `/api/tabulation/undoChampionshipAdvancement/`,
+            `/api/advance/undoChampionshipAdvancement/`,
             {
               contestid: contestId,
             },
