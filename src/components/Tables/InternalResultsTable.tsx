@@ -13,6 +13,8 @@ import {
 import { alpha } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
 import { useMapContestToTeamStore } from "../../store/map_stores/mapContestToTeamStore";
+import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
+import { useEffect } from "react";
 
 const COLS = [
   { key: "rank", label: "Rank", width: "6%", align: "center" as const },
@@ -38,21 +40,22 @@ const bgBronze = (t: any) => alpha(BRONZE, 0.18);
 
 export default function InternalResultsTable() {
   const { teamsByContest } = useMapContestToTeamStore();
+  const {clusters, teamsByClusterId, fetchClustersByContestId, getTeamsByClusterId} = useMapClusterTeamStore();
   const navigate = useNavigate();
 
   const rows = (teamsByContest ?? []) as any[];
+ 
+  // Fetch teams for each cluster when clusters are loaded
+  useEffect(()=>{
+    if (clusters.length > 0){
+      clusters.forEach(cluster =>{
+        getTeamsByClusterId(cluster.id)
+      })
+    }
+  },[clusters, fetchClustersByContestId])
 
   return (
     <Container maxWidth={false} sx={{ px: 0, py: 0 }}>
-<<<<<<< HEAD
-      <TableContainer 
-        component={Paper} 
-        elevation={2} 
-        sx={{ 
-          borderRadius: 1,
-          overflow: "auto",
-          maxWidth: "100%"
-=======
       {/* Wrapper that enables smooth horizontal scroll on small screens */}
       <TableContainer
         component={Paper}
@@ -63,48 +66,20 @@ export default function InternalResultsTable() {
           overflowX: "auto",
           overflowY: "hidden",
           WebkitOverflowScrolling: "touch",
->>>>>>> 97eaa17b60e37f4ff7ee11532929f821c6fa153d
         }}
       >
         <Table
           size="small"
-<<<<<<< HEAD
-          sx={{ 
-            tableLayout: "fixed", 
-            width: "100%",
-            minWidth: { xs: 600, sm: 800 }
-=======
           sx={{
             // Force a wide natural width so mobile uses horizontal scroll instead of squeezing
             width: "1200px",
             minWidth: "1200px",
             tableLayout: "fixed",
->>>>>>> 97eaa17b60e37f4ff7ee11532929f821c6fa153d
           }}
           aria-label="contest results"
         >
           <TableHead>
             <TableRow sx={{ bgcolor: (t) => alpha(t.palette.success.main, 0.08) }}>
-<<<<<<< HEAD
-              {COLS.map((c) => (
-                <TableCell
-                  key={c.key}
-                  align={c.align}
-                  sx={{
-                    width: c.width,
-                    fontWeight: 800,
-                    whiteSpace: "nowrap",
-                    fontSize: { xs: "0.7rem", sm: "0.875rem" },
-                    py: { xs: 0.5, sm: 1 },
-                    px: { xs: 0.25, sm: 1 },
-                    ...(c.key === "penalties" && { color: "error.main" }),
-                    ...(c.key === "total" && { color: "common.white", bgcolor: "success.main" }),
-                  }}
-                >
-                  {c.label}
-                </TableCell>
-              ))}
-=======
               {COLS.map((c) => {
                 const isPenaltyHeader =
                   c.key === "general_penalties" || c.key === "run_penalties";
@@ -146,7 +121,6 @@ export default function InternalResultsTable() {
                   </TableCell>
                 );
               })}
->>>>>>> 97eaa17b60e37f4ff7ee11532929f821c6fa153d
             </TableRow>
           </TableHead>
 
@@ -185,42 +159,6 @@ export default function InternalResultsTable() {
                     borderBottom: borderColor ? `3px solid ${borderColor}` : undefined,
                   }}
                 >
-<<<<<<< HEAD
-                  {/* Rank + medal */}
-                  <TableCell 
-                    align="center" 
-                    sx={{ 
-                      fontWeight: 900, 
-                      color: borderColor ?? "text.primary",
-                      fontSize: { xs: "0.7rem", sm: "0.875rem" },
-                      py: { xs: 0.5, sm: 1 },
-                      px: { xs: 0.25, sm: 1 }
-                    }}
-                  >
-                    {rank ?? "—"} {is1 ? "🏆" : is2 ? "🥈" : is3 ? "🥉" : null}
-                  </TableCell>
-
-                  {/* Team */}
-                  <TableCell 
-                    sx={{ 
-                      overflow: "hidden", 
-                      textOverflow: "ellipsis",
-                      py: { xs: 0.5, sm: 1 },
-                      px: { xs: 0.25, sm: 1 }
-                    }}
-                  >
-                    <Typography 
-                      fontWeight={700}
-                      sx={{ fontSize: { xs: "0.7rem", sm: "0.875rem" } }}
-                    >
-                      {team.team_name}
-                    </Typography>
-                    <Typography 
-                      variant="caption" 
-                      color="text.disabled"
-                      sx={{ fontSize: { xs: "0.6rem", sm: "0.75rem" } }}
-                    >
-=======
                   <TableCell align="center" sx={{ fontWeight: 900, color: borderColor ?? "text.primary" }}>
                     {rank ?? "—"} {is1 ? "🏆" : is2 ? "🥈" : is3 ? "🥉" : null}
                   </TableCell>
@@ -228,79 +166,25 @@ export default function InternalResultsTable() {
                   <TableCell>
                     <Typography fontWeight={700}>{team.team_name}</Typography>
                     <Typography variant="caption" color="text.disabled">
->>>>>>> 97eaa17b60e37f4ff7ee11532929f821c6fa153d
-                      ID: {team.id}
+                    {(() => {
+                      // Find which cluster this team belongs to
+                    // format: teamsByClusterId = {
+                    //     "29": [team1, team2, team3],     // Cluster 29 has 3 teams
+                    //     "50": [team4, team5],            // Cluster 50 has 2 teams  
+                    //     "51": [team6],                   // Cluster 51 has 1 team
+                    //     "32": [team7, team8, team9]       // Cluster 32 has 3 teams
+                    for (const clusterId in teamsByClusterId) {
+                      const teamsInCluster = teamsByClusterId[clusterId];
+                      if (teamsInCluster && teamsInCluster.some((t: any) => t.id === team.id)) {
+                        const cluster = clusters.find(c => c.id === parseInt(clusterId));
+                        return cluster?.cluster_name || `Cluster ID: ${clusterId}`;
+                      }
+                    }
+                    return `ID: ${team.id}`;
+                  })()}
                     </Typography>
                   </TableCell>
 
-<<<<<<< HEAD
-                  {/* School */}
-                  <TableCell 
-                    sx={{ 
-                      overflow: "hidden", 
-                      textOverflow: "ellipsis",
-                      py: { xs: 0.5, sm: 1 },
-                      px: { xs: 0.25, sm: 1 }
-                    }}
-                  >
-                    <Typography 
-                      variant="body2"
-                      sx={{ fontSize: { xs: "0.7rem", sm: "0.875rem" } }}
-                    >
-                      {school}
-                    </Typography>
-                  </TableCell>
-
-                  {/* Scores */}
-                  <TableCell 
-                    align="center" 
-                    sx={{ 
-                      fontWeight: 600, 
-                      color: "success.dark",
-                      fontSize: { xs: "0.7rem", sm: "0.875rem" },
-                      py: { xs: 0.5, sm: 1 },
-                      px: { xs: 0.25, sm: 1 }
-                    }}
-                  >
-                    {team.journal_score}
-                  </TableCell>
-                  <TableCell 
-                    align="center" 
-                    sx={{ 
-                      fontWeight: 600, 
-                      color: "success.dark",
-                      fontSize: { xs: "0.7rem", sm: "0.875rem" },
-                      py: { xs: 0.5, sm: 1 },
-                      px: { xs: 0.25, sm: 1 }
-                    }}
-                  >
-                    {team.presentation_score}
-                  </TableCell>
-                  <TableCell 
-                    align="center" 
-                    sx={{ 
-                      fontWeight: 600, 
-                      color: "success.dark",
-                      fontSize: { xs: "0.7rem", sm: "0.875rem" },
-                      py: { xs: 0.5, sm: 1 },
-                      px: { xs: 0.25, sm: 1 }
-                    }}
-                  >
-                    {team.machinedesign_score}
-                  </TableCell>
-
-                  {/* Penalties */}
-                  <TableCell 
-                    align="center" 
-                    sx={{ 
-                      fontWeight: 800, 
-                      color: "error.main",
-                      fontSize: { xs: "0.7rem", sm: "0.875rem" },
-                      py: { xs: 0.5, sm: 1 },
-                      px: { xs: 0.25, sm: 1 }
-                    }}
-                  >
-=======
                   <TableCell>
                     <Typography variant="body2">{school}</Typography>
                   </TableCell>
@@ -311,15 +195,14 @@ export default function InternalResultsTable() {
 
                   {/* New columns */}
                   <TableCell align="center" sx={{ color: "error.main", fontWeight: 600 }}>
-                    -{Number(team.general_penalties ?? 0).toFixed(1)}
+                    -{Number(team.preliminary_penalties_score ?? 0).toFixed(1)}
                   </TableCell>
                   <TableCell align="center" sx={{ color: "error.main", fontWeight: 600 }}>
-                    -{Number(team.run_penalties ?? 0).toFixed(1)}
+                    -{Number(team.redesign_score ?? 0).toFixed(1)}
                   </TableCell>
 
                   {/* Existing penalties */}
                   <TableCell align="center" sx={{ color: "error.main", fontWeight: 800 }}>
->>>>>>> 97eaa17b60e37f4ff7ee11532929f821c6fa153d
                     -{Number(team.penalties_score).toFixed(1)}
                   </TableCell>
 
@@ -337,15 +220,7 @@ export default function InternalResultsTable() {
                     {Number(team.total_score).toFixed(1)}
                   </TableCell>
 
-<<<<<<< HEAD
-                  {/* Details */}
-                  <TableCell 
-                    align="center"
-                    sx={{ py: { xs: 0.5, sm: 1 }, px: { xs: 0.25, sm: 1 } }}
-                  >
-=======
                   <TableCell align="center">
->>>>>>> 97eaa17b60e37f4ff7ee11532929f821c6fa153d
                     <Button
                       size="small"
                       variant="outlined"
@@ -363,10 +238,6 @@ export default function InternalResultsTable() {
                 </TableRow>
               );
             })}
-<<<<<<< HEAD
-            
-=======
->>>>>>> 97eaa17b60e37f4ff7ee11532929f821c6fa153d
           </TableBody>
         </Table>
       </TableContainer>

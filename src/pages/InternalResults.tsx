@@ -3,6 +3,7 @@ import { Box, Chip, Container, Paper, Typography, Link } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
+import { useContestStore } from "../store/primary_stores/contestStore";
 import InternalResultsTable from "../components/Tables/InternalResultsTable";
 import axios from "axios";
 
@@ -19,6 +20,15 @@ const InternalResults: React.FC = () => {
 
   const { fetchTeamsByContest, clearTeamsByContest, isLoading } =
     (useMapContestToTeamStore() as any) || {};
+
+  const { contest, fetchContestById, isLoadingContest } = useContestStore();
+
+  // Fetch contest information
+  useEffect(() => {
+    if (parsedContestId) {
+      fetchContestById(parsedContestId);
+    }
+  }, [parsedContestId, fetchContestById]);
 
   useEffect(() => {
     if (!parsedContestId) return;
@@ -89,7 +99,7 @@ const InternalResults: React.FC = () => {
               fontSize: { xs: "1rem", sm: "1.25rem" },
             }}
           >
-            Contest ID: {contestId}
+            {isLoadingContest ? "Loading contest..." : contest?.name || `Contest ID: ${contestId}`}
           </Typography>
 
           {/* ✅ Live chip */}
@@ -103,7 +113,7 @@ const InternalResults: React.FC = () => {
           </Box>
         </Paper>
 
-        <InternalResultsTable />
+        <InternalResultsTable  />
       </Container>
     </Box>
   );
