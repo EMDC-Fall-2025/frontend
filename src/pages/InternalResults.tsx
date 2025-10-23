@@ -4,7 +4,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
 import InternalResultsTable from "../components/Tables/InternalResultsTable";
-
 import axios from "axios";
 
   
@@ -18,13 +17,14 @@ const InternalResults: React.FC = () => {
 
   const parsedContestId = contestId ? parseInt(contestId, 10) : undefined;
 
+  const { fetchTeamsByContest, clearTeamsByContest, isLoading } =
+    (useMapContestToTeamStore() as any) || {};
 
   useEffect(() => {
     if (!parsedContestId) return;
-  
+
     const load = async () => {
       try {
-        // Tabulate scores to ensure they're calculated
         const token = localStorage.getItem("token");
         await axios.put(
           "/api/tabulation/tabulateScores/",
@@ -36,38 +36,22 @@ const InternalResults: React.FC = () => {
             },
           }
         );
-        
-        // Fetch the updated teams with calculated scores
         await fetchTeamsByContest(parsedContestId);
       } catch (error) {
-        // Still try to fetch teams even if tabulation fails
         await fetchTeamsByContest(parsedContestId);
       }
     };
-  
-    load(); // initial
-  
+
+    load();
+
     const onFocus = () => load();
     window.addEventListener("focus", onFocus);
-  
+
     return () => {
       window.removeEventListener("focus", onFocus);
       clearTeamsByContest();
     };
   }, [parsedContestId]);
-
-  const { fetchTeamsByContest, clearTeamsByContest, isLoading } =
-    (useMapContestToTeamStore() as any) || {};
-
-  useEffect(() => {
-    const idNum = contestId ? Number(contestId) : NaN;
-    if (!Number.isNaN(idNum) && typeof fetchTeamsByContest === "function") {
-      fetchTeamsByContest(idNum);
-    }
-    return () => {
-      if (typeof clearTeamsByContest === "function") clearTeamsByContest();
-    };
-  }, [contestId, fetchTeamsByContest, clearTeamsByContest]);
 
   return (
     <Box sx={{ bgcolor: "#fff", minHeight: "100vh" }}>
@@ -89,34 +73,36 @@ const InternalResults: React.FC = () => {
         </Box>
 
         <Paper elevation={2} sx={{ p: { xs: 2, md: 3 }, mb: 2, borderRadius: 1 }}>
-          <Typography 
-            variant="h4" 
+          <Typography
+            variant="h4"
             fontWeight={800}
             sx={{ fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" } }}
           >
             Master ScoreSheet Results
           </Typography>
-          <Typography 
-            variant="h6" 
-            color="success.main" 
-            sx={{ 
+
+          <Typography
+            variant="h6"
+            color="success.main"
+            sx={{
               mt: 1,
-              fontSize: { xs: "1rem", sm: "1.25rem" }
+              fontSize: { xs: "1rem", sm: "1.25rem" },
             }}
           >
             Contest ID: {contestId}
           </Typography>
+
+          {/* ✅ Live chip */}
           <Box sx={{ mt: 1 }}>
-            <Chip 
-              size="small" 
-              color="success" 
+            <Chip
+              size="small"
+              color="success"
               label={isLoading ? "Loading…" : "Live"}
               sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}
             />
           </Box>
         </Paper>
 
-        {/* Store-only. If store returns nothing, table will show an empty body. */}
         <InternalResultsTable />
       </Container>
     </Box>
