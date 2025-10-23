@@ -6,6 +6,7 @@ import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamSt
 import InternalResultsTable from "../components/Tables/InternalResultsTable";
 
 import axios from "axios";
+import useContestStore from "../store/primary_stores/contestStore";
 
   
 
@@ -17,7 +18,15 @@ const InternalResults: React.FC = () => {
   const { role } = useAuthStore();
 
   const parsedContestId = contestId ? parseInt(contestId, 10) : undefined;
+  const { contest, fetchContestById, isLoadingContest } = useContestStore();
 
+
+  // Fetch contest information
+  useEffect(() => {
+    if (parsedContestId) {
+      fetchContestById(parsedContestId);
+    }
+  }, [parsedContestId, fetchContestById]);
 
   useEffect(() => {
     if (!parsedContestId) return;
@@ -104,7 +113,7 @@ const InternalResults: React.FC = () => {
               fontSize: { xs: "1rem", sm: "1.25rem" }
             }}
           >
-            Contest ID: {contestId}
+            {isLoadingContest ? "Loading..." : contest?.name || `ID: ${contestId}`}
           </Typography>
           <Box sx={{ mt: 1 }}>
             <Chip 
@@ -117,7 +126,7 @@ const InternalResults: React.FC = () => {
         </Paper>
 
         {/* Store-only. If store returns nothing, table will show an empty body. */}
-        <InternalResultsTable />
+        <InternalResultsTable contestId={parsedContestId} />
       </Container>
     </Box>
   );

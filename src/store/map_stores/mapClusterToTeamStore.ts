@@ -39,7 +39,7 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
-            `/api/clusters?contestId=${contestId}`,
+            `/api/mapping/clusterToContest/getAllClustersByContest/${contestId}/`,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -47,7 +47,9 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
               },
             }
           );
-          set({ clusters: response.data, isLoadingMapClusterToTeam: false });
+          console.log('API Response for clusters:', response.data);
+          console.log('Clusters from API:', response.data.Clusters);
+          set({ clusters: response.data.Clusters, isLoadingMapClusterToTeam: false });
         } catch (error) {
           handleError(error, set, "Error fetching clusters");
         }
