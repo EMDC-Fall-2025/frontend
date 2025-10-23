@@ -10,7 +10,6 @@ import {
   Box,
   Collapse,
   IconButton,
-  CircularProgress,
   Container,
   Dialog,
   DialogTitle,
@@ -28,7 +27,7 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { useJudgeStore } from "../../store/primary_stores/judgeStore";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useMapScoreSheetStore } from "../../store/map_stores/mapScoreSheetStore";
 import AreYouSureModal from "../Modals/AreYouSureModal";
 import { useScoreSheetStore } from "../../store/primary_stores/scoreSheetStore";
@@ -42,10 +41,20 @@ interface IJudgeDashboardProps {
   currentCluster?: any;
 }
 
-export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
+const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudgeDashboardProps) {
   const { teams, currentCluster } = props;
 
   const navigate = useNavigate();
+  
+  // Store hooks
+  const { judge, clearJudge } = useJudgeStore();
+  const {
+    mappings,
+    fetchScoreSheetsByJudge,
+    clearMappings,
+  } = useMapScoreSheetStore();
+  const { contest, getContestByJudgeId } = useMapContestJudgeStore();
+  const { editScoreSheetField, multipleScoreSheets } = useScoreSheetStore();
 
   // Function to determine if a scoresheet is from preliminary round (should be greyed out)
   const isPreliminaryScoresheet = (_teamId: number, sheetType: number) => {
@@ -86,8 +95,55 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     return !isPreliminaryScoresheet(teamId, sheetType);
   };
 
+  const getIsSubmitted = useCallback((
+    judgeId: number,
+    teamId: number,
+    sheetType: number
+  ) => {
+    const key = `${teamId}-${judgeId}-${sheetType}`;
+    const data = mappings[key] || null;
+    return !!data?.scoresheet?.isSubmitted;
+  }, [mappings]);
+
+  // Check if a scoresheet exists for the given judge, team, and sheet type
+  const hasScoresheet = useCallback((
+    judgeId: number,
+    teamId: number,
+    sheetType: number
+  ) => {
+    const key = `${teamId}-${judgeId}-${sheetType}`;
+    return !!mappings[key];
+  }, [mappings]);
+
+  const checkAllPreliminaryScoresheetsCompleted = (teamId: number) => {
+    if (!judge) return false;
+    
+    
+    // Check if all preliminary scoresheets (1-5) are completed
+    const preliminaryTypes = [1, 2, 3, 4, 5]; // runpenalties, otherpenalties, presentation, journal, mdo
+    let allCompleted = true;
+    
+    for (const sheetType of preliminaryTypes) {
+      if (hasScoresheet(judge.id, teamId, sheetType)) {
+        // Check if this scoresheet is completed (has been submitted)
+        const scoresheet = multipleScoreSheets?.find(sheet => 
+          sheet.teamId === teamId && 
+          sheet.judgeId === judge.id && 
+          sheet.sheetType === sheetType
+        );
+        
+        if (scoresheet && !scoresheet.isSubmitted) {
+          allCompleted = false;
+          break;
+        }
+      }
+    }
+    
+    return allCompleted;
+  };
+
   // Function to determine if a team has only preliminary scoresheets (should grey out header)
-  const hasOnlyPreliminaryScoresheets = (teamId: number) => {
+  const hasOnlyPreliminaryScoresheets = useCallback((teamId: number) => {
     // Check if we're in a championship or redesign cluster
     const isInChampionshipOrRedesignCluster = currentCluster && (
       currentCluster.cluster_type === 'championship' || 
@@ -132,34 +188,8 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     }
     
     return false; // Default: no grey styling
-  };
+  }, [currentCluster, teams, judge, hasScoresheet, getIsSubmitted]);
 
-  const checkAllPreliminaryScoresheetsCompleted = (teamId: number) => {
-    if (!judge) return false;
-    
-    
-    // Check if all preliminary scoresheets (1-5) are completed
-    const preliminaryTypes = [1, 2, 3, 4, 5]; // runpenalties, otherpenalties, presentation, journal, mdo
-    let allCompleted = true;
-    
-    for (const sheetType of preliminaryTypes) {
-      if (hasScoresheet(judge.id, teamId, sheetType)) {
-        // Check if this scoresheet is completed (has been submitted)
-        const scoresheet = multipleScoreSheets?.find(sheet => 
-          sheet.teamId === teamId && 
-          sheet.judgeId === judge.id && 
-          sheet.sheetType === sheetType
-        );
-        
-        if (scoresheet && !scoresheet.isSubmitted) {
-          allCompleted = false;
-          break;
-        }
-      }
-    }
-    
-    return allCompleted;
-  };
 
   // Function to check if current user is organizer/admin (can edit preliminary scoresheets)
   const isOrganizerOrAdmin = () => {
@@ -170,21 +200,8 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     return role?.user_type === 1 || role?.user_type === 2;
   };
 
-  const { judge, clearJudge } = useJudgeStore();
-
-  const {
-    mappings,
-    fetchScoreSheetsByJudge,
-    isLoadingMapScoreSheet,
-    clearMappings,
-  } = useMapScoreSheetStore();
-
-  const { getContestByJudgeId, contest } = useMapContestJudgeStore();
-  
   // State to store contest names for each team
   const [teamContestMap, setTeamContestMap] = React.useState<{[teamId: number]: string}>({});
-
-  const { editScoreSheetField, multipleScoreSheets } = useScoreSheetStore();
   
 
   const [openRows, setOpenRows] = React.useState<{ [key: number]: boolean }>(
@@ -217,20 +234,18 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     setOpenRows(allExpanded);
   };
 
+  // Initial load effect - only fetch when judge first loads
   useEffect(() => {
-    if (judge) {
-      // Always fetch all scoresheets for the judge to show both preliminary and championship/redesign
-      if (judge.id) {
-        try {
-          fetchScoreSheetsByJudge(judge.id);
-          // Try to get contest info, but don't fail if it's not available
-          getContestByJudgeId(judge.id).catch(error => {
-            console.warn('Contest info not available for judge:', error);
-            // Continue without contest info - the judge dashboard can still work
-          });
-        } catch (error) {
-          console.error('Error fetching judge data:', error);
-        }
+    if (judge && judge.id) {
+      try {
+        fetchScoreSheetsByJudge(judge.id);
+        // Try to get contest info, but don't fail if it's not available
+        getContestByJudgeId(judge.id).catch(error => {
+          console.warn('Contest info not available for judge:', error);
+          // Continue without contest info - the judge dashboard can still work
+        });
+      } catch (error) {
+        console.error('Error fetching judge data:', error);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -238,53 +253,58 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
 
   // Refresh scoresheets when teams change (after championship advancement)
   useEffect(() => {
-    if (judge && teams && teams.length > 0) {
-      if (judge.id) {
-        try {
-          fetchScoreSheetsByJudge(judge.id);
-        } catch (error) {
-          console.error('Error refreshing scoresheets:', error);
-        }
+    if (judge && judge.id && teams && teams.length > 0) {
+      try {
+        fetchScoreSheetsByJudge(judge.id);
+      } catch (error) {
+        console.error('Error refreshing scoresheets:', error);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teams]);
 
-  // Fetch contest information for each team
+  // Memoize team contest fetching to avoid unnecessary API calls
+  const fetchContestForTeams = useCallback(async (teamsToFetch: Team[]) => {
+    const contestMap: {[teamId: number]: string} = {};
+    
+    // Only fetch for teams we don't already have contest info for
+    const teamsToFetchInfo = teamsToFetch.filter(team => !teamContestMap[team.id]);
+    
+    if (teamsToFetchInfo.length === 0) return;
+    
+    for (const team of teamsToFetchInfo) {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`/api/mapping/contestToTeam/getContestByTeam/${team.id}/`, {
+          headers: {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.Contest) {
+            contestMap[team.id] = data.Contest.name;
+          }
+        } else {
+          console.error(`Failed to fetch contest for team ${team.id}:`, response.status);
+        }
+      } catch (error) {
+        console.error(`Error fetching contest for team ${team.id}:`, error);
+      }
+    }
+    
+    if (Object.keys(contestMap).length > 0) {
+      setTeamContestMap(prev => ({ ...prev, ...contestMap }));
+    }
+  }, [teamContestMap]);
+
+  // Fetch contest information for each team (only when teams change)
   useEffect(() => {
     if (teams && teams.length > 0) {
-      const fetchContestForTeams = async () => {
-        const contestMap: {[teamId: number]: string} = {};
-        
-        for (const team of teams) {
-          try {
-            // Get contest for this team
-            const token = localStorage.getItem("token");
-            const response = await fetch(`/api/mapping/contestToTeam/getContestByTeam/${team.id}/`, {
-              headers: {
-                'Authorization': `Token ${token}`,
-                'Content-Type': 'application/json',
-              },
-            });
-            if (response.ok) {
-              const data = await response.json();
-              if (data.Contest) {
-                contestMap[team.id] = data.Contest.name;
-              }
-            } else {
-              console.error(`Failed to fetch contest for team ${team.id}:`, response.status);
-            }
-          } catch (error) {
-            console.error(`Error fetching contest for team ${team.id}:`, error);
-          }
-        }
-        
-        setTeamContestMap(contestMap);
-      };
-      
-      fetchContestForTeams();
+      fetchContestForTeams(teams);
     }
-  }, [teams]);
+  }, [teams, fetchContestForTeams]);
 
   useEffect(() => {
     const handlePageHide = () => {
@@ -296,33 +316,14 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     return () => window.removeEventListener("pagehide", handlePageHide);
   }, [clearMappings, clearJudge]);
 
-  const getIsSubmitted = (
-    judgeId: number,
-    teamId: number,
-    sheetType: number
-  ) => {
-    const key = `${teamId}-${judgeId}-${sheetType}`;
-    const data = mappings[key] || null;
-    return !!data?.scoresheet?.isSubmitted;
-  };
 
-  // Check if a scoresheet exists for the given judge, team, and sheet type
-  const hasScoresheet = (
-    judgeId: number,
-    teamId: number,
-    sheetType: number
-  ) => {
-    const key = `${teamId}-${judgeId}-${sheetType}`;
-    return !!mappings[key];
-  };
-
-  const getTotal = (judgeId: number, teamId: number, sheetType: number) => {
+  const getTotal = useCallback((judgeId: number, teamId: number, sheetType: number) => {
     const key = `${teamId}-${judgeId}-${sheetType}`;
     const data = mappings[key] || null;
     return data?.total;
-  };
+  }, [mappings]);
 
-  const getScoreSheetId = (
+  const getScoreSheetId = useCallback((
     judgeId: number,
     teamId: number,
     sheetType: number
@@ -330,7 +331,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     const key = `${teamId}-${judgeId}-${sheetType}`;
     const data = mappings[key] || null;
     return data?.scoresheet?.id;
-  };
+  }, [mappings]);
 
   // NEW: open/close multi-team dialog
   const handleMultiTeamScore = () => {
@@ -428,8 +429,8 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
               mb: { xs: 0.5, sm: 1 },
               textTransform: "none",
               borderRadius: 2,
-              px: { xs: 1.5, sm: 2.25 },
-              py: { xs: 0.5, sm: 0.75 },
+              px: { xs: 0.75, sm: 2.25 },
+              py: { xs: 0.4, sm: 0.75 },
               bgcolor: isPreliminary ? theme.palette.grey[400] : theme.palette.success.main,
               color: isPreliminary ? theme.palette.grey[600] : "white",
               "&:hover": { 
@@ -439,9 +440,11 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                 bgcolor: theme.palette.grey[400],
                 color: theme.palette.grey[600],
               },
-              fontSize: { xs: "0.75rem", sm: "0.875rem" },
+              fontSize: { xs: "0.65rem", sm: "0.875rem" },
               fontWeight: 600,
-              minWidth: { xs: "auto", sm: "auto" },
+              minWidth: { xs: "100px", sm: "auto" },
+              maxWidth: { xs: "150px", sm: "none" },
+              width: { xs: "100%", sm: "auto" },
               opacity: isPreliminary ? 0.6 : 1,
             }}
           >
@@ -454,16 +457,18 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
               mb: { xs: 0.5, sm: 1 },
               textTransform: "none",
               borderRadius: 2,
-              px: { xs: 1.5, sm: 2.25 },
-              py: { xs: 0.5, sm: 0.75 },
+              px: { xs: 0.75, sm: 2.25 },
+              py: { xs: 0.4, sm: 0.75 },
               bgcolor: isPreliminary ? theme.palette.grey[400] : theme.palette.grey[500],
               color: isPreliminary ? theme.palette.grey[600] : "white",
               "&:hover": { 
                 bgcolor: isPreliminary ? theme.palette.grey[400] : theme.palette.grey[600] 
               },
-              fontSize: { xs: "0.75rem", sm: "0.875rem" },
+              fontSize: { xs: "0.65rem", sm: "0.875rem" },
               fontWeight: 600,
-              minWidth: { xs: "auto", sm: "auto" },
+              minWidth: { xs: "100px", sm: "auto" },
+              maxWidth: { xs: "150px", sm: "none" },
+              width: { xs: "100%", sm: "auto" },
               opacity: isPreliminary ? 0.6 : 1,
             }}
             onClick={() =>
@@ -481,9 +486,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     );
   }
 
-  if (isLoadingMapScoreSheet) {
-    return <CircularProgress />;
-  }
+  // Remove loading state - show dashboard immediately
 
   return (
     <>
@@ -733,7 +736,9 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                             display: "flex", 
                             flexWrap: "wrap", 
                             gap: { xs: 0.5, sm: 1 },
-                            flexDirection: { xs: "column", sm: "row" }
+                            flexDirection: { xs: "column", sm: "row" },
+                            justifyContent: { xs: "center", sm: "flex-start" },
+                            alignItems: { xs: "center", sm: "flex-start" }
                           }}>
                             {/* Journal - not tied to contest.is_open */}
                             <ScoreSheetButton
@@ -904,4 +909,6 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
       </Dialog>
     </>
   );
-}
+});
+
+export default JudgeDashboardTable;

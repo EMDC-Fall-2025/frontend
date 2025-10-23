@@ -14,7 +14,7 @@ import { alpha } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
 import { useMapContestToTeamStore } from "../../store/map_stores/mapContestToTeamStore";
 import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const COLS = [
   { key: "rank", label: "Rank", width: "6%", align: "center" as const },
@@ -38,12 +38,36 @@ const bgGold = (t: any) => alpha(GOLD, 0.18);
 const bgSilver = (t: any) => alpha(SILVER, 0.18);
 const bgBronze = (t: any) => alpha(BRONZE, 0.18);
 
-export default function InternalResultsTable({ contestId }: { contestId?: number }) {
+export default function InternalResultsTable({ contestId, resultType='preliminary' }: { contestId?: number; resultType?: 'preliminary' | 'championship' | 'redesign'; }) {
   const { teamsByContest } = useMapContestToTeamStore();
   const {clusters, teamsByClusterId, fetchClustersByContestId, getTeamsByClusterId, clearTeamsByClusterId} = useMapClusterTeamStore();
   const navigate = useNavigate();
+  
 
   const rows = (teamsByContest ?? []) as any[];
+  
+  // Debug: Log championship team data
+  if (resultType === 'championship') {
+    console.log('Championship teams data:', rows.filter(team => team.advanced_to_championship));
+    rows.filter(team => team.advanced_to_championship).forEach(team => {
+      console.log(`Team ${team.team_name}:`, {
+        championship_presentation_score: team.championship_presentation_score,
+        championship_machinedesign_score: team.championship_machinedesign_score,
+        championship_penalties_score: team.championship_penalties_score,
+        preliminary_journal_score: team.preliminary_journal_score,
+        total_score: team.total_score
+      });
+    });
+  }
+  
+  // Filter rows based on result type
+  const filteredRows = resultType === 'preliminary' 
+  ? rows 
+  : rows.filter(team => {
+      if (resultType === 'championship') return team.advanced_to_championship;
+      if (resultType === 'redesign') return !team.advanced_to_championship;
+      return false;
+    });
  
   // Clear cluster data when contest changes
   useEffect(() => {
@@ -79,8 +103,8 @@ export default function InternalResultsTable({ contestId }: { contestId?: number
   // Debug: log teamsByClusterId when it changes
   useEffect(() => {
     console.log('teamsByClusterId updated:', teamsByClusterId);
-    console.log('Contest teams:', rows.map(t => ({ id: t.id, name: t.team_name })));
-  }, [teamsByClusterId, rows]);
+    console.log('Contest teams:', filteredRows.map(t => ({ id: t.id, name: t.team_name })));
+  }, [teamsByClusterId, filteredRows]);
 
   return (
     <Container maxWidth={false} sx={{ px: 0, py: 0 }}>
@@ -153,8 +177,17 @@ export default function InternalResultsTable({ contestId }: { contestId?: number
           </TableHead>
 
           <TableBody>
-            {rows.map((team: any, idx: number) => {
-              const rank = team.team_rank ?? null;
+            {filteredRows.map((team: any, idx: number) => {
+              // Use appropriate ranking based on result type
+              let rank: number | null = null;
+              if (resultType === 'championship') {
+                rank = team.championship_rank ?? null;
+              } else if (resultType === 'redesign') {
+                rank = team.cluster_rank ?? null;
+              } else {
+                rank = team.team_rank ?? null; // preliminary uses overall contest rank
+              }
+              
               const is1 = rank === 1;
               const is2 = rank === 2;
               const is3 = rank === 3;
@@ -238,21 +271,40 @@ export default function InternalResultsTable({ contestId }: { contestId?: number
                     <Typography variant="body2">{school}</Typography>
                   </TableCell>
 
-                  <TableCell align="center">{team.journal_score}</TableCell>
-                  <TableCell align="center">{team.presentation_score}</TableCell>
-                  <TableCell align="center">{team.machinedesign_score}</TableCell>
-
-                  {/* New columns */}
-                  <TableCell align="center" sx={{ color: "error.main", fontWeight: 600 }}>
-                    -{Number(team.preliminary_penalties_score ?? 0).toFixed(1)}
+                  <TableCell align="center">
+                    {resultType === 'preliminary' ? team.preliminary_journal_score :
+                     resultType === 'championship' ? team.preliminary_journal_score : // Championship uses preliminary journal score
+                     team.redesign_journal_score}
                   </TableCell>
-                  <TableCell align="center" sx={{ color: "error.main", fontWeight: 600 }}>
-                    -{Number(team.redesign_score ?? 0).toFixed(1)}
+                  <TableCell align="center">
+                    {resultType === 'preliminary' ? team.preliminary_presentation_score :
+                     resultType === 'championship' ? (team.championship_presentation_score ?? 0) :
+                     team.redesign_presentation_score}
+                  </TableCell>
+                  <TableCell align="center">
+                    {resultType === 'preliminary' ? team.preliminary_machinedesign_score :
+                     resultType === 'championship' ? (team.championship_machinedesign_score ?? 0) :
+                     team.redesign_machinedesign_score}
                   </TableCell>
 
-                  {/* Existing penalties */}
+                  {/* General Penalties */}
+                  <TableCell align="center" sx={{ color: "error.main", fontWeight: 600 }}>
+                    -{Number(resultType === 'preliminary' ? team.preliminary_penalties_score ?? 0 :
+                         resultType === 'championship' ? team.championship_penalties_score ?? 0 :
+                         team.redesign_penalties_score ?? 0).toFixed(1)}
+                  </TableCell>
+                  {/* Run Penalties */}
+                  <TableCell align="center" sx={{ color: "error.main", fontWeight: 600 }}>
+                    -{Number(resultType === 'preliminary' ? team.penalties_score ?? 0 :
+                         resultType === 'championship' ? team.championship_penalties_score ?? 0 :
+                         team.redesign_penalties_score ?? 0).toFixed(1)}
+                  </TableCell>
+
+                  {/* Total Penalties */}
                   <TableCell align="center" sx={{ color: "error.main", fontWeight: 800 }}>
-                    -{Number(team.penalties_score).toFixed(1)}
+                    -{Number(resultType === 'preliminary' ? (team.preliminary_penalties_score ?? 0) + (team.penalties_score ?? 0) :
+                         resultType === 'championship' ? team.championship_penalties_score ?? 0 :
+                         team.redesign_penalties_score ?? 0).toFixed(1)}
                   </TableCell>
 
                   <TableCell
@@ -266,7 +318,13 @@ export default function InternalResultsTable({ contestId }: { contestId?: number
                       px: { xs: 0.25, sm: 1 }
                     }}
                   >
-                    {Number(team.total_score).toFixed(1)}
+                    {resultType === 'preliminary' ? Number(team.preliminary_total_score || 0).toFixed(1) :
+                     resultType === 'championship' ? 
+                       Number((team.preliminary_journal_score || 0) + 
+                              (team.championship_presentation_score || 0) + 
+                              (team.championship_machinedesign_score || 0) - 
+                              (team.championship_penalties_score || 0)).toFixed(1) :
+                     Number(team.redesign_score || 0).toFixed(1)}
                   </TableCell>
 
                   <TableCell align="center">
@@ -274,7 +332,15 @@ export default function InternalResultsTable({ contestId }: { contestId?: number
                       size="small"
                       variant="outlined"
                       color="success"
-                      onClick={() => navigate(`/score-breakdown/${team.id}`)}
+                      onClick={() => {
+                        if (resultType === 'preliminary') {
+                          navigate(`/score-breakdown/${team.id}`);
+                        } else if (resultType === 'championship') {
+                          navigate(`/championship-score-breakdown/${team.id}`);
+                        } else if (resultType === 'redesign') {
+                          navigate(`/redesign-score-breakdown/${team.id}`);
+                        }
+                      }}
                       sx={{
                         fontSize: { xs: "0.6rem", sm: "0.75rem" },
                         px: { xs: 1, sm: 2 },

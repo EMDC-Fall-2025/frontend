@@ -190,13 +190,9 @@ function JudgesTable(props: IJudgesTableProps) {
     try {
       // Get the judge's cluster information
       const judgeCluster = judgeClusters[judgeId];
-      console.log("DEBUG: judgeClusters data:", judgeClusters);
-      console.log("DEBUG: Looking for judgeId:", judgeId);
-      console.log("DEBUG: Found judgeCluster:", judgeCluster);
       
       if (!judgeCluster) {
         // Fallback: try to get cluster info from the judges data
-        console.log("DEBUG: judgeClusters not found, trying fallback method");
         
         // Find the judge in the judges array to get cluster info
         const judge = judges.find(j => j.id === judgeId);

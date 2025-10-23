@@ -353,6 +353,7 @@ export type ScoreSheetDetails = {
   [ScoreSheetType.RunPenalties]: RunPenaltiesScoreSheetDetails;
   [ScoreSheetType.GeneralPenalties]: GeneralPenaltiesScoreSheetDetails;
   [ScoreSheetType.Redesign]: RedesignScoreSheetDetails;
+  [ScoreSheetType.Championship]: ChampionshipScoreSheetDetails;
 } | null;
 
 export type PresentationScoreSheetDetails = {

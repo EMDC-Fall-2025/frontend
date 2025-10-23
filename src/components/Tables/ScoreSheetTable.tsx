@@ -62,6 +62,7 @@ export default function ScoreSheetTable({
     updateScores,
     editScoreSheet,
     scoreSheetError,
+    clearScoreSheet,
   } = useScoreSheetStore();
 
   // Confirm-submit modal
@@ -85,6 +86,8 @@ export default function ScoreSheetTable({
    */
   useEffect(() => {
     if (teamId && judgeId) {
+      // Clear the current scoresheet to prevent showing old data
+      clearScoreSheet();
       fetchScoreSheetId(judgeId, teamId, sheetType);
     }
   }, [teamId, judgeId, fetchScoreSheetId]);
@@ -528,72 +531,89 @@ export default function ScoreSheetTable({
                               </Box>
 
                               {/* Numeric score input for Q1..Q8 */}
-                              <TextField
-                                id="outlined-number"
-                                label="Score"
-                                type="number"
-                                value={
-                                  formData[question.id] !== undefined && 
-                                  formData[question.id] !== null && 
-                                  formData[question.id] !== "" &&
-                                  formData[question.id] !== 0
-                                    ? formData[question.id]
-                                    : ""
-                                }
-                                // avoid accidental value change from mouse wheel
-                                onWheel={(e) => {
-                                  const inputElement =
-                                    e.target as HTMLInputElement;
-                                  inputElement.blur();
-                                }}
-                                onChange={(e) => {
-                                  // enforce allowed range: [lowPoints, highPoints] or empty
-                                  let value: any = e.target.value;
+                              <Box sx={{ 
+                                display: "flex", 
+                                alignItems: "flex-start", 
+                                justifyContent: "center",
+                                minWidth: { xs: "100px", sm: "120px" },
+                                maxWidth: { xs: "120px", sm: "140px" },
+                                mx: { xs: 1, sm: 2 }
+                              }}>
+                                <TextField
+                                  id="outlined-number"
+                                  label="Score"
+                                  type="number"
+                                  value={
+                                    formData[question.id] !== undefined && 
+                                    formData[question.id] !== null && 
+                                    formData[question.id] !== "" &&
+                                    formData[question.id] !== 0
+                                      ? formData[question.id]
+                                      : ""
+                                  }
+                                  // avoid accidental value change from mouse wheel
+                                  onWheel={(e) => {
+                                    const inputElement =
+                                      e.target as HTMLInputElement;
+                                    inputElement.blur();
+                                  }}
+                                  onChange={(e) => {
+                                    // enforce allowed range: [lowPoints, highPoints] or empty
+                                    let value: any = e.target.value;
 
-                                  if (value !== undefined) {
-                                    if (value === "") {
-                                      value = undefined; // Clear the field
-                                    } else if (Number(value) < question.lowPoints) {
-                                      value = undefined; // Clear if below range
-                                    } else if (Number(value) > question.highPoints) {
-                                      value = undefined; // Clear if above range
-                                    } else {
-                                      value = Number(value); // Convert to number if valid
+                                    if (value !== undefined) {
+                                      if (value === "") {
+                                        value = undefined; // Clear the field
+                                      } else if (Number(value) < question.lowPoints) {
+                                        value = undefined; // Clear if below range
+                                      } else if (Number(value) > question.highPoints) {
+                                        value = undefined; // Clear if above range
+                                      } else {
+                                        value = Number(value); // Convert to number if valid
+                                      }
                                     }
-                                  }
 
-                                  handleScoreChange(question.id, value);
-                                }}
-                                onKeyDown={(e) => {
-                                  // block up/down arrows to prevent accidental changes
-                                  if (
-                                    e.key === "ArrowUp" ||
-                                    e.key === "ArrowDown"
-                                  ) {
-                                    e.preventDefault();
-                                  }
-                                }}
-                                slotProps={{
-                                  inputLabel: {
-                                    shrink: true,
-                                  },
-                                  htmlInput: {
-                                    min: question.lowPoints,
-                                    max: question.highPoints,
-                                    step: 0.5,
-                                  },
-                                }}
-                                helperText={`Allowed: ${question.lowPoints} – ${question.highPoints}`}
-                                sx={{
-                                  minWidth: 120,
-                                  "& .MuiOutlinedInput-root.Mui-focused fieldset": {
-                                    borderColor: theme.palette.success.main,
-                                  },
-                                  "& label.Mui-focused": {
-                                    color: theme.palette.success.main,
-                                  },
-                                }}
-                              />
+                                    handleScoreChange(question.id, value);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    // block up/down arrows to prevent accidental changes
+                                    if (
+                                      e.key === "ArrowUp" ||
+                                      e.key === "ArrowDown"
+                                    ) {
+                                      e.preventDefault();
+                                    }
+                                  }}
+                                  slotProps={{
+                                    inputLabel: {
+                                      shrink: true,
+                                    },
+                                    htmlInput: {
+                                      min: question.lowPoints,
+                                      max: question.highPoints,
+                                      step: 0.5,
+                                    },
+                                  }}
+                                  helperText={`Allowed: ${question.lowPoints} – ${question.highPoints}`}
+                                  sx={{
+                                    width: "100%",
+                                    "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+                                      borderColor: theme.palette.success.main,
+                                    },
+                                    "& label.Mui-focused": {
+                                      color: theme.palette.success.main,
+                                    },
+                                    "& .MuiOutlinedInput-root": {
+                                      borderRadius: 2,
+                                    },
+                                    "& .MuiFormHelperText-root": {
+                                      fontSize: { xs: "0.7rem", sm: "0.75rem" },
+                                      mt: 0.5,
+                                      mx: 0
+                                    }
+                                  }}
+                                />
+                              </Box>
                             </>
                           ) : (
                             // Free-text comments for Q9

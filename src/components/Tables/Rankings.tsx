@@ -56,14 +56,19 @@ const Ranking = () => {
           const { data: clusterResp } = await axios.get(`/api/mapping/clusterToContest/getAllClustersByContest/${selectedContest.id}/`, {
             headers: { Authorization: `Token ${token}` }
           })
-          const clusterData = (clusterResp?.Clusters ?? []).map((c: any) => ({ id: c.id, cluster_name: c.cluster_name ?? c.name, teams: [] }))
+          const clusterData = (clusterResp?.Clusters ?? []).map((c: any) => ({ id: c.id, cluster_name: c.cluster_name ?? c.name, cluster_type: c.cluster_type, teams: [] }))
           const withTeams = await Promise.all(
             clusterData.map(async (cluster: any) => {
               try {
                 const { data: teamResp } = await axios.get(`/api/mapping/clusterToTeam/getAllTeamsByCluster/${cluster.id}/`, {
                   headers: { Authorization: `Token ${token}` }
                 })
-                const teams = (teamResp?.Teams ?? []).map((t: any) => ({ id: t.id, team_name: t.team_name ?? t.name, school_name: t.school_name ?? 'N/A', total_score: t.total_score ?? 0 }))
+                const teams = (teamResp?.Teams ?? []).map((t: any) => ({ 
+                  id: t.id, 
+                  team_name: t.team_name ?? t.name, 
+                  school_name: t.school_name ?? 'N/A', 
+                  total_score: cluster.cluster_type === 'preliminary' ? (t.preliminary_total_score ?? 0) : (t.total_score ?? 0)
+                }))
                 const ranked = teams
                   .sort((a: any, b: any) => (b.total_score ?? 0) - (a.total_score ?? 0))
                   .map((t: any, i: number) => ({ ...t, cluster_rank: i + 1 }))

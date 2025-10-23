@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Box, Chip, Container, Paper, Typography, Link } from "@mui/material";
+import { useEffect, useState } from "react";
+import { Box, Chip, Container, Paper, Typography, Link, Tab, Tabs } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
@@ -19,6 +19,8 @@ const InternalResults: React.FC = () => {
 
   const parsedContestId = contestId ? parseInt(contestId, 10) : undefined;
   const { contest, fetchContestById, isLoadingContest } = useContestStore();
+  const [activeTab, setActiveTab] = useState(0);
+  
 
 
   // Fetch contest information
@@ -65,8 +67,43 @@ const InternalResults: React.FC = () => {
     };
   }, [parsedContestId]);
 
-  const { fetchTeamsByContest, clearTeamsByContest, isLoading } =
+  const { fetchTeamsByContest, clearTeamsByContest, isLoading, teamsByContest } =
     (useMapContestToTeamStore() as any) || {};
+
+  // Trigger tabulation when switching to championship or redesign tabs
+  useEffect(() => {
+    if (activeTab === 1 || activeTab === 2) { // Championship or Redesign tab
+      const runTabulation = async () => {
+        try {
+          const token = localStorage.getItem("token");
+          await axios.put(
+            "/api/tabulation/tabulateScores/",
+            { contestid: parsedContestId },
+            {
+              headers: {
+                Authorization: `Token ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          
+          // Fetch the updated teams with calculated scores
+          await fetchTeamsByContest(parsedContestId);
+        } catch (error) {
+          console.error('Error running tabulation:', error);
+        }
+      };
+      
+      runTabulation();
+    }
+  }, [activeTab, parsedContestId, fetchTeamsByContest]);
+
+  // Check if any teams have advanced to championship
+  const hasChampionshipAdvanced = teamsByContest?.some((team: any) => team.advanced_to_championship === true);
+  
+  // Redesign works if any team has advanced to championship (regardless of championship status)
+  // and includes teams that are not in the championship
+  const hasRedesignAdvanced = hasChampionshipAdvanced;
 
   useEffect(() => {
     const idNum = contestId ? Number(contestId) : NaN;
@@ -125,8 +162,23 @@ const InternalResults: React.FC = () => {
           </Box>
         </Paper>
 
-        {/* Store-only. If store returns nothing, table will show an empty body. */}
-        <InternalResultsTable contestId={parsedContestId} />
+        
+        <Box sx={{ mb: 2 }}>
+          <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
+            <Tab label="Preliminary Results" />
+            {hasChampionshipAdvanced && <Tab label="Championship Results" />}
+            {hasRedesignAdvanced && <Tab label="Redesign Results" />}
+          </Tabs>
+        </Box>
+        {activeTab === 0 && (
+          <InternalResultsTable contestId={parsedContestId} resultType="preliminary" />
+        )}
+        {activeTab === 1 && hasChampionshipAdvanced && ( 
+          <InternalResultsTable contestId={parsedContestId} resultType="championship" />
+        )}
+        {activeTab === 2 && hasChampionshipAdvanced && ( 
+          <InternalResultsTable contestId={parsedContestId} resultType="redesign" />
+        )}
       </Container>
     </Box>
   );

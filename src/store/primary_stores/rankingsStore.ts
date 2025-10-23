@@ -83,6 +83,7 @@ export const useRankingsStore = create<RankingsState>()(
           const clusterData = (clusterResponse.data?.Clusters ?? []).map((c: any) => ({ 
             id: c.id, 
             cluster_name: c.cluster_name ?? c.name, 
+            cluster_type: c.cluster_type,
             teams: [] 
           }));
 
@@ -102,7 +103,7 @@ export const useRankingsStore = create<RankingsState>()(
                   id: t.id, 
                   team_name: t.team_name ?? t.name, 
                   school_name: t.school_name ?? 'N/A', 
-                  total_score: t.total_score ?? 0,
+                  total_score: cluster.cluster_type === 'preliminary' ? (t.preliminary_total_score ?? 0) : (t.total_score ?? 0),
                   advanced_to_championship: t.advanced_to_championship ?? false
                 }));
 

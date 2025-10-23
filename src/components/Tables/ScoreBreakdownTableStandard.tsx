@@ -10,6 +10,8 @@ import {
   JournalScoreSheetFields,
   MachineDesignScoreSheetFields,
   PresentationScoreSheetFields,
+  ChampionshipScoreSheetFields,
+  RedesignScoreSheetFields,
   ScoreSheetType,
 } from "../../types";
 
@@ -171,6 +173,26 @@ export default function ScoreBreakdownTableStandard(
                           <ul>
                             {scoreSheetBreakdown[ScoreSheetType.Journal][
                               JournalScoreSheetFields.Comments
+                            ].map((comment, index) => (
+                              <li key={index}>
+                                <Typography sx={{ mb: 1 }}>
+                                  {comment}
+                                </Typography>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                    </TableCell>
+                  )}
+                  {type === ScoreSheetType.Championship && (
+                    <TableCell colSpan={3}>
+                      {scoreSheetBreakdown &&
+                        scoreSheetBreakdown[ScoreSheetType.Championship][
+                          ChampionshipScoreSheetFields.Comments
+                        ][0] !== "" && (
+                          <ul>
+                            {scoreSheetBreakdown[ScoreSheetType.Championship][
+                              ChampionshipScoreSheetFields.Comments
                             ].map((comment, index) => (
                               <li key={index}>
                                 <Typography sx={{ mb: 1 }}>
@@ -377,6 +399,17 @@ export default function ScoreBreakdownTableStandard(
                         textAlign: "center"
                       }}>
                         {scoreSheetBreakdown &&
+                          scoreSheetBreakdown[ScoreSheetType.Presentation] &&
+                          scoreSheetBreakdown[ScoreSheetType.Presentation][
+                            PresentationScoreSheetFields[
+                              question.field as keyof typeof PresentationScoreSheetFields
+                            ]
+                          ] &&
+                          Array.isArray(scoreSheetBreakdown[ScoreSheetType.Presentation][
+                            PresentationScoreSheetFields[
+                              question.field as keyof typeof PresentationScoreSheetFields
+                            ]
+                          ]) &&
                           scoreSheetBreakdown[ScoreSheetType.Presentation][
                             PresentationScoreSheetFields[
                               question.field as keyof typeof PresentationScoreSheetFields
@@ -396,6 +429,17 @@ export default function ScoreBreakdownTableStandard(
                         textAlign: "center"
                       }}>
                         {scoreSheetBreakdown &&
+                          scoreSheetBreakdown[ScoreSheetType.Journal] &&
+                          scoreSheetBreakdown[ScoreSheetType.Journal][
+                            JournalScoreSheetFields[
+                              question.field as keyof typeof JournalScoreSheetFields
+                            ]
+                          ] &&
+                          Array.isArray(scoreSheetBreakdown[ScoreSheetType.Journal][
+                            JournalScoreSheetFields[
+                              question.field as keyof typeof JournalScoreSheetFields
+                            ]
+                          ]) &&
                           scoreSheetBreakdown[ScoreSheetType.Journal][
                             JournalScoreSheetFields[
                               question.field as keyof typeof JournalScoreSheetFields
@@ -415,9 +459,80 @@ export default function ScoreBreakdownTableStandard(
                         textAlign: "center"
                       }}>
                         {scoreSheetBreakdown &&
+                          scoreSheetBreakdown[ScoreSheetType.MachineDesign] &&
                           scoreSheetBreakdown[ScoreSheetType.MachineDesign][
                             MachineDesignScoreSheetFields[
                               question.field as keyof typeof MachineDesignScoreSheetFields
+                            ]
+                          ] &&
+                          Array.isArray(scoreSheetBreakdown[ScoreSheetType.MachineDesign][
+                            MachineDesignScoreSheetFields[
+                              question.field as keyof typeof MachineDesignScoreSheetFields
+                            ]
+                          ]) &&
+                          scoreSheetBreakdown[ScoreSheetType.MachineDesign][
+                            MachineDesignScoreSheetFields[
+                              question.field as keyof typeof MachineDesignScoreSheetFields
+                            ]
+                          ].join(", ")}
+                      </Typography>
+                    </TableCell>
+                  )}
+                  {type === ScoreSheetType.Championship && (
+                    <TableCell sx={{ 
+                      minWidth: { xs: "80px", sm: "100px" },
+                      maxWidth: { xs: "100px", sm: "120px" }
+                    }}>
+                      <Typography sx={{ 
+                        fontSize: { xs: "0.8rem", sm: "0.95rem" },
+                        fontWeight: 600,
+                        textAlign: "center"
+                      }}>
+                        {scoreSheetBreakdown &&
+                          scoreSheetBreakdown[ScoreSheetType.Championship] &&
+                          scoreSheetBreakdown[ScoreSheetType.Championship][
+                            ChampionshipScoreSheetFields[
+                              question.field as keyof typeof ChampionshipScoreSheetFields
+                            ]
+                          ] &&
+                          Array.isArray(scoreSheetBreakdown[ScoreSheetType.Championship][
+                            ChampionshipScoreSheetFields[
+                              question.field as keyof typeof ChampionshipScoreSheetFields
+                            ]
+                          ]) &&
+                          scoreSheetBreakdown[ScoreSheetType.Championship][
+                            ChampionshipScoreSheetFields[
+                              question.field as keyof typeof ChampionshipScoreSheetFields
+                            ]
+                          ].join(", ")}
+                      </Typography>
+                    </TableCell>
+                  )}
+                  {type === ScoreSheetType.Redesign && (
+                    <TableCell sx={{ 
+                      minWidth: { xs: "80px", sm: "100px" },
+                      maxWidth: { xs: "100px", sm: "120px" }
+                    }}>
+                      <Typography sx={{ 
+                        fontSize: { xs: "0.8rem", sm: "0.95rem" },
+                        fontWeight: 600,
+                        textAlign: "center"
+                      }}>
+                        {scoreSheetBreakdown &&
+                          scoreSheetBreakdown[ScoreSheetType.Redesign] &&
+                          scoreSheetBreakdown[ScoreSheetType.Redesign][
+                            RedesignScoreSheetFields[
+                              question.field as keyof typeof RedesignScoreSheetFields
+                            ]
+                          ] &&
+                          Array.isArray(scoreSheetBreakdown[ScoreSheetType.Redesign][
+                            RedesignScoreSheetFields[
+                              question.field as keyof typeof RedesignScoreSheetFields
+                            ]
+                          ]) &&
+                          scoreSheetBreakdown[ScoreSheetType.Redesign][
+                            RedesignScoreSheetFields[
+                              question.field as keyof typeof RedesignScoreSheetFields
                             ]
                           ].join(", ")}
                       </Typography>

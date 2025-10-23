@@ -111,9 +111,6 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
           set({ mappings: fetchedMappings });
           set({ mapScoreSheetError: null });
         } catch (error: any) {
-          console.error('Error fetching score sheets by judge:', error);
-          console.error('Error response:', error.response?.data);
-          console.error('Error status:', error.response?.status);
           const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || "Failed to fetch score sheets by judge";
           set({ mapScoreSheetError: errorMessage });
           throw new Error(errorMessage);

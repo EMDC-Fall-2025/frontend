@@ -13,6 +13,7 @@ interface MapClusterJudgeState {
   fetchJudgesByClusterId: (clusterId: number) => Promise<void>;
   fetchClusterByJudgeId: (judgeId: number) => Promise<void>;
   fetchClustersForJudges: (judges: Judge[]) => Promise<void>;
+  fetchAllClustersByJudgeId: (judgeId: number) => Promise<Cluster[]>;
   createClusterJudgeMapping: (mapData: any) => Promise<void>;
   deleteClusterJudgeMapping: (
     mapId: number,
@@ -143,6 +144,30 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
           set({ judgeClusters: clusters, mapClusterJudgeError: null });
         } catch (error) {
           const errorMessage = "Error fetching clusters for judges";
+          set({ mapClusterJudgeError: errorMessage });
+          throw new Error(errorMessage);
+        } finally {
+          set({ isLoadingMapClusterJudge: false });
+        }
+      },
+
+      fetchAllClustersByJudgeId: async (judgeId: number) => {
+        set({ isLoadingMapClusterJudge: true });
+        try {
+          const token = localStorage.getItem("token");
+          const response = await axios.get(
+            `/api/mapping/clusterToJudge/getAllClustersByJudge/${judgeId}/`,
+            {
+              headers: {
+                Authorization: `Token ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          set({ mapClusterJudgeError: null });
+          return response.data?.Clusters || [];
+        } catch (error) {
+          const errorMessage = "Error fetching all clusters for judge";
           set({ mapClusterJudgeError: errorMessage });
           throw new Error(errorMessage);
         } finally {

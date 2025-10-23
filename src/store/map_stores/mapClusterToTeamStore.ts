@@ -12,6 +12,7 @@ interface MapClusterTeamState {
 
   fetchClustersByContestId: (contestId: number) => Promise<void>;
   getTeamsByClusterId: (clusterId: number) => Promise<void>;
+  fetchTeamsByClusterId: (clusterId: number) => Promise<Team[]>;
   createClusterTeamMapping: (data: ClusterTeamMapping) => Promise<void>;
   deleteClusterTeamMapping: (mapId: number) => Promise<void>;
   clearClusters: () => void;
@@ -77,6 +78,28 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
           }));
         } catch (error) {
           handleError(error, set, "Error fetching teams by cluster");
+        }
+      },
+
+      fetchTeamsByClusterId: async (clusterId: number) => {
+        set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
+        try {
+          const token = localStorage.getItem("token");
+          const response = await axios.get(
+            `/api/mapping/clusterToTeam/getAllTeamsByCluster/${clusterId}/`,
+            {
+              headers: {
+                Authorization: `Token ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          set({ isLoadingMapClusterToTeam: false, mapClusterToTeamError: null });
+          return response.data?.Teams || [];
+        } catch (error) {
+          const errorMessage = "Error fetching teams by cluster";
+          set({ mapClusterToTeamError: errorMessage, isLoadingMapClusterToTeam: false });
+          throw new Error(errorMessage);
         }
       },
 

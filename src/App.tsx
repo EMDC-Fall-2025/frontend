@@ -30,6 +30,8 @@ import MultiTeamPresentationScore from "./pages/PresentationMultiTeamScore";
 import MultiTeamJournalScore from "./pages/JournalMultiTeamScore";
 import MultiTeamMachineDesignScore from "./pages/MachineDesignMultiTeamScore";
 import ChampionshipScore from "./pages/ChampionshipScore";
+import ChampionshipScoreBreakdown from "./pages/ChampionshipScoreBreakdown";
+import RedesignScoreBreakdown from "./pages/RedesignScoreBreakdown";
 import { Toaster } from "react-hot-toast";
 import Ranking from "./components/Tables/Rankings";
 
@@ -81,7 +83,7 @@ function App() {
           {isAuthenticated && <Route path="/awards/" element={<AdminSpecialAwardsPage />} />}
           {isAuthenticated && <Route path="/organizerAwards/" element={<OrganizerSpecialAwards />} />}
           {isAuthenticated && (
-            <Route path="/championship-score/:judgeId/:contestId/" element={<ChampionshipScore />} />
+            <Route path="/championship-score/:judgeId/:teamId/" element={<ChampionshipScore />} />
           )}
           {isAuthenticated && <Route path="/judgeAwards/" element={<JudgeSpecialAwards />} />}
 
@@ -128,8 +130,18 @@ function App() {
               element={<ScoreBreakdown />}
             />
           )}
-        
-          {isAuthenticated && <Route path="/score-breakdown/:teamId" element={<ScoreBreakdown />} />}
+          {isAuthenticated && (
+            <Route
+              path="/championship-score-breakdown/:teamId"
+              element={<ChampionshipScoreBreakdown />}
+            />
+          )}
+          {isAuthenticated && (
+            <Route
+              path="/redesign-score-breakdown/:teamId"
+              element={<RedesignScoreBreakdown />}
+            />
+          )}
         </Routes>
         
         

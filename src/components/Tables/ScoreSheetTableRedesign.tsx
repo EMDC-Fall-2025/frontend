@@ -14,6 +14,7 @@ import {
   TextField,
   Button,
   Link,
+  Divider,
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
@@ -53,7 +54,8 @@ export default function ScoreSheetTableRedesign({
     fetchScoreSheetById,
     isLoadingScoreSheet,
     updateScores,
-    editScoreSheet
+    editScoreSheet,
+    clearScoreSheet
   } = useScoreSheetStore();
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
 
@@ -68,9 +70,10 @@ export default function ScoreSheetTableRedesign({
 
   useEffect(() => {
     if (teamId && judgeId) {
+      clearScoreSheet();
       fetchScoreSheetId(judgeId, teamId, sheetType);
     }
-  }, [teamId, judgeId, fetchScoreSheetId]);
+  }, [teamId, judgeId, fetchScoreSheetId, clearScoreSheet]);
 
   useEffect(() => {
     if (scoreSheetId) {
@@ -107,6 +110,19 @@ export default function ScoreSheetTableRedesign({
       setFormData({});
     }
   }, [scoreSheet, judgeId, teamId]);
+
+  useEffect(() => {
+    const handlePageHide = () => {
+      clearScoreSheet();
+    };
+
+    window.addEventListener("pagehide", handlePageHide);
+
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+      clearScoreSheet();
+    };
+  }, [clearScoreSheet]);
 
   const handleScoreChange = (
     questionId: number,
@@ -208,84 +224,132 @@ export default function ScoreSheetTableRedesign({
     <CircularProgress />
   ) : (
     <>
+      {/* Back link to the judging dashboard */}
       <Link
         onClick={() => navigate(-1)}
-        sx={{ textDecoration: "none" }}
-        style={{ cursor: "pointer" }}
+        sx={{
+          textDecoration: "none",
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          ml: "2%",
+          mt: 2,
+          color: theme.palette.success.main,
+          "&:hover": { color: theme.palette.success.dark },
+        }}
       >
-        <Typography variant="body2" sx={{ m: 2 }}>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
           {"<"} Back to Judging Dashboard{" "}
         </Typography>
       </Link>
-      <Typography variant="h1" sx={{ ml: "2%", mr: 5, mt: 4, mb: 2 }}>
+
+      {/* Page title + team name (subtitle) */}
+      <Typography
+        variant="h4"
+        sx={{
+          ml: "2%",
+          mr: 5,
+          mt: 3,
+          mb: 0.5,
+          fontWeight: 800,
+          color: theme.palette.success.main,
+        }}
+      >
         {title}
       </Typography>
-      <Typography variant="body1" sx={{ ml: "2%", mr: 5, mb: 4 }}>
+      <Typography variant="subtitle2" color="text.secondary" sx={{ ml: "2%", mr: 5, mb: 2 }}>
         {teamName}
       </Typography>
       <Container
         component="form"
         sx={{
-          width: "90vw",
-          height: "auto",
-          padding: 3,
-          bgcolor: theme.palette.secondary.light,
+          width: "auto",
+          p: 3,
+          bgcolor: "#fff", 
+          borderRadius: 3,
+          border: `1px solid ${theme.palette.grey[300]}`,
           ml: "2%",
           mr: 1,
           mb: 3,
-          borderRadius: 5,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
         }}
       >
-        <Button
-          variant="contained"
-          onClick={handleSaveScoreSheet}
+        {/* Actions: save, expand incomplete, collapse all */}
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2 }}>
+          <Button
+            variant="contained"
+            onClick={handleSaveScoreSheet}
+            sx={{
+              bgcolor: theme.palette.success.main,
+              "&:hover": { bgcolor: theme.palette.success.dark },
+              color: "#fff",
+              minWidth: 200,
+              height: 44,
+              textTransform: "none",
+              borderRadius: 2,
+            }}
+          >
+            Save
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={expandIncompleteRows}
+            sx={{
+              borderColor: theme.palette.success.main,
+              color: theme.palette.success.main,
+              "&:hover": {
+                borderColor: theme.palette.success.dark,
+                bgcolor: "rgba(46,125,50,0.06)",
+              },
+              minWidth: 200,
+              height: 44,
+              textTransform: "none",
+              borderRadius: 2,
+            }}
+          >
+            Expand Incomplete Rows
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={handleCollapseAllRows}
+            sx={{
+              borderColor: theme.palette.grey[400],
+              color: theme.palette.text.primary,
+              "&:hover": { borderColor: theme.palette.grey[600], bgcolor: theme.palette.grey[50] },
+              minWidth: 200,
+              height: 44,
+              textTransform: "none",
+              borderRadius: 2,
+            }}
+          >
+            Collapse All
+          </Button>
+        </Box>
+        <Divider sx={{ mb: 2 }} />
+
+        {/* Scoring table: each question row can be expanded to show criteria + input */}
+        <TableContainer
+          component={Paper}
           sx={{
-            mb: 2,
-            bgcolor: theme.palette.secondary.main,
-            color: theme.palette.primary.main,
-            width: 200,
-            height: 45,
+            borderRadius: 2,
+            border: `1px solid ${theme.palette.grey[200]}`,
+            overflow: "hidden",
           }}
         >
-          Save
-        </Button>
-        <Button
-          variant="contained"
-          onClick={expandIncompleteRows}
-          sx={{
-            mb: 2,
-            bgcolor: theme.palette.secondary.main,
-            color: theme.palette.primary.main,
-            width: 200,
-            height: 45,
-          }}
-        >
-          Expand Incomplete Rows
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleCollapseAllRows}
-          sx={{
-            mb: 2,
-            bgcolor: theme.palette.secondary.main,
-            color: theme.palette.primary.main,
-            width: 200,
-            height: 45,
-          }}
-        >
-          Collapse All
-        </Button>
-        <TableContainer component={Paper}>
-          <Table>
+          <Table
+            sx={{
+              "& .MuiTableRow-root": { transition: "background-color 120ms ease" },
+              "& tr:hover td": {
+                backgroundColor: "rgba(46,125,50,0.04)",
+              },
+              "& td, & th": { borderColor: theme.palette.grey[200] },
+            }}
+          >
             <TableBody>
               {questions.map((question) => (
                 <React.Fragment key={question.id}>
-                  <TableRow onClick={() => handleToggle(question.id)}>
-                    <TableCell>
+                  {/* Summary row: shows question text and status icon */}
+                  <TableRow onClick={() => handleToggle(question.id)} sx={{ cursor: "pointer" }}>
+                    <TableCell sx={{ width: 56 }}>
                       <IconButton aria-label="expand row" size="small">
                         {openRows[question.id] ? (
                           <KeyboardArrowUpIcon />
@@ -297,22 +361,21 @@ export default function ScoreSheetTableRedesign({
                     <TableCell
                       component="th"
                       scope="row"
-                      sx={{ pl: 2, textAlign: "left", mr: 1 }}
+                      sx={{ pl: 2, textAlign: "left", pr: 2, fontWeight: 600 }}
                     >
                       {question.questionText}
                     </TableCell>
-                    <TableCell align="right" scope="row">
-                      {question.id !== 8 && (
-                        <>
-                          {formData[question.id] === undefined || formData[question.id] === 0 || formData[question.id] === "" || formData[question.id] === null ? (
-                            <CloseIcon sx={{ color: "red" }} />
-                          ) : (
-                            <CheckIcon sx={{ color: "green" }} />
-                          )}
-                        </>
-                      )}
+                    <TableCell align="right" scope="row" sx={{ width: 56 }}>
+                      {/* For questions 1..7 show a check/close icon; question 8 is comments */}
+                      {question.id != 8 &&
+                        (formData[question.id] === undefined || formData[question.id] === 0 || formData[question.id] === "" || formData[question.id] === null ? (
+                          <CloseIcon sx={{ color: theme.palette.error.main }} />
+                        ) : (
+                          <CheckIcon sx={{ color: theme.palette.success.main }} />
+                        ))}
                     </TableCell>
                   </TableRow>
+                  {/* Details row: criteria cards + score input (or comments for Q8) */}
                   <TableRow>
                     <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
                       <Collapse in={openRows[question.id]} timeout="auto" unmountOnExit>
@@ -321,124 +384,129 @@ export default function ScoreSheetTableRedesign({
                             mt: 2,
                             mb: 2,
                             display: "flex",
-                            gap: 3,
-                            flexDirection: {
-                              md: "row",
-                              sm: "column",
-                              xs: "column",
-                            },
+                            gap: 2,
+                            flexDirection: { md: "row", sm: "column", xs: "column" },
                             width: "100%",
-                            alignItems: "center",
+                            alignItems: "stretch",
                             justifyContent: "center",
+                            px: { xs: 1, sm: 2 },
                           }}
                         >
                           {question.id !== 8 ? (
                             <>
+                              {/* Criteria 1 card */}
                               <Box
                                 sx={{
-                                  bgcolor: theme.palette.secondary.light,
-                                  padding: 1,
-                                  borderRadius: 3,
-                                  width: "95%",
-                                  height: "100%",
+                                  bgcolor: theme.palette.grey[50],
+                                  border: `1px solid ${theme.palette.grey[200]}`,
+                                  p: 1.5,
+                                  borderRadius: 2,
+                                  flex: 1,
                                 }}
                               >
                                 <Typography>{question.criteria1}</Typography>
-                                <Typography
-                                  sx={{
-                                    mt: 1,
-                                    fontWeight: 800,
-                                    fontSize: "12pt",
-                                  }}
-                                >
+                                <Typography sx={{ mt: 1, fontWeight: 800, fontSize: 12 }}>
                                   {question.criteria1Points}
                                 </Typography>
                               </Box>
+
+                              {/* Criteria 2 card */}
                               <Box
                                 sx={{
-                                  bgcolor: theme.palette.secondary.light,
-                                  padding: 1,
-                                  borderRadius: 3,
-                                  width: "95%",
-                                  height: "100%",
+                                  bgcolor: theme.palette.grey[50],
+                                  border: `1px solid ${theme.palette.grey[200]}`,
+                                  p: 1.5,
+                                  borderRadius: 2,
+                                  flex: 1,
                                 }}
                               >
                                 <Typography>{question.criteria2}</Typography>
-                                <Typography
-                                  sx={{
-                                    mt: 1,
-                                    fontWeight: 800,
-                                    fontSize: "12pt",
-                                  }}
-                                >
+                                <Typography sx={{ mt: 1, fontWeight: 800, fontSize: 12 }}>
                                   {question.criteria2Points}
                                 </Typography>
                               </Box>
+
+                              {/* Criteria 3 card */}
                               <Box
                                 sx={{
-                                  bgcolor: theme.palette.secondary.light,
-                                  padding: 1,
-                                  borderRadius: 3,
-                                  width: "95%",
-                                  height: "100%",
+                                  bgcolor: theme.palette.grey[50],
+                                  border: `1px solid ${theme.palette.grey[200]}`,
+                                  p: 1.5,
+                                  borderRadius: 2,
+                                  flex: 1,
                                 }}
                               >
                                 <Typography>{question.criteria3}</Typography>
-                                <Typography
-                                  sx={{
-                                    mt: 1,
-                                    fontWeight: 800,
-                                    fontSize: "12pt",
-                                  }}
-                                >
+                                <Typography sx={{ mt: 1, fontWeight: 800, fontSize: 12 }}>
                                   {question.criteria3Points}
                                 </Typography>
                               </Box>
-                              <TextField
-                                id={`score-${question.id}`}
-                                label="Score"
-                                type="number"
-                                value={
-                                  formData[question.id] !== 0
-                                    ? formData[question.id]
-                                    : ""
-                                }
-                                onWheel={(e) => {
-                                  const inputElement = e.target as HTMLInputElement;
-                                  inputElement.blur();
-                                }}
-                                onChange={(e) => {
-                                  let value = e.target.value;
-  
-                                  if (value !== undefined) {
-                                    if (value === "") {
-                                      value = "";
-                                    } else if (value < question.lowPoints) {
-                                      value = "";
-                                    } else if (value > question.highPoints) {
-                                      value = "";
+                              {/* Numeric score input for Q1..Q7 */}
+                              <Box sx={{ 
+                                display: "flex", 
+                                alignItems: "flex-start", 
+                                justifyContent: "center",
+                                minWidth: { xs: "100px", sm: "120px" },
+                                maxWidth: { xs: "120px", sm: "140px" },
+                                mx: { xs: 1, sm: 2 }
+                              }}>
+                                <TextField
+                                  id="outlined-number"
+                                  label="Score"
+                                  type="number"
+                                  value={
+                                    formData[question.id] !== undefined && 
+                                    formData[question.id] !== null && 
+                                    formData[question.id] !== "" &&
+                                    formData[question.id] !== 0
+                                      ? formData[question.id]
+                                      : ""
+                                  }
+                                  onWheel={(e) => {
+                                    const inputElement = e.target as HTMLInputElement;
+                                    inputElement.blur();
+                                  }}
+                                  onChange={(e) => {
+                                    let value = e.target.value;
+                                    if (value !== undefined) {
+                                      if (value === "") {
+                                        value = "";
+                                      } else if (value < question.lowPoints) {
+                                        value = "";
+                                      } else if (value > question.highPoints) {
+                                        value = "";
+                                      }
                                     }
-                                  }
-  
-                                  handleScoreChange(question.id, value);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-                                    e.preventDefault();
-                                  }
-                                }}
-                                slotProps={{
-                                  inputLabel: {
-                                    shrink: true,
-                                  },
-                                  htmlInput: {
-                                    min: question.lowPoints,
-                                    max: question.highPoints,
-                                    step: 0.5,
-                                  },
-                                }}
-                                sx={{ minWidth: "75px" }}
-                              />
+                                    handleScoreChange(question.id, value);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                                      e.preventDefault();
+                                    }
+                                  }}
+                                  slotProps={{
+                                    inputLabel: {
+                                      shrink: true,
+                                    },
+                                    htmlInput: {
+                                      min: question.lowPoints,
+                                      max: question.highPoints,
+                                      step: 0.5,
+                                    },
+                                  }}
+                                  sx={{ 
+                                    width: "100%",
+                                    "& .MuiOutlinedInput-root": {
+                                      borderRadius: 2,
+                                    },
+                                    "& .MuiFormHelperText-root": {
+                                      fontSize: { xs: "0.7rem", sm: "0.75rem" },
+                                      mt: 0.5,
+                                      mx: 0
+                                    }
+                                  }}
+                                />
+                              </Box>
                             </>
                           ) : (
                             <TextField
@@ -475,10 +543,13 @@ export default function ScoreSheetTableRedesign({
           disabled={!allFieldsFilled()}
           sx={{
             mt: 3,
-            bgcolor: theme.palette.secondary.main,
-            color: theme.palette.primary.main,
-            width: 200,
-            height: 45,
+            bgcolor: theme.palette.success.main,
+            "&:hover": { bgcolor: theme.palette.success.dark },
+            color: "#fff",
+            minWidth: 200,
+            height: 44,
+            textTransform: "none",
+            borderRadius: 2,
           }}
         >
           Submit

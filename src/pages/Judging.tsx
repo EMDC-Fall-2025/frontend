@@ -3,7 +3,6 @@ import {
   Box,
   Container,
   Typography,
-  CircularProgress,
   Card,
   CardContent,
   Grid,
@@ -20,24 +19,24 @@ import useClusterTeamStore from "../store/map_stores/mapClusterToTeamStore";
 import JudgeDashboardTable from "../components/Tables/JudgeDashboardTable";
 import theme from "../theme";
 import { Team } from "../types";
-import axios from "axios";
 
 export default function Judging() {
   const { judgeId } = useParams();
   const judgeIdNumber = judgeId ? parseInt(judgeId, 10) : null;
   const { judge, fetchJudgeById, clearJudge } = useJudgeStore();
   const { listAdvancers } = useRankingsStore();
-  const { fetchClusterByJudgeId, clearCluster } = useMapClusterJudgeStore();
+  const { fetchClusterByJudgeId, fetchAllClustersByJudgeId, clearCluster } = useMapClusterJudgeStore();
   const {
     mapClusterToTeamError,
     clearClusterTeamMappings,
     clearTeamsByClusterId,
+    fetchTeamsByClusterId,
   } = useClusterTeamStore();
   const [teams, setTeams] = useState<Team[]>([]);
   const [currentCluster, setCurrentCluster] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [advancers, setAdvancers] = useState<any[]>([]);
   const [showAdvancers, setShowAdvancers] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   const handleListAdvancers = async () => {
     // Get contest ID from the current cluster or the first cluster
@@ -70,34 +69,20 @@ export default function Judging() {
 
   useEffect(() => {
     if (judgeIdNumber) {
-      setIsLoading(true);
       fetchJudgeById(judgeIdNumber);
       // Fetch all clusters for this judge across all contests
-      fetchAllClustersByJudgeId(judgeIdNumber);
-    } else {
-      setIsLoading(false);
+      fetchAllClustersForJudge(judgeIdNumber);
     }
   }, [judgeIdNumber]);
 
 
-  // New function to fetch all clusters for a judge
-  const fetchAllClustersByJudgeId = async (judgeId: number) => {
+  // New function to fetch all clusters for a judge using stores
+  const fetchAllClustersForJudge = async (judgeId: number) => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `/api/mapping/clusterToJudge/getAllClustersByJudge/${judgeId}/`,
-        {
-          headers: {
-            Authorization: `Token ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      // Use store function to fetch all clusters for the judge
+      const allClusters = await fetchAllClustersByJudgeId(judgeId);
       
-      if (response.data?.Clusters) {
-        // Use all clusters returned by the backend (they are already filtered by is_active)
-        const allClusters = response.data.Clusters;
-        
+      if (allClusters && allClusters.length > 0) {
         // Check if we have any championship/redesign clusters that are active
         const championshipClusters = allClusters.filter((cluster: any) => 
           cluster.cluster_type === 'championship' || 
@@ -111,16 +96,8 @@ export default function Judging() {
         let hasTeamsInChampionshipClusters = false;
         for (const cluster of championshipClusters) {
           try {
-            const teamsResponse = await axios.get(
-              `/api/mapping/clusterToTeam/getAllTeamsByCluster/${cluster.id}/`,
-              {
-                headers: {
-                  Authorization: `Token ${token}`,
-                  "Content-Type": "application/json",
-                },
-              }
-            );
-            if (teamsResponse.data?.Teams && teamsResponse.data.Teams.length > 0) {
+            const teams = await fetchTeamsByClusterId(cluster.id);
+            if (teams && teams.length > 0) {
               hasTeamsInChampionshipClusters = true;
               break;
             }
@@ -144,20 +121,12 @@ export default function Judging() {
         
         for (const cluster of filteredClusters) {
           try {
-            // Fetch teams for this cluster
-            const teamsResponse = await axios.get(
-              `/api/mapping/clusterToTeam/getAllTeamsByCluster/${cluster.id}/`,
-              {
-                headers: {
-                  Authorization: `Token ${token}`,
-                  "Content-Type": "application/json",
-                },
-              }
-            );
+            // Use store function to fetch teams for this cluster
+            const teams = await fetchTeamsByClusterId(cluster.id);
             
-            if (teamsResponse.data?.Teams) {
+            if (teams && teams.length > 0) {
               // Map teams to include advanced_to_championship field
-              const mappedTeams = teamsResponse.data.Teams.map((t: any) => ({
+              const mappedTeams = teams.map((t: any) => ({
                 ...t,
                 advanced_to_championship: t.advanced_to_championship ?? false
               }));
@@ -165,43 +134,34 @@ export default function Judging() {
             }
           } catch (error: any) {
             console.error(`Error fetching teams for cluster ${cluster.id}:`, error);
-            console.error(`Error details:`, error.response?.data || error.message);
           }
         }
         
         setTeams(allTeams);
-        setIsLoading(false);
+        setHasLoaded(true);
         
         // Set the current cluster to the first cluster that has teams
         let currentClusterToSet = null;
         for (const cluster of filteredClusters) {
           try {
-            const teamsResponse = await axios.get(
-              `/api/mapping/clusterToTeam/getAllTeamsByCluster/${cluster.id}/`,
-              {
-                headers: {
-                  Authorization: `Token ${token}`,
-                  "Content-Type": "application/json",
-                },
-              }
-            );
-            if (teamsResponse.data?.Teams && teamsResponse.data.Teams.length > 0) {
+            const teams = await fetchTeamsByClusterId(cluster.id);
+            if (teams && teams.length > 0) {
               currentClusterToSet = cluster;
               break;
             }
           } catch (error) {
-        
+            // Silently continue
           }
         }
         
         setCurrentCluster(currentClusterToSet);
       } else {
         setTeams([]);
+        setHasLoaded(true);
       }
     } catch (error: any) {
       console.error('Error fetching all clusters for judge:', error);
-      console.error('Error details:', error.response?.data || error.message);
-      setIsLoading(false);
+      setHasLoaded(true);
       // Fallback to original single cluster fetch
       fetchClusterByJudgeId(judgeId);
     }
@@ -247,10 +207,11 @@ export default function Judging() {
     return (
       <Box sx={{ pb: 8, backgroundColor: "#fafafa", minHeight: "100vh" }}>
         <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 } }}>
-        {isLoading || mapClusterToTeamError ? (
+        {mapClusterToTeamError ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
-            <CircularProgress />
-            <Typography sx={{ ml: 2 }}>Loading judge dashboard...</Typography>
+            <Typography variant="h6" color="error">
+              Error loading judge dashboard. Please refresh the page.
+            </Typography>
           </Box>
         ) : (
           <>
@@ -357,20 +318,16 @@ export default function Judging() {
               <Box sx={{ px: 3, pb: 3 }}>
                 {teams.length > 0 ? (
                   <JudgeDashboardTable teams={teams} currentCluster={currentCluster} />
-                ) : (
-                  <Box>
-                    <Typography>No teams available for this cluster.</Typography>
-                    <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-                      Debug: Teams array length: {teams.length}
+                ) : hasLoaded ? (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="h6" color="text.secondary">
+                      No teams available for this judge.
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      Debug: Current cluster: {currentCluster ? currentCluster.cluster_name : 'None'}
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      Debug: Judge ID: {judgeIdNumber}
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      Please contact the organizer if you believe this is an error.
                     </Typography>
                   </Box>
-                )}
+                ) : null}
               </Box>
             </Box>
           </>

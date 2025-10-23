@@ -37,7 +37,7 @@ import { useAuthStore } from "../store/primary_stores/authStore";
 export default function ManageContest() {
   const { contestId } = useParams();
   const parsedContestId = contestId ? parseInt(contestId, 10) : 0;
-  
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Tab state management - persists active tab across page reloads
   const [value, setValue] = useState(
@@ -420,6 +420,7 @@ export default function ManageContest() {
           }}
         >
           <OrganizerJudgesTable
+          key={refreshTrigger}
             clusters={clusters}
             judgesByClusterId={judgesByClusterId}
             contestid={parsedContestId}
@@ -483,9 +484,25 @@ export default function ManageContest() {
       handleClose={() => {
         setOpenAssignJudgeModal(false);
       }}
-      onSuccess={() => {
+      onSuccess={async () => {
         // Refresh judges after successful assignment
-        getAllJudgesByContestId(parsedContestId);
+        await getAllJudgesByContestId(parsedContestId);
+        // Also refresh clusters and teams to ensure all data is up to date
+        await fetchClustersByContestId(parsedContestId);
+        
+        // Refresh judges for each cluster to update judgesByClusterId
+        if (clusters && clusters.length > 0) {
+          for (const cluster of clusters) {
+            try {
+              await fetchJudgesByClusterId(cluster.id);
+            } catch (error) {
+              console.error(`Error fetching judges for cluster ${cluster.id}:`, error);
+            }
+          }
+        }
+        
+        // Trigger a refresh of the UI components
+        setRefreshTrigger(prev => prev + 1);
         setOpenAssignJudgeModal(false);
       }}
     />
