@@ -1,73 +1,120 @@
 // src/components/AwardWinners.tsx
-import { Grid, Card, CardContent, Typography } from "@mui/material";
+import { Grid, Card, CardContent, Typography, Box } from "@mui/material";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
-import GroupIcon from "@mui/icons-material/Group";
-import StarIcon from "@mui/icons-material/Star";
-import FavoriteIcon from "@mui/icons-material/Favorite";
 import theme from "../../theme";
 
 interface Award {
   id: number;
   award_name: string;
   team_name: string;
+  isJudge?: boolean;
 }
 
 export default function AwardWinners({ awards }: { awards: Award[] }) {
-  // placeholder awards
-  const placeholderAwards: Award[] = [
-    { id: -1, award_name: "Best Overall Design", team_name: "Quantum" },
-    { id: -2, award_name: "Best Team Collaboration", team_name: "Pulse" },
-    { id: -3, award_name: "Fan Favorite", team_name: "Maxis" },
-    { id: -4, award_name: "Underdog Award", team_name: "Orion" },
-  ];
+  const allAwards = awards || [];
 
-  //icons place holder
-  const placeholderIcons = [
-    <EmojiEventsIcon sx={{ fontSize: 40, color: theme.palette.primary.main, mb: 1 }} />,
-    <GroupIcon sx={{ fontSize: 40, color: theme.palette.secondary.main, mb: 1 }} />,
-    <StarIcon sx={{ fontSize: 40, color: theme.palette.warning.main, mb: 1 }} />,
-    <FavoriteIcon sx={{ fontSize: 40, color: theme.palette.error.main, mb: 1 }} />,
-  ];
-
-  //display 4 awards
-  const displayAwards: Award[] = [
-    ...awards,
-    ...placeholderAwards.slice(0, Math.max(0, 4 - awards.length)),
-  ].slice(0, 4);
+  // If no awards
+  if (allAwards.length === 0) {
+    return (
+      <Typography
+        align="center"
+        sx={{ mt: 4, fontWeight: 500, color: theme.palette.text.secondary }}
+      >
+        No awards have been assigned yet.
+      </Typography>
+    );
+  }
 
   return (
-    <Grid container spacing={3}>
-      {displayAwards.map((award, index) => (
-        <Grid item xs={12} sm={6} key={index}> 
-          <Card
-            sx={{
-              borderRadius: 3,
-              backgroundColor: theme.palette.success.light + "22",
-              textAlign: "center",
-              p: 3,
-              height: "auto"
-            }}
-          >
-            <CardContent>
-              
-              {award.id < 0
-                ? placeholderIcons[index % placeholderIcons.length]
-                : <EmojiEventsIcon sx={{ fontSize: 40, color: theme.palette.primary.main, mb: 1 }} />
-              }
+    <Box sx={{ maxWidth: 1100, mx: "auto", px: 2 }}>
 
-              <Typography variant="h6" sx={{ fontWeight: "bold", mb: 1 }}>
-                {award.award_name}
-              </Typography>
-              <Typography
-                variant="body1"
-                sx={{ fontWeight: 600, color: theme.palette.success.main }}
+      <Grid
+        container
+        spacing={3}
+        justifyContent="center"
+        alignItems="stretch"
+        sx={{ display: "flex", flexWrap: "wrap" }}
+      >
+        {allAwards.flatMap((award) =>
+          award.award_name
+            .split(",")
+            .map((name, index) => (
+              <Grid
+                item
+                xs={12}
+                sm={6}
+                md={4}
+                key={`${award.id}-${index}`}
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                }}
               >
-                {award.team_name}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      ))}
-    </Grid>
+                <Card
+                  elevation={4}
+                  sx={{
+                    width: "100%",
+                    maxWidth: 320,
+                    borderRadius: 4,
+                    backgroundColor: theme.palette.background.paper,
+                    textAlign: "center",
+                    p: 2,
+                    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      boxShadow: "0 6px 20px rgba(0,0,0,0.1)",
+                    },
+                  }}
+                >
+                  <CardContent>
+                    <Box
+                      display="flex"
+                      justifyContent="center"
+                      alignItems="center"
+                      sx={{
+                        width: 70,
+                        height: 70,
+                        borderRadius: "50%",
+                        backgroundColor: theme.palette.primary.light + "22",
+                        mx: "auto",
+                        mb: 2,
+                      }}
+                    >
+                      <EmojiEventsIcon
+                        sx={{
+                          fontSize: 38,
+                          color: theme.palette.primary.main,
+                        }}
+                      />
+                    </Box>
+
+                    <Typography
+                      variant="subtitle1"
+                      sx={{
+                        fontWeight: 700,
+                        fontSize: "1.05rem",
+                        mb: 1,
+                        color: theme.palette.text.primary,
+                      }}
+                    >
+                      {name.trim()}
+                    </Typography>
+
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        color: theme.palette.success.main,
+                      }}
+                    >
+                      {award.team_name}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))
+        )}
+      </Grid>
+    </Box>
   );
 }

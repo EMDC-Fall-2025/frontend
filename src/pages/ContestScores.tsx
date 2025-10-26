@@ -132,6 +132,7 @@ export default function ContestScores() {
           onChange={(_, newValue) => setActiveTab(newValue)}
           textColor="primary"
           indicatorColor="primary"
+          variant="scrollable"
           sx={{
             borderBottom: `1px solid ${theme.palette.grey[300]}`,
             mb: 2,

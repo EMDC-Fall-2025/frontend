@@ -35,14 +35,14 @@ export default function ContestTable({
         boxShadow: 3,
       }}
     >
-      <Table aria-label="contest table">
-        {/* ✅ Light Green Header Row */}
+      <Table
+        aria-label="contest table"
+        sx={{
+          "& th:first-of-type, & td:first-of-type": { pl: 1 },
+        }}
+      >
         <TableHead>
-          <TableRow
-            sx={{
-              backgroundColor: theme.palette.primary.light,
-            }}
-          >
+          <TableRow sx={{ backgroundColor: theme.palette.primary.main }}>
             <TableCell sx={{ fontWeight: 700, color: "#fff" }}>
               Contest Name
             </TableCell>
@@ -63,9 +63,7 @@ export default function ContestTable({
               <TableRow
                 key={row.id}
                 hover
-                sx={{
-                  cursor: "pointer",
-                }}
+                sx={{ cursor: "pointer" }}
                 onClick={() => onRowClick(row.id)}
               >
                 <TableCell>{row.name}</TableCell>

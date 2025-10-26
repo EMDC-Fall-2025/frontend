@@ -30,7 +30,7 @@ import MultiTeamJournalScore from "./pages/JournalMultiTeamScore";
 import MultiTeamMachineDesignScore from "./pages/MachineDesignMultiTeamScore";
 import ChampionshipScore from "./pages/ChampionshipScore";
 import ContestScores from "./pages/ContestScores";
-import Contests from "./pages/ContestsPage";
+import ContestPage from "./pages/ContestsPage";
 /*import MasterScorePage from "./pages/MasterScorePage";*/
 
 

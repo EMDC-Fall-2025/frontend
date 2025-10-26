@@ -8,9 +8,6 @@ import ContestTable from "../components/Tables/ContestTable";
 
 
 // FILE OVERVIEW: page for displaying contests
-
-
-
 export default function Contests() {
   const { allContests, fetchAllContests, isLoadingContest } = useContestStore();
   const navigate = useNavigate();
@@ -21,14 +18,24 @@ export default function Contests() {
   }, []);
 
   // function to create data row
-  function createData(id: number, name: string, date: string, is_open: boolean) {
+  function createData(
+    id: number,
+    name: string,
+    date: string,
+    is_open: boolean
+  ) {
+    const today = new Date();
+    const contestDate = new Date(date);
     let status = "";
-    if (is_open) {
+
+    if (!is_open && contestDate < today) {
+      status = "Finalized";
+    } else if (is_open) {
       status = "In Progress";
+    } else {
+      status = "Not Started";
     }
-    else {
-      status = "Not Started"
-    }
+
     return { id, name, date, status };
   }
 
@@ -40,9 +47,15 @@ export default function Contests() {
   };
 
   // transforms array into rows
-  const rows = allContests.map((contest: { id: number; name: string; date: string; is_open: boolean; }) =>
-    createData(contest.id, contest.name, contest.date, contest.is_open)
-  );
+  const rows = allContests
+    .map((contest: { id: number; name: string; date: string; is_open: boolean }) =>
+      createData(contest.id, contest.name, contest.date, contest.is_open)
+    )
+    .sort((a: { status: string; }, b: { status: string; }) => {
+      const order = { "Finalized": 1, "In Progress": 2, "Not Started": 3 };
+      return order[a.status as keyof typeof order] - order[b.status as keyof typeof order];
+    });
+
 
   return (
     <>

@@ -28,22 +28,14 @@ import { useMapCoachToTeamStore } from "../store/map_stores/mapCoachToTeamStore"
 import useMapClusterTeamStore from "../store/map_stores/mapClusterToTeamStore";
 import { useAuthStore } from "../store/primary_stores/authStore";
 
-/**
- * ManageContest Component
- * 
- * Main page for managing contest details including judges, teams, and clusters.
- * Provides tabbed interface for different management functions.
- */
 export default function ManageContest() {
   const { contestId } = useParams();
   const parsedContestId = contestId ? parseInt(contestId, 10) : 0;
 
-
-  // Tab state management - persists active tab across page reloads
+  // UI state
   const [value, setValue] = useState(
     () => localStorage.getItem("activeTab") || "1"
   );
-  // Modal state management for different creation/editing operations
   const [openJudgeModal, setOpenJudgeModal] = useState(false);
   const [openClusterModal, setOpenClusterModal] = useState(false);
   const [openTeamModal, setOpenTeamModal] = useState(false);
@@ -51,59 +43,37 @@ export default function ManageContest() {
 
   const { role } = useAuthStore();
 
-  // Contest data management
+  // Stores
   const { contest, fetchContestById, clearContest, isLoadingContest } =
     useContestStore();
-  // Judge data management for the contest
+  const { getAllJudgesByContestId, clearJudges } = useContestJudgeStore();
+  const { clusters, fetchClustersByContestId, clearClusters } =
+    useMapClusterToContestStore();
+  const { getTeamsByClusterId, teamsByClusterId, clearTeamsByClusterId } =
+    useMapClusterTeamStore();
   const {
-    getAllJudgesByContestId,
-    clearJudges
-  } = useContestJudgeStore();
-  // Cluster data management for the contest
-  const {
-    clusters,
-    fetchClustersByContestId,
-    clearClusters,
-  } = useMapClusterToContestStore();
-  // Team data management organized by clusters
-  const {
-    getTeamsByClusterId,
-    teamsByClusterId,
-    clearTeamsByClusterId,
-  } = useMapClusterTeamStore();
-  // Judge-cluster mapping for organizing judges by clusters
-  const {
-
     fetchJudgesByClusterId,
     judgesByClusterId,
     clearJudgesByClusterId,
     clearJudgeClusters,
   } = useMapClusterJudgeStore();
-  // Judge operations and score sheet management
-  const {
-    clearSubmissionStatus,
-  } = useJudgeStore();
-  // Coach data management for teams
+  const { clearSubmissionStatus } = useJudgeStore();
   const { fetchCoachesByTeams, clearCoachesByTeams, isLoadingMapCoachToTeam } =
     useMapCoachToTeamStore();
 
-  // Load all contest-related data on component mount
+  // Load contest data
   useEffect(() => {
     const loadAllData = async () => {
       if (parsedContestId) {
-        // Load contest details, judges, and clusters for the specific contest
         await fetchContestById(parsedContestId);
-
-        // Then load judges and clusters in parallel
         await Promise.all([
           getAllJudgesByContestId(parsedContestId),
-          fetchClustersByContestId(parsedContestId)
+          fetchClustersByContestId(parsedContestId),
         ]);
       }
     };
+    loadAllData();
 
-    loadContestData();
-    // Cleanup function to clear all data when component unmounts
     return () => {
       clearContest();
       clearJudges();
@@ -111,72 +81,50 @@ export default function ManageContest() {
     };
   }, [parsedContestId]);
 
-  // Load teams and judges for each cluster when clusters are available
+  // Load teams by cluster
   useEffect(() => {
     const loadTeams = async () => {
-      if (clusters && clusters.length > 0) {
-        // Fetch teams and judges for each cluster
+      if (clusters.length > 0) {
         for (const cluster of clusters) {
           await getTeamsByClusterId(cluster.id);
         }
       }
     };
-
-    if (clusters.length > 0) {
-      loadTeams();
-    }
-
-    return () => {
-      clearTeamsByClusterId();
-    };
+    if (clusters.length > 0) loadTeams();
+    return () => clearTeamsByClusterId();
   }, [clusters.length]);
 
-  // Load judges for each cluster when clusters are available
+  // Load judges by cluster
   useEffect(() => {
     const loadJudges = async () => {
-      if (clusters && clusters.length > 0) {
+      if (clusters.length > 0) {
         for (const cluster of clusters) {
           await fetchJudgesByClusterId(cluster.id);
         }
       }
     };
-
-    if (clusters.length > 0) {
-      loadJudges();
-    }
-
-    return () => {
-      clearJudgesByClusterId();
-    };
+    if (clusters.length > 0) loadJudges();
+    return () => clearJudgesByClusterId();
   }, [clusters.length]);
 
-  // Load coaches when teams are available
+  // Load coaches for teams
   useEffect(() => {
     const loadCoaches = async () => {
-      if (clusters && clusters.length > 0) {
-        for (const cluster of clusters) {
-          const teams = teamsByClusterId[cluster.id];
-          if (teams && teams.length > 0) {
-            await fetchCoachesByTeams(teams);
-          }
+      for (const cluster of clusters) {
+        const teams = teamsByClusterId[cluster.id];
+        if (teams && teams.length > 0) {
+          await fetchCoachesByTeams(teams);
         }
       }
     };
-
-    const hasTeams = clusters.some(cluster =>
-      teamsByClusterId[cluster.id]?.length > 0
+    const hasTeams = clusters.some(
+      (cluster) => teamsByClusterId[cluster.id]?.length > 0
     );
-
-    if (hasTeams) {
-      loadCoaches();
-    }
-
-    return () => {
-      clearCoachesByTeams();
-    };
+    if (hasTeams) loadCoaches();
+    return () => clearCoachesByTeams();
   }, [clusters.length, Object.keys(teamsByClusterId).length]);
 
-
+  // Cleanup on page hide
   useEffect(() => {
     const handlePageHide = () => {
       clearClusters();
@@ -188,12 +136,8 @@ export default function ManageContest() {
       clearJudgeClusters();
       clearCoachesByTeams();
     };
-
     window.addEventListener("pagehide", handlePageHide);
-
-    return () => {
-      window.removeEventListener("pagehide", handlePageHide);
-    };
+    return () => window.removeEventListener("pagehide", handlePageHide);
   }, []);
 
   const hasClusters = clusters.length > 0;
@@ -201,32 +145,29 @@ export default function ManageContest() {
     (cluster) => teamsByClusterId[cluster.id]?.length > 0
   );
 
-
-  const handleChange = (_event: React.SyntheticEvent, newValue: string) => {
+  const handleChange = (_: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);
     localStorage.setItem("activeTab", newValue);
   };
 
+  // Loading spinner
+  if (isLoadingContest || isLoadingMapCoachToTeam) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "50vh",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-  return isLoadingContest ||
-    isLoadingJudge ||
-    isLoadingMapClusterContest ||
-    isLoadingMapClusterJudge ||
-    isLoadingMapClusterToTeam ||
-    isLoadingMapCoachToTeam ||
-    isLoadingMapContestJudge ? (
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "50vh",
-      }}
-    >
-      <CircularProgress />
-    </Box>
-  ) : (
-  <>
+  return (
+    <>
       {/* Back to Dashboard */}
       {role?.user_type === 2 && (
         <Link href="/organizer" sx={{ textDecoration: "none" }}>
@@ -257,12 +198,13 @@ export default function ManageContest() {
         </Link>
       )}
 
-      {/* Page Title */}
-      <Typography variant="h4"
-        sx={{ fontWeight: 700, m: 5, color: theme.palette.primary.main }}>
+      {/* Title */}
+      <Typography
+        variant="h4"
+        sx={{ fontWeight: 700, m: 5, color: theme.palette.primary.main }}
+      >
         Manage {contest?.name}
       </Typography>
-
 
       {/* Main Container */}
       <Container
@@ -293,10 +235,6 @@ export default function ManageContest() {
                 bgcolor: theme.palette.success.main,
                 color: theme.palette.common.white,
                 "&:hover": { bgcolor: theme.palette.success.dark },
-                "&.Mui-disabled": {
-                  bgcolor: theme.palette.action.disabledBackground,
-                  color: theme.palette.action.disabled,
-                },
               }}
             >
               Create Judge
@@ -314,7 +252,7 @@ export default function ManageContest() {
                 color: theme.palette.success.main,
                 "&:hover": {
                   borderColor: theme.palette.success.dark,
-                  backgroundColor: "rgba(46,125,50,0.06)", // success.main @ ~6%
+                  backgroundColor: "rgba(46,125,50,0.06)",
                 },
               }}
             >
@@ -336,10 +274,6 @@ export default function ManageContest() {
                   borderColor: theme.palette.success.dark,
                   backgroundColor: "rgba(46,125,50,0.06)",
                 },
-                "&.Mui-disabled": {
-                  borderColor: theme.palette.action.disabledBackground,
-                  color: theme.palette.action.disabled,
-                },
               }}
             >
               Create Team
@@ -347,9 +281,7 @@ export default function ManageContest() {
 
             <Button
               variant="outlined"
-              onClick={() => {
-                setOpenAssignJudgeModal(true);
-              }}
+              onClick={() => setOpenAssignJudgeModal(true)}
               disabled={!hasClusters}
               sx={{
                 textTransform: "none",
@@ -362,17 +294,12 @@ export default function ManageContest() {
                   borderColor: theme.palette.success.dark,
                   backgroundColor: "rgba(46,125,50,0.06)",
                 },
-                "&.Mui-disabled": {
-                  borderColor: theme.palette.action.disabledBackground,
-                  color: theme.palette.action.disabled,
-                },
               }}
             >
               Assign Judge to Contest
             </Button>
           </Box>
         )}
-
 
         {/* Tabs */}
         <TabContext value={value}>
@@ -402,265 +329,78 @@ export default function ManageContest() {
                 },
               }}
             >
-              {"<"} Back to Dashboard
-          </Typography>
-        </Link>
-      )}
-          {role?.user_type === 1 && (
-            <Link href="/admin" sx={{ textDecoration: "none" }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  m: 2,
-                  color: theme.palette.primary.main,
-                  "&:hover": { textDecoration: "underline" },
-                }}
-              >
-                {"<"} Back to Dashboard
-              </Typography>
-            </Link>
-          )}
-
-          {/* Page Title */}
-          <Typography variant="h4"
-            sx={{ fontWeight: 700, m: 5, color: theme.palette.primary.main }}>
-            Manage {contest?.name}
-          </Typography>
-
-
-          {/* Main Container */}
-          <Container
-            sx={{
-              maxWidth: 1200,
-              width: "100%",
-              mx: "auto",
-              my: 2,
-              p: 3,
-              bgcolor: theme.palette.background.paper,
-              borderRadius: 3,
-              boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
-              border: `1px solid ${theme.palette.divider}`,
-            }}
-          >
-            {/* Action Buttons */}
-            {!contest?.is_open && (
-              <Box sx={{ mb: 3, display: "flex", flexWrap: "wrap", gap: 1.5 }}>
-                <Button
-                  variant="contained"
-                  onClick={() => setOpenJudgeModal(true)}
-                  disabled={!hasClusters || !hasTeams}
-                  sx={{
-                    textTransform: "none",
-                    borderRadius: 2,
-                    px: 4.5,
-                    fontWeight: 600,
-                    bgcolor: theme.palette.success.main,
-                    color: theme.palette.common.white,
-                    "&:hover": { bgcolor: theme.palette.success.dark },
-                    "&.Mui-disabled": {
-                      bgcolor: theme.palette.action.disabledBackground,
-                      color: theme.palette.action.disabled,
-                    },
-                  }}
-                >
-                  Create Judge
-                </Button>
-
-                <Button
-                  variant="outlined"
-                  onClick={() => setOpenClusterModal(true)}
-                  sx={{
-                    textTransform: "none",
-                    borderRadius: 2,
-                    px: 4.5,
-                    fontWeight: 600,
-                    borderColor: theme.palette.success.main,
-                    color: theme.palette.success.main,
-                    "&:hover": {
-                      borderColor: theme.palette.success.dark,
-                      backgroundColor: "rgba(46,125,50,0.06)", // success.main @ ~6%
-                    },
-                  }}
-                >
-                  Create Cluster
-                </Button>
-
-                <Button
-                  variant="outlined"
-                  onClick={() => setOpenTeamModal(true)}
-                  disabled={!hasClusters}
-                  sx={{
-                    textTransform: "none",
-                    borderRadius: 2,
-                    px: 4.5,
-                    fontWeight: 600,
-                    borderColor: theme.palette.success.main,
-                    color: theme.palette.success.main,
-                    "&:hover": {
-                      borderColor: theme.palette.success.dark,
-                      backgroundColor: "rgba(46,125,50,0.06)",
-                    },
-                    "&.Mui-disabled": {
-                      borderColor: theme.palette.action.disabledBackground,
-                      color: theme.palette.action.disabled,
-                    },
-                  }}
-                >
-                  Create Team
-                </Button>
-
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    setOpenAssignJudgeModal(true);
-                  }}
-                  disabled={!hasClusters}
-                  sx={{
-                    textTransform: "none",
-                    borderRadius: 2,
-                    px: 4.5,
-                    fontWeight: 600,
-                    borderColor: theme.palette.success.main,
-                    color: theme.palette.success.main,
-                    "&:hover": {
-                      borderColor: theme.palette.success.dark,
-                      backgroundColor: "rgba(46,125,50,0.06)",
-                    },
-                    "&.Mui-disabled": {
-                      borderColor: theme.palette.action.disabledBackground,
-                      color: theme.palette.action.disabled,
-                    },
-                  }}
-                >
-                  Assign Judge to Contest
-                </Button>
-              </Box>
-            )}
-
-
-            {/* Tabs */}
-            <TabContext value={value}>
-              <Box
-                sx={{
-                  borderBottom: `1px solid ${theme.palette.divider}`,
-                  bgcolor: theme.palette.background.paper,
-                  borderTopLeftRadius: 8,
-                  borderTopRightRadius: 8,
-                }}
-              >
-                <TabList
-                  onChange={handleChange}
-                  TabIndicatorProps={{
-                    style: {
-                      backgroundColor: theme.palette.primary.main,
-                      height: 3,
-                      borderRadius: 2,
-                    },
-                  }}
-                >
-                  <Tab
-                    label="Judges"
-                    value="1"
-                    sx={{
-                      textTransform: "none",
-                      fontWeight: 600,
-                      "&.Mui-selected": { color: theme.palette.primary.main },
-                    }}
-                  />
-                  <Tab
-                    label="Teams"
-                    value="2"
-                    sx={{
-                      textTransform: "none",
-                      fontWeight: 600,
-                      "&.Mui-selected": { color: theme.palette.primary.main },
-                    }}
-                  />
-                </TabList>
-              </Box>
-
-              {/* Judges Tab */}
-              <TabPanel
+              <Tab
+                label="Judges"
                 value="1"
                 sx={{
-                  bgcolor: "#f9f9f9",
-                  borderBottomLeftRadius: 8,
-                  borderBottomRightRadius: 8,
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderTop: "none",
+                  textTransform: "none",
+                  fontWeight: 600,
+                  "&.Mui-selected": { color: theme.palette.primary.main },
                 }}
-              >
-                <OrganizerJudgesTable
-                  clusters={clusters}
-                  judgesByClusterId={judgesByClusterId}
-                  contestid={parsedContestId}
-                />
-              </TabPanel>
-
-              {/* Teams Tab */}
-              <TabPanel
+              />
+              <Tab
+                label="Teams"
                 value="2"
                 sx={{
-                  bgcolor: theme.palette.common.white,
-                  borderBottomLeftRadius: 8,
-                  borderBottomRightRadius: 8,
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderTop: "none",
+                  textTransform: "none",
+                  fontWeight: 600,
+                  "&.Mui-selected": { color: theme.palette.primary.main },
                 }}
-              >
-                <OrganizerTeamsTable
-                  clusters={clusters}
-                  contestId={parsedContestId ?? 0}
-                />
-              </TabPanel>
-            </TabContext>
-          </Container>
+              />
+            </TabList>
+          </Box>
 
-          {/* Modals */}
-          <JudgeModal
-            open={openJudgeModal}
-            handleClose={() => setOpenJudgeModal(false)}
-            mode="new"
-            clusters={clusters}
-            contestid={parsedContestId}
-            onSuccess={() => {
-              // Refresh all data after successful judge creation
-              getAllJudgesByContestId(parsedContestId);
-              fetchClustersByContestId(parsedContestId);
+          <TabPanel value="1">
+            <OrganizerJudgesTable
+              clusters={clusters}
+              judgesByClusterId={judgesByClusterId}
+              contestid={parsedContestId}
+            />
+          </TabPanel>
 
-              // Refresh judges for all clusters
-              if (clusters && clusters.length > 0) {
-                clusters.forEach(cluster => {
-                  fetchJudgesByClusterId(cluster.id);
-                });
-              }
-            }}
-          />
-          <ClusterModal
-            open={openClusterModal}
-            handleClose={() => setOpenClusterModal(false)}
-            mode="new"
-            contestid={parsedContestId}
-          />
-          <TeamModal
-            open={openTeamModal}
-            handleClose={() => setOpenTeamModal(false)}
-            mode="new"
-            clusters={clusters}
-            contestId={parsedContestId}
-          />
-          <AssignJudgeToContestModal
-            open={openAssignJudgeModal}
-            handleClose={() => {
-              setOpenAssignJudgeModal(false);
-            }}
-            onSuccess={() => {
-              // Refresh judges after successful assignment
-              getAllJudgesByContestId(parsedContestId);
-              setOpenAssignJudgeModal(false);
-            }}
-          />
+          <TabPanel value="2">
+            <OrganizerTeamsTable
+              clusters={clusters}
+              contestId={parsedContestId ?? 0}
+            />
+          </TabPanel>
+        </TabContext>
+      </Container>
+
+      {/* Modals */}
+      <JudgeModal
+        open={openJudgeModal}
+        handleClose={() => setOpenJudgeModal(false)}
+        mode="new"
+        clusters={clusters}
+        contestid={parsedContestId}
+        onSuccess={() => {
+          getAllJudgesByContestId(parsedContestId);
+          fetchClustersByContestId(parsedContestId);
+          clusters.forEach((cluster) => fetchJudgesByClusterId(cluster.id));
+        }}
+      />
+      <ClusterModal
+        open={openClusterModal}
+        handleClose={() => setOpenClusterModal(false)}
+        mode="new"
+        contestid={parsedContestId}
+      />
+      <TeamModal
+        open={openTeamModal}
+        handleClose={() => setOpenTeamModal(false)}
+        mode="new"
+        clusters={clusters}
+        contestId={parsedContestId}
+      />
+      <AssignJudgeToContestModal
+        open={openAssignJudgeModal}
+        handleClose={() => setOpenAssignJudgeModal(false)}
+        onSuccess={() => {
+          getAllJudgesByContestId(parsedContestId);
+          setOpenAssignJudgeModal(false);
+        }}
+      />
     </>
-        );
+  );
 }
-
