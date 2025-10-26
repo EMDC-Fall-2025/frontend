@@ -164,10 +164,48 @@ const InternalResults: React.FC = () => {
 
         
         <Box sx={{ mb: 2 }}>
-          <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
-            <Tab label="Preliminary Results" />
-            {hasChampionshipAdvanced && <Tab label="Championship Results" />}
-            {hasRedesignAdvanced && <Tab label="Redesign Results" />}
+          <Tabs 
+            value={activeTab} 
+            onChange={(_, newValue) => setActiveTab(newValue)}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
+            sx={{
+              '& .MuiTabs-scrollButtons': {
+                '&.Mui-disabled': {
+                  opacity: 0.3,
+                },
+              },
+            }}
+          >
+            <Tab 
+              label="Preliminary Results" 
+              sx={{ 
+                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                minWidth: { xs: "auto", sm: "auto" },
+                px: { xs: 1, sm: 2 }
+              }} 
+            />
+            {hasChampionshipAdvanced && (
+              <Tab 
+                label="Championship Results" 
+                sx={{ 
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                  minWidth: { xs: "auto", sm: "auto" },
+                  px: { xs: 1, sm: 2 }
+                }} 
+              />
+            )}
+            {hasRedesignAdvanced && (
+              <Tab 
+                label="Redesign Results" 
+                sx={{ 
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                  minWidth: { xs: "auto", sm: "auto" },
+                  px: { xs: 1, sm: 2 }
+                }} 
+              />
+            )}
           </Tabs>
         </Box>
         {activeTab === 0 && (
@@ -179,7 +217,7 @@ const InternalResults: React.FC = () => {
         {activeTab === 2 && hasChampionshipAdvanced && ( 
           <InternalResultsTable contestId={parsedContestId} resultType="redesign" />
         )}
-      </Container>
+            </Container>
     </Box>
   );
 };

@@ -232,7 +232,7 @@ export default function ScoreSheetTableRedesign({
           cursor: "pointer",
           display: "inline-flex",
           alignItems: "center",
-          ml: "2%",
+          ml: "4%",
           mt: 2,
           color: theme.palette.success.main,
           "&:hover": { color: theme.palette.success.dark },
@@ -264,7 +264,7 @@ export default function ScoreSheetTableRedesign({
         component="form"
         sx={{
           width: "auto",
-          p: 3,
+          p: 2,
           bgcolor: "#fff", 
           borderRadius: 3,
           border: `1px solid ${theme.palette.grey[300]}`,
@@ -282,11 +282,15 @@ export default function ScoreSheetTableRedesign({
               bgcolor: theme.palette.success.main,
               "&:hover": { bgcolor: theme.palette.success.dark },
               color: "#fff",
-              minWidth: 200,
-              height: 44,
+              minWidth: { xs: 120, sm: 160, md: 200 }, // responsive widths
+              height: { xs: 36, sm: 40, md: 44 },      // responsive heights
+              fontSize: { xs: "0.7rem", sm: "0.8rem", md: "0.9rem" },
               textTransform: "none",
               borderRadius: 2,
+              mb: { xs: 1, sm: 0 }, // margin bottom only on small screens
+              p: { xs: "4px 8px", sm: "6px 12px" } // responsive padding
             }}
+        
           >
             Save
           </Button>
@@ -300,10 +304,13 @@ export default function ScoreSheetTableRedesign({
                 borderColor: theme.palette.success.dark,
                 bgcolor: "rgba(46,125,50,0.06)",
               },
-              minWidth: 200,
-              height: 44,
+              minWidth: { xs: 120, sm: 160, md: 200 }, // responsive widths
+              height: { xs: 36, sm: 40, md: 44 },      // responsive heights
+              fontSize: { xs: "0.7rem", sm: "0.8rem", md: "0.9rem" },
               textTransform: "none",
               borderRadius: 2,
+              mb: { xs: 1, sm: 0 }, // margin bottom only on small screens
+              p: { xs: "4px 8px", sm: "6px 12px" } // responsive padding
             }}
           >
             Expand Incomplete Rows
@@ -315,10 +322,13 @@ export default function ScoreSheetTableRedesign({
               borderColor: theme.palette.grey[400],
               color: theme.palette.text.primary,
               "&:hover": { borderColor: theme.palette.grey[600], bgcolor: theme.palette.grey[50] },
-              minWidth: 200,
-              height: 44,
+              minWidth: { xs: 120, sm: 160, md: 200 }, // responsive widths
+              height: { xs: 36, sm: 40, md: 44 },      // responsive heights
+              fontSize: { xs: "0.7rem", sm: "0.8rem", md: "0.9rem" },
               textTransform: "none",
               borderRadius: 2,
+              mb: { xs: 1, sm: 0 }, // margin bottom only on small screens
+              p: { xs: "4px 8px", sm: "6px 12px" } // responsive padding
             }}
           >
             Collapse All
@@ -365,7 +375,7 @@ export default function ScoreSheetTableRedesign({
                     >
                       {question.questionText}
                     </TableCell>
-                    <TableCell align="right" scope="row" sx={{ width: 56 }}>
+                    <TableCell align="right" scope="row" sx={{ width: 56, fontSize: 1 }}>
                       {/* For questions 1..7 show a check/close icon; question 8 is comments */}
                       {question.id != 8 &&
                         (formData[question.id] === undefined || formData[question.id] === 0 || formData[question.id] === "" || formData[question.id] === null ? (
@@ -381,15 +391,15 @@ export default function ScoreSheetTableRedesign({
                       <Collapse in={openRows[question.id]} timeout="auto" unmountOnExit>
                         <Box
                           sx={{
-                            mt: 2,
-                            mb: 2,
+                            mt: { xs: 0.5, sm: 1 },
+                            mb: { xs: 0.5, sm: 1 },
                             display: "flex",
-                            gap: 2,
+                            gap: { xs: 1, sm: 2 },
                             flexDirection: { md: "row", sm: "column", xs: "column" },
-                            width: "100%",
+                            width: { xs: "100%", sm: "80%" },
                             alignItems: "stretch",
                             justifyContent: "center",
-                            px: { xs: 1, sm: 2 },
+                            px: { xs: 0.5, sm: 2 },
                           }}
                         >
                           {question.id !== 8 ? (
@@ -399,13 +409,13 @@ export default function ScoreSheetTableRedesign({
                                 sx={{
                                   bgcolor: theme.palette.grey[50],
                                   border: `1px solid ${theme.palette.grey[200]}`,
-                                  p: 1.5,
+                                  p: { xs: 0.75, sm: 1 },
                                   borderRadius: 2,
                                   flex: 1,
                                 }}
                               >
-                                <Typography>{question.criteria1}</Typography>
-                                <Typography sx={{ mt: 1, fontWeight: 800, fontSize: 12 }}>
+                                <Typography sx={{fontSize: { xs: "0.65rem", sm: "0.85rem" }}}>{question.criteria1}</Typography>
+                                <Typography sx={{ mt: 1, fontWeight: 800, fontSize: { xs: 10, sm: 12 } }}>
                                   {question.criteria1Points}
                                 </Typography>
                               </Box>
@@ -415,13 +425,13 @@ export default function ScoreSheetTableRedesign({
                                 sx={{
                                   bgcolor: theme.palette.grey[50],
                                   border: `1px solid ${theme.palette.grey[200]}`,
-                                  p: 1.5,
+                                  p: { xs: 0.75, sm: 1.5 },
                                   borderRadius: 2,
                                   flex: 1,
                                 }}
                               >
-                                <Typography>{question.criteria2}</Typography>
-                                <Typography sx={{ mt: 1, fontWeight: 800, fontSize: 12 }}>
+                                <Typography sx={{fontSize: { xs: "0.65rem", sm: "0.85rem" }}}>{question.criteria2}</Typography>
+                                <Typography sx={{ mt: 1, fontWeight: 800, fontSize: { xs: 10, sm: 12 } }}>
                                   {question.criteria2Points}
                                 </Typography>
                               </Box>
@@ -431,13 +441,13 @@ export default function ScoreSheetTableRedesign({
                                 sx={{
                                   bgcolor: theme.palette.grey[50],
                                   border: `1px solid ${theme.palette.grey[200]}`,
-                                  p: 1.5,
+                                  p: { xs: 0.75, sm: 1 },
                                   borderRadius: 2,
                                   flex: 1,
                                 }}
                               >
-                                <Typography>{question.criteria3}</Typography>
-                                <Typography sx={{ mt: 1, fontWeight: 800, fontSize: 12 }}>
+                                <Typography sx={{fontSize: { xs: "0.65rem", sm: "0.85rem" }}}>{question.criteria3}</Typography>
+                                <Typography sx={{ mt: 1, fontWeight: 800, fontSize: { xs: 10, sm: 12 } }}>
                                   {question.criteria3Points}
                                 </Typography>
                               </Box>
@@ -446,9 +456,9 @@ export default function ScoreSheetTableRedesign({
                                 display: "flex", 
                                 alignItems: "flex-start", 
                                 justifyContent: "center",
-                                minWidth: { xs: "100px", sm: "120px" },
-                                maxWidth: { xs: "120px", sm: "140px" },
-                                mx: { xs: 1, sm: 2 }
+                                minWidth: { xs: "80px", sm: "120px" },
+                                maxWidth: { xs: "100px", sm: "140px" },
+                                mx: { xs: 0.5, sm: 2 }
                               }}>
                                 <TextField
                                   id="outlined-number"
@@ -500,9 +510,16 @@ export default function ScoreSheetTableRedesign({
                                       borderRadius: 2,
                                     },
                                     "& .MuiFormHelperText-root": {
-                                      fontSize: { xs: "0.7rem", sm: "0.75rem" },
+                                      fontSize: { xs: "0.6rem", sm: "0.75rem" },
                                       mt: 0.5,
                                       mx: 0
+                                    },
+                                    "& .MuiInputLabel-root": {
+                                      fontSize: { xs: "0.75rem", sm: "0.875rem" }
+                                    },
+                                    "& .MuiOutlinedInput-input": {
+                                      fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                                      py: { xs: 1, sm: 1.5 }
                                     }
                                   }}
                                 />
@@ -525,7 +542,15 @@ export default function ScoreSheetTableRedesign({
                                   e.target.value ? String(e.target.value) : undefined
                                 )
                               }
-                              sx={{ width: "90%" }}
+                              sx={{ 
+                                width: "90%",
+                                "& .MuiInputLabel-root": {
+                                  fontSize: { xs: "0.75rem", sm: "0.875rem" }
+                                },
+                                "& .MuiOutlinedInput-input": {
+                                  fontSize: { xs: "0.75rem", sm: "0.875rem" }
+                                }
+                              }}
                             />
                           )}
                         </Box>
