@@ -13,11 +13,18 @@ import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import MilitaryTechIcon from "@mui/icons-material/MilitaryTech";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import StarIcon from "@mui/icons-material/Star";
+import { useContestStore } from "../store/primary_stores/contestStore";
+import { useMapClusterToContestStore } from "../store/map_stores/mapClusterToContestStore";
+import useContestJudgeStore from "../store/map_stores/mapContestToJudgeStore";
+
 
 
 export default function ContestScores() {
   const { contestId } = useParams<{ contestId: string }>();
   const contestIdNumber = contestId ? parseInt(contestId, 10) : null;
+  const { fetchContestById } = useContestStore();
+  const { fetchClustersByContestId } = useMapClusterToContestStore();
+  const { getAllJudgesByContestId } = useContestJudgeStore();
 
   const {
     teamsByContest,
@@ -35,6 +42,10 @@ export default function ContestScores() {
 
   useEffect(() => {
     if (contestIdNumber) {
+      fetchTeamsByContest(contestIdNumber);
+      fetchContestById(contestIdNumber);
+      fetchClustersByContestId(contestIdNumber);
+      getAllJudgesByContestId(contestIdNumber);
       fetchTeamsByContest(contestIdNumber);
     }
     return () => {
