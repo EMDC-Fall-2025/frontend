@@ -31,6 +31,7 @@ import Modal from "./Modal";
 import theme from "../../theme";
 import toast from "react-hot-toast";
 import { useContestStore } from "../../store/primary_stores/contestStore";
+import { useMapClusterToContestStore } from "../../store/map_stores/mapClusterToContestStore";
 import { Judge } from "../../types";
 import axios from "axios";
 import SearchBar from "../SearchBar";
@@ -55,8 +56,6 @@ export default function AssignJudgeToContestModal(
   const [selectedContestId, setSelectedContestId] = React.useState<number>(-1);
   const [selectedClusterId, setSelectedClusterId] = React.useState<number>(-1);
   
-  // Reference to track which contest's clusters have been loaded to prevent duplicate API calls
-  const loadedContestIdRef = React.useRef<number>(-1);
   
   // Track which score sheets the judge will be responsible for
   const [scoreSheets, setScoreSheets] = React.useState({
@@ -80,10 +79,10 @@ export default function AssignJudgeToContestModal(
 
   
 
-  // Local state for clusters specific to selected contest
-  const [contestClusters, setContestClusters] = React.useState<any[]>([]);
+  // Use cluster store instead of local state
+  const { clusters: contestClusters, fetchClustersByContestId } = useMapClusterToContestStore();
   // Local state for judges 
-  const [assignedJudgeClusterPairs, setAssignedJudgeClusterPairs] = React.useState<Set<string>>(new Set());
+  const [assignedJudgeClusterPairs] = React.useState<Set<string>>(new Set());
   
   //# preventing duplicate assignments
   const availableClusters = contestClusters;
@@ -96,6 +95,14 @@ export default function AssignJudgeToContestModal(
       return !assignedJudgeClusterPairs.has(pairKey);
     });
   }, [availableClusters, selectedJudgeId, selectedContestId, assignedJudgeClusterPairs]);
+
+  // Get current cluster info for scoresheet validation
+  const currentCluster = filteredClusters.find(cluster => cluster.id === selectedClusterId);
+  const isChampionshipCluster = currentCluster?.cluster_type === 'championship' || 
+                               currentCluster?.cluster_name?.toLowerCase().includes('championship');
+  const isRedesignCluster = currentCluster?.cluster_type === 'redesign' || 
+                           currentCluster?.cluster_name?.toLowerCase().includes('redesign');
+  const isPreliminaryCluster = !isChampionshipCluster && !isRedesignCluster;
 
   // # Load contests & judges each time the modal opens
   React.useEffect(() => {
@@ -140,80 +147,69 @@ export default function AssignJudgeToContestModal(
     };
   }, [open, fetchAllContests, contests.length]);
 
-  // Load clusters when a contest is selected
+  // Load clusters when a contest is selected using the store
   React.useEffect(() => {
-    // cluster validation
     if (selectedContestId === -1 || selectedContestId <= 0) {
-    
-      setContestClusters([]);
       return;
     }
     
-    // Only fetch if we haven't already loaded clusters for this contest
-    if (loadedContestIdRef.current !== selectedContestId) {
-      // Fetch clusters and assigned judges for this contest
-      (async () => {
-        try {
-          const token = localStorage.getItem("token");
-          
-          // #Fetch clusters for the selected contest
-          const clustersResponse = await axios.get(
-            `/api/mapping/clusterToContest/getAllClustersByContest/${selectedContestId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
-          );
-          
-          // Process clusters response and update state
-          if (clustersResponse.data?.Clusters) {
-            setContestClusters(clustersResponse.data.Clusters);
-          } else {
-            setContestClusters([]);
-          }
-          
-          // Fetch assigned judges by cluster to build precise judge–contest–cluster pairs
-          const assignedPairs = new Set<string>();
-          await Promise.all(
-            (clustersResponse.data?.Clusters || []).map(async (cluster: any) => {
-              try {
-                const judgesByClusterResponse = await axios.get(
-                  `/api/mapping/clusterToJudge/getAllJudgesByCluster/${cluster.id}/`,
-                  {
-                    headers: {
-                      Authorization: `Token ${token}`,
-                      "Content-Type": "application/json",
-                    },
-                  }
-                );
-                if (judgesByClusterResponse.data?.Judges) {
-                  judgesByClusterResponse.data.Judges.forEach((judge: any) => {
-                    const pairKey = `${judge.id}-${selectedContestId}-${cluster.id}`;
-                    assignedPairs.add(pairKey);
-                  });
-                }
-              } catch (error) {
-                
-              }
-            })
-          );
+    // Fetch clusters using the store
+    fetchClustersByContestId(selectedContestId).catch((error) => {
+      console.error("Error loading clusters:", error);
+      setError("Failed to load clusters for the selected contest");
+    });
+  }, [selectedContestId, fetchClustersByContestId]);
 
-          // Update assigned judge–cluster pairs to prevent duplicate assignments
-          setAssignedJudgeClusterPairs(assignedPairs);
-        } catch (error) {
-          // Handle general data fetching errors
-          setContestClusters([]);
-          setAssignedJudgeClusterPairs(new Set());
-        }
-      })();
-      
-      // Mark this contest as loaded to prevent duplicate requests
-      loadedContestIdRef.current = selectedContestId;
+  // Auto-set scoresheets based on cluster type when cluster is selected
+  React.useEffect(() => {
+    if (selectedClusterId === -1) {
+      // Reset scoresheets when no cluster is selected
+      setScoreSheets({
+        presentation: false,
+        journal: false,
+        mdo: false,
+        runpenalties: false,
+        otherpenalties: false,
+        redesign: false,
+        championship: false,
+      });
+      return;
     }
-   
-  }, [selectedContestId]);
+
+    // Auto-set appropriate scoresheets based on cluster type
+    if (isChampionshipCluster) {
+      setScoreSheets({
+        presentation: false,
+        journal: false,
+        mdo: false,
+        runpenalties: false,
+        otherpenalties: false,
+        redesign: false,
+        championship: true,
+      });
+    } else if (isRedesignCluster) {
+      setScoreSheets({
+        presentation: false,
+        journal: false,
+        mdo: false,
+        runpenalties: false,
+        otherpenalties: false,
+        redesign: true,
+        championship: false,
+      });
+    } else {
+      // For preliminary clusters, don't auto-set - let user choose
+      setScoreSheets({
+        presentation: false,
+        journal: false,
+        mdo: false,
+        runpenalties: false,
+        otherpenalties: false,
+        redesign: false,
+        championship: false,
+      });
+    }
+  }, [selectedClusterId, isChampionshipCluster, isRedesignCluster]);
 
   /**
    * Handle form submission for judge assignment
@@ -232,6 +228,27 @@ export default function AssignJudgeToContestModal(
     const hasScoreSheets = Object.values(scoreSheets).some(Boolean);
     if (!hasScoreSheets) {
       setError("Please select at least one score sheet type");
+      return;
+    }
+
+    // Validate scoresheet combinations based on cluster type
+    const hasPreliminarySheets = scoreSheets.presentation || scoreSheets.journal || 
+                                scoreSheets.mdo || scoreSheets.runpenalties || scoreSheets.otherpenalties;
+    const hasRedesignSheets = scoreSheets.redesign;
+    const hasChampionshipSheets = scoreSheets.championship;
+
+    if (isPreliminaryCluster && (hasRedesignSheets || hasChampionshipSheets)) {
+      setError("Preliminary clusters cannot have Redesign or Championship scoresheets");
+      return;
+    }
+    
+    if (isRedesignCluster && (hasPreliminarySheets || hasChampionshipSheets)) {
+      setError("Redesign clusters can only have Redesign scoresheets");
+      return;
+    }
+    
+    if (isChampionshipCluster && (hasPreliminarySheets || hasRedesignSheets)) {
+      setError("Championship clusters can only have Championship scoresheets");
       return;
     }
 
@@ -305,6 +322,7 @@ export default function AssignJudgeToContestModal(
     setSuccess(null);
     handleClose();
   };
+
 
   return (
     <Modal
@@ -405,35 +423,106 @@ export default function AssignJudgeToContestModal(
 
           <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 0.5, sm: 1 } }}>
             {[
-              { key: "presentation", label: "Presentation" },
-              { key: "journal", label: "Journal" },
-              { key: "mdo", label: "Machine Design" },
-              { key: "runpenalties", label: "Run Penalties" },
-              { key: "otherpenalties", label: "Other Penalties" },
-              { key: "redesign", label: "Redesign" },
-              { key: "championship", label: "Championship" },
-            ].map(({ key, label }) => (
-              <Box key={key} sx={{ display: "flex", alignItems: "center" }}>
-                <Checkbox
-                  checked={scoreSheets[key as keyof typeof scoreSheets]}
-                  onChange={(e) =>
-                    setScoreSheets((prev) => ({
-                      ...prev,
-                      [key]: e.target.checked,
-                    }))
-                  }
-                  sx={{ 
-                    padding: { xs: 0.5, sm: 1 },
-                    "& .MuiSvgIcon-root": { 
-                      fontSize: { xs: "1.2rem", sm: "1.5rem" } 
-                    }
-                  }}
-                />
-                <Typography variant="body2" sx={{ fontSize: { xs: "0.85rem", sm: "0.875rem" } }}>
-                  {label}
-                </Typography>
-              </Box>
-            ))}
+              { key: "presentation", label: "Presentation", isPreliminary: true },
+              { key: "journal", label: "Journal", isPreliminary: true },
+              { key: "mdo", label: "Machine Design", isPreliminary: true },
+              { key: "runpenalties", label: "Run Penalties", isPreliminary: true },
+              { key: "otherpenalties", label: "Other Penalties", isPreliminary: true },
+              { key: "redesign", label: "Redesign", isPreliminary: false },
+              { key: "championship", label: "Championship", isPreliminary: false },
+            ].map(({ key, label, isPreliminary }) => {
+              // Determine if this scoresheet type should be disabled
+              let isDisabled = false;
+              let disabledReason = "";
+              
+              if (isChampionshipCluster) {
+                // Championship clusters can only have championship scoresheets
+                isDisabled = key !== "championship";
+                disabledReason = "Championship clusters can only have Championship scoresheets";
+              } else if (isRedesignCluster) {
+                // Redesign clusters can only have redesign scoresheets
+                isDisabled = key !== "redesign";
+                disabledReason = "Redesign clusters can only have Redesign scoresheets";
+              } else if (isPreliminaryCluster) {
+                // Preliminary clusters cannot have redesign or championship scoresheets
+                isDisabled = !isPreliminary;
+                disabledReason = "Preliminary clusters cannot have Redesign or Championship scoresheets";
+              }
+              
+              return (
+                <Box key={key} sx={{ display: "flex", alignItems: "center" }}>
+                  <Checkbox
+                    checked={scoreSheets[key as keyof typeof scoreSheets]}
+                    disabled={isDisabled}
+                    onChange={(e) => {
+                      if (isDisabled) return;
+                      
+                      // Additional validation for mixed types
+                      if (e.target.checked) {
+                        if (key === "redesign" || key === "championship") {
+                          // If adding redesign/championship, clear all preliminary scoresheets
+                          setScoreSheets({
+                            presentation: false,
+                            journal: false,
+                            mdo: false,
+                            runpenalties: false,
+                            otherpenalties: false,
+                            redesign: key === "redesign",
+                            championship: key === "championship",
+                          });
+                        } else {
+                          // If adding preliminary scoresheet, clear redesign/championship
+                          setScoreSheets(prev => ({
+                            ...prev,
+                            [key]: true,
+                            redesign: false,
+                            championship: false,
+                          }));
+                        }
+                      } else {
+                        // Normal toggle behavior
+                        setScoreSheets(prev => ({
+                          ...prev,
+                          [key]: e.target.checked,
+                        }));
+                      }
+                    }}
+                    sx={{ 
+                      padding: { xs: 0.5, sm: 1 },
+                      "& .MuiSvgIcon-root": { 
+                        fontSize: { xs: "1.2rem", sm: "1.5rem" } 
+                      },
+                      "&.Mui-disabled": {
+                        color: theme.palette.grey[400],
+                      }
+                    }}
+                  />
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      fontSize: { xs: "0.85rem", sm: "0.875rem" },
+                      color: isDisabled ? theme.palette.grey[500] : "inherit"
+                    }}
+                  >
+                    {label}
+                    {isDisabled && (
+                      <Typography 
+                        component="span" 
+                        variant="caption" 
+                        sx={{ 
+                          display: "block", 
+                          color: theme.palette.error.main,
+                          fontSize: "0.75rem",
+                          ml: 0.5
+                        }}
+                      >
+                        ({disabledReason})
+                      </Typography>
+                    )}
+                  </Typography>
+                </Box>
+              );
+            })}
           </Box>
         </Box>
 

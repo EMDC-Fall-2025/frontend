@@ -29,14 +29,14 @@ export default function Penalties() {
   const { role } = useAuthStore();
   const { judgeId, teamId } = useParams();
   const { team, fetchTeamById } = useTeamStore();
-  const { scoreSheetId, fetchScoreSheetId } = useMapScoreSheetStore();
+  const { fetchScoreSheetWithData } = useMapScoreSheetStore();
   const {
     scoreSheet,
-    fetchScoreSheetById,
     isLoadingScoreSheet,
     updateScores,
-    editScoreSheet,
+    submitScoreSheet,
     scoreSheetError,
+    setScoreSheet,
   } = useScoreSheetStore();
   const navigate = useNavigate();
 
@@ -72,19 +72,18 @@ export default function Penalties() {
     }
   }, [parsedTeamId, fetchTeamById]);
 
-  // Fetch mapping to get scoreSheetId for this judge+team (sheetType 4 = run penalties)
+  // Load scoresheet data in one optimized call (sheetType 4 = run penalties)
   useEffect(() => {
     if (parsedJudgeId && parsedTeamId) {
-      fetchScoreSheetId(parsedJudgeId, parsedTeamId, 4);
+      fetchScoreSheetWithData(parsedJudgeId, parsedTeamId, 4)
+        .then((scoresheetData) => {
+          setScoreSheet(scoresheetData);
+        })
+        .catch((error) => {
+          console.error('Error fetching run penalties scoresheet:', error);
+        });
     }
-  }, [parsedTeamId, parsedJudgeId, fetchScoreSheetId]);
-
-  // Load the full score sheet once we know the id
-  useEffect(() => {
-    if (scoreSheetId) {
-      fetchScoreSheetById(scoreSheetId);
-    }
-  }, [scoreSheetId, fetchScoreSheetById]);
+  }, [parsedTeamId, parsedJudgeId, fetchScoreSheetWithData, setScoreSheet]);
 
   // Populate local state from scoreSheet.
   // NOTE: fields are point values, so to get occurrences we divide by the per-occurrence point value.
@@ -116,7 +115,7 @@ export default function Penalties() {
     } else {
       setPenaltyState({});
     }
-  }, [scoreSheet, parsedJudgeId, parsedTeamId]);
+  }, [scoreSheet]);
 
   /**
    * Convert current penaltyState (occurrence counts) into scored fields for persistence.
@@ -155,7 +154,7 @@ export default function Penalties() {
     try {
       if (scoreSheet) {
         const penalties = calculatePenalties();
-        await editScoreSheet({
+        await submitScoreSheet({
           id: scoreSheet.id,
           sheetType: scoreSheet.sheetType,
           isSubmitted: true,
@@ -163,9 +162,15 @@ export default function Penalties() {
         });
       }
       setOpenAreYouSure(false);
-      navigate(-1);
+      
+      // Small delay to ensure toast is visible before navigation
+      setTimeout(() => {
+        navigate(-1);
+      }, 100);
     } catch (error) {
       console.error(error);
+      toast.error("Failed to submit penalties. Please try again.");
+      setOpenAreYouSure(false);
     }
   };
 

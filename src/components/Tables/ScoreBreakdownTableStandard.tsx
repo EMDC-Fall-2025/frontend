@@ -122,7 +122,7 @@ export default function ScoreBreakdownTableStandard(
                   {question.questionText}
                 </Typography>
               </TableCell>
-              {question.id == 9 && (
+              {(question.id == 9 || (type === ScoreSheetType.Championship && (question.id == 17 || question.id == 18))) && (
                 <>
                   {type === ScoreSheetType.MachineDesign && (
                     <TableCell colSpan={3}>
@@ -184,16 +184,36 @@ export default function ScoreBreakdownTableStandard(
                         )}
                     </TableCell>
                   )}
-                  {type === ScoreSheetType.Championship && (
+                  {type === ScoreSheetType.Championship && question.id == 17 && (
                     <TableCell colSpan={3}>
                       {scoreSheetBreakdown &&
-                        scoreSheetBreakdown[ScoreSheetType.Championship][
-                          ChampionshipScoreSheetFields.Comments
+                        (scoreSheetBreakdown[ScoreSheetType.Championship] as any)[
+                          ChampionshipScoreSheetFields.field9
                         ][0] !== "" && (
                           <ul>
-                            {scoreSheetBreakdown[ScoreSheetType.Championship][
-                              ChampionshipScoreSheetFields.Comments
-                            ].map((comment, index) => (
+                            {(scoreSheetBreakdown[ScoreSheetType.Championship] as any)[
+                              ChampionshipScoreSheetFields.field9
+                            ].map((comment: any, index: number) => (
+                              <li key={index}>
+                                <Typography sx={{ mb: 1 }}>
+                                  {comment}
+                                </Typography>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                    </TableCell>
+                  )}
+                  {type === ScoreSheetType.Championship && question.id == 18 && (
+                    <TableCell colSpan={3}>
+                      {scoreSheetBreakdown &&
+                        (scoreSheetBreakdown[ScoreSheetType.Championship] as any)[
+                          ChampionshipScoreSheetFields.field18
+                        ][0] !== "" && (
+                          <ul>
+                            {(scoreSheetBreakdown[ScoreSheetType.Championship] as any)[
+                              ChampionshipScoreSheetFields.field18
+                            ].map((comment: any, index: number) => (
                               <li key={index}>
                                 <Typography sx={{ mb: 1 }}>
                                   {comment}
@@ -206,7 +226,7 @@ export default function ScoreBreakdownTableStandard(
                   )}
                 </>
               )}
-              {(type == 2 || question.id != 4) && question.id != 9 ? (
+              {(type == 2 || question.id != 4) && question.id != 9 && !(type === ScoreSheetType.Championship && (question.id == 17 || question.id == 18)) ? (
                 <>
                   <TableCell sx={{ 
                     minWidth: { xs: "100px", sm: "120px" },
@@ -386,7 +406,7 @@ export default function ScoreBreakdownTableStandard(
                   </>
                 )
               )}
-              {question.id != 9 && (
+              {question.id != 9 && !(type === ScoreSheetType.Championship && (question.id == 17 || question.id == 18)) && (
                 <>
                   {type === ScoreSheetType.Presentation && (
                     <TableCell sx={{ 
@@ -490,17 +510,17 @@ export default function ScoreBreakdownTableStandard(
                       }}>
                         {scoreSheetBreakdown &&
                           scoreSheetBreakdown[ScoreSheetType.Championship] &&
-                          scoreSheetBreakdown[ScoreSheetType.Championship][
+                          (scoreSheetBreakdown[ScoreSheetType.Championship] as any)[
                             ChampionshipScoreSheetFields[
                               question.field as keyof typeof ChampionshipScoreSheetFields
                             ]
                           ] &&
-                          Array.isArray(scoreSheetBreakdown[ScoreSheetType.Championship][
+                          Array.isArray((scoreSheetBreakdown[ScoreSheetType.Championship] as any)[
                             ChampionshipScoreSheetFields[
                               question.field as keyof typeof ChampionshipScoreSheetFields
                             ]
                           ]) &&
-                          scoreSheetBreakdown[ScoreSheetType.Championship][
+                          (scoreSheetBreakdown[ScoreSheetType.Championship] as any)[
                             ChampionshipScoreSheetFields[
                               question.field as keyof typeof ChampionshipScoreSheetFields
                             ]

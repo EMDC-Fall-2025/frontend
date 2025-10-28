@@ -342,6 +342,12 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
         handleClose={() => handleCloseModal("cluster")}
         mode="edit"
         clusterData={clusterData}
+        contestid={contestId}
+        onSuccess={async () => {
+          try {
+            await fetchClustersByContestId(contestId);
+          } catch {}
+        }}
       />
       <TeamModal
         open={openTeamModal}

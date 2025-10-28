@@ -1,6 +1,9 @@
+export type ClusterType = 'preliminary' | 'championship' | 'redesign';
+
 export interface Cluster {
   id: number;
   cluster_name: string;
+  cluster_type?: ClusterType;
 }
 
 export interface ClusterTeamMapping {
@@ -172,7 +175,7 @@ export interface ScoreSheet {
   field6: number | string;
   field7: number | string;
   field8: number | string;
-  field9?: string;
+  field9?: number | string;
   field10?: number | string;
   field11?: number | string;
   field12?: number | string;
@@ -188,6 +191,17 @@ export interface ScoreSheet {
   field22?: number | string;
   field23?: number | string;
   field24?: number | string;
+  field25?: number | string;
+  field26?: number | string;
+  field27?: number | string;
+  field28?: number | string;
+  field29?: number | string;
+  field30?: number | string;
+  field31?: number | string;
+  field32?: number | string;
+  field33?: number | string;
+  field34?: number | string;
+  field35?: number | string;
 }
 
 export interface ScoreSheetMapping {
@@ -335,6 +349,7 @@ export enum RedesignScoreSheetFields {
 }
 
 export enum ChampionshipScoreSheetFields {
+  // Machine Design fields 1-8
   field1 = 1,
   field2 = 2,
   field3 = 3,
@@ -343,7 +358,44 @@ export enum ChampionshipScoreSheetFields {
   field6 = 6,
   field7 = 7,
   field8 = 8,
-  Comments = 9,
+  // Machine Design comment field 9
+  field9 = 9,
+  // Presentation fields 10-17
+  field10 = 10,
+  field11 = 11,
+  field12 = 12,
+  field13 = 13,
+  field14 = 14,
+  field15 = 15,
+  field16 = 16,
+  field17 = 17,
+  // Presentation comment field 18
+  field18 = 18,
+  // Penalty fields 19-42
+  field19 = 19,
+  field20 = 20,
+  field21 = 21,
+  field22 = 22,
+  field23 = 23,
+  field24 = 24,
+  field25 = 25,
+  field26 = 26,
+  field27 = 27,
+  field28 = 28,
+  field29 = 29,
+  field30 = 30,
+  field31 = 31,
+  field32 = 32,
+  field33 = 33,
+  field34 = 34,
+  field35 = 35,
+  field36 = 36,
+  field37 = 37,
+  field38 = 38,
+  field39 = 39,
+  field40 = 40,
+  field41 = 41,
+  field42 = 42,
 }
 
 export type ScoreSheetDetails = {
@@ -433,13 +485,51 @@ export interface RedesignScoreSheetDetails {
 }
 
 export interface ChampionshipScoreSheetDetails {
-  [MachineDesignScoreSheetFields.field1]: number[];
-  [MachineDesignScoreSheetFields.field2]: number[];
-  [MachineDesignScoreSheetFields.field3]: number[];
-  [MachineDesignScoreSheetFields.field4]: number[];
-  [MachineDesignScoreSheetFields.field5]: number[];
-  [MachineDesignScoreSheetFields.field6]: number[];
-  [MachineDesignScoreSheetFields.field7]: number[];
-  [MachineDesignScoreSheetFields.field8]: number[];
-  [MachineDesignScoreSheetFields.Comments]: string[];
+  // Machine Design fields 1-8
+  [ChampionshipScoreSheetFields.field1]: number[];
+  [ChampionshipScoreSheetFields.field2]: number[];
+  [ChampionshipScoreSheetFields.field3]: number[];
+  [ChampionshipScoreSheetFields.field4]: number[];
+  [ChampionshipScoreSheetFields.field5]: number[];
+  [ChampionshipScoreSheetFields.field6]: number[];
+  [ChampionshipScoreSheetFields.field7]: number[];
+  [ChampionshipScoreSheetFields.field8]: number[];
+  // Machine Design comment field 9
+  [ChampionshipScoreSheetFields.field9]: string[];
+  // Presentation fields 10-17
+  [ChampionshipScoreSheetFields.field10]: number[];
+  [ChampionshipScoreSheetFields.field11]: number[];
+  [ChampionshipScoreSheetFields.field12]: number[];
+  [ChampionshipScoreSheetFields.field13]: number[];
+  [ChampionshipScoreSheetFields.field14]: number[];
+  [ChampionshipScoreSheetFields.field15]: number[];
+  [ChampionshipScoreSheetFields.field16]: number[];
+  [ChampionshipScoreSheetFields.field17]: number[];
+  // Presentation comment field 18
+  [ChampionshipScoreSheetFields.field18]: string[];
+  // Penalty fields 19-42
+  [ChampionshipScoreSheetFields.field19]: number[];
+  [ChampionshipScoreSheetFields.field20]: number[];
+  [ChampionshipScoreSheetFields.field21]: number[];
+  [ChampionshipScoreSheetFields.field22]: number[];
+  [ChampionshipScoreSheetFields.field23]: number[];
+  [ChampionshipScoreSheetFields.field24]: number[];
+  [ChampionshipScoreSheetFields.field25]: number[];
+  [ChampionshipScoreSheetFields.field26]: number[];
+  [ChampionshipScoreSheetFields.field27]: number[];
+  [ChampionshipScoreSheetFields.field28]: number[];
+  [ChampionshipScoreSheetFields.field29]: number[];
+  [ChampionshipScoreSheetFields.field30]: number[];
+  [ChampionshipScoreSheetFields.field31]: number[];
+  [ChampionshipScoreSheetFields.field32]: number[];
+  [ChampionshipScoreSheetFields.field33]: number[];
+  [ChampionshipScoreSheetFields.field34]: number[];
+  [ChampionshipScoreSheetFields.field35]: number[];
+  [ChampionshipScoreSheetFields.field36]: number[];
+  [ChampionshipScoreSheetFields.field37]: number[];
+  [ChampionshipScoreSheetFields.field38]: number[];
+  [ChampionshipScoreSheetFields.field39]: number[];
+  [ChampionshipScoreSheetFields.field40]: number[];
+  [ChampionshipScoreSheetFields.field41]: number[];
+  [ChampionshipScoreSheetFields.field42]: number[];
 }

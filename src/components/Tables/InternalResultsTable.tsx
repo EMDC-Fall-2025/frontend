@@ -13,8 +13,7 @@ import {
 import { alpha } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
 import { useMapContestToTeamStore } from "../../store/map_stores/mapContestToTeamStore";
-import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 const COLS = [
   { key: "rank", label: "Rank", width: "6%", align: "center" as const },
@@ -34,77 +33,46 @@ const GOLD = "#D4AF37";
 const SILVER = "#C0C0C0";
 const BRONZE = "#CD7F32";
 
-const bgGold = (t: any) => alpha(GOLD, 0.18);
-const bgSilver = (t: any) => alpha(SILVER, 0.18);
-const bgBronze = (t: any) => alpha(BRONZE, 0.18);
+const bgGold = () => alpha(GOLD, 0.18);
+const bgSilver = () => alpha(SILVER, 0.18);
+const bgBronze = () => alpha(BRONZE, 0.18);
 
 export default function InternalResultsTable({ contestId, resultType='preliminary' }: { contestId?: number; resultType?: 'preliminary' | 'championship' | 'redesign'; }) {
   const { teamsByContest } = useMapContestToTeamStore();
-  const {clusters, teamsByClusterId, fetchClustersByContestId, getTeamsByClusterId, clearTeamsByClusterId} = useMapClusterTeamStore();
   const navigate = useNavigate();
   
 
   const rows = (teamsByContest ?? []) as any[];
   
-  // Debug: Log championship team data
-  if (resultType === 'championship') {
-    console.log('Championship teams data:', rows.filter(team => team.advanced_to_championship));
-    rows.filter(team => team.advanced_to_championship).forEach(team => {
-      console.log(`Team ${team.team_name}:`, {
-        championship_presentation_score: team.championship_presentation_score,
-        championship_machinedesign_score: team.championship_machinedesign_score,
-        championship_penalties_score: team.championship_penalties_score,
-        preliminary_journal_score: team.preliminary_journal_score,
-        total_score: team.total_score
-      });
-    });
-  }
   
-  // Filter rows based on result type
-  const filteredRows = resultType === 'preliminary' 
-  ? rows 
-  : rows.filter(team => {
-      if (resultType === 'championship') return team.advanced_to_championship;
-      if (resultType === 'redesign') return !team.advanced_to_championship;
-      return false;
-    });
+  // Filter and sort rows based on result type
+  const filteredRows = (() => {
+    if (resultType === 'preliminary') {
+      // Preliminary: ALL teams in the contest, sorted by preliminary_total_score descending
+      const sorted = rows.sort((a, b) => (b.preliminary_total_score || 0) - (a.preliminary_total_score || 0));
+      return sorted;
+    } else if (resultType === 'championship') {
+      // Championship: Only teams advanced to championship, sorted by total_score descending
+      return rows
+        .filter(team => team.advanced_to_championship)
+        .sort((a, b) => (b.total_score || 0) - (a.total_score || 0));
+    } else if (resultType === 'redesign') {
+      // Redesign: Teams NOT advanced to championship, sorted by total_score descending
+      return rows
+        .filter(team => !team.advanced_to_championship)
+        .sort((a, b) => (b.total_score || 0) - (a.total_score || 0));
+    }
+    return rows;
+  })();
  
-  // Clear cluster data when contest changes
+  // Fetch teams when contest changes
   useEffect(() => {
     if (contestId) {
-      console.log('Fetching clusters for contest:', contestId);
-      clearTeamsByClusterId();
-      // Fetch clusters for this contest
-      fetchClustersByContestId(contestId).then(() => {
-        console.log('Clusters fetch completed');
-      }).catch(error => {
-        console.error('Error fetching clusters:', error);
-      });
+      // The teamsByContest data is already fetched by the parent component
+      // No need for additional fetching here
     }
-  }, [contestId, clearTeamsByClusterId, fetchClustersByContestId]);
+  }, [contestId]);
 
-  // Fetch teams for each cluster when clusters are loaded
-  useEffect(()=>{
-    console.log('Clusters loaded:', clusters);
-    console.log('Number of clusters:', clusters.length);
-    if (clusters.length > 0){
-      clusters.forEach(cluster =>{
-        console.log('Fetching teams for cluster:', cluster.id, cluster.cluster_name);
-        getTeamsByClusterId(cluster.id).then(() => {
-          console.log('Teams fetched for cluster:', cluster.id);
-          console.log('Teams in cluster:', teamsByClusterId[cluster.id]);
-        }).catch(error => {
-          console.error('Error fetching teams for cluster:', cluster.id, error);
-        });
-      })
-    }
-  },[clusters, getTeamsByClusterId])
-
-  // Debug: log teamsByClusterId when it changes
-  useEffect(() => {
-    console.log('teamsByClusterId updated:', teamsByClusterId);
-    console.log('Contest teams:', filteredRows.map(t => ({ id: t.id, name: t.team_name })));
-  }, [teamsByClusterId, filteredRows]);
 
   return (
     <Container maxWidth={false} sx={{ px: 0, py: 0 }}>
@@ -178,15 +146,8 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
 
           <TableBody>
             {filteredRows.map((team: any, idx: number) => {
-              // Use appropriate ranking based on result type
-              let rank: number | null = null;
-              if (resultType === 'championship') {
-                rank = team.championship_rank ?? null;
-              } else if (resultType === 'redesign') {
-                rank = team.cluster_rank ?? null;
-              } else {
-                rank = team.team_rank ?? null; // preliminary uses overall contest rank
-              }
+              // Rank is based on position in the sorted array (1-based)
+              const rank = idx + 1;
               
               const is1 = rank === 1;
               const is2 = rank === 2;
@@ -196,15 +157,15 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
               let borderColor: string | undefined;
 
               if (is1) {
-                rowBg = (t: any) => bgGold(t);
+                rowBg = bgGold();
                 borderColor = GOLD;
               }
               if (is2) {
-                rowBg = (t: any) => bgSilver(t);
+                rowBg = bgSilver();
                 borderColor = SILVER;
               }
               if (is3) {
-                rowBg = (t: any) => bgBronze(t);
+                rowBg = bgBronze();
                 borderColor = BRONZE;
               }
 
@@ -234,34 +195,7 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
                     //     "50": [team4, team5],            // Cluster 50 has 2 teams  
                     //     "51": [team6],                   // Cluster 51 has 1 team
                     //     "32": [team7, team8, team9]       // Cluster 32 has 3 teams
-                    // Find the most specific cluster for this team (not "All Teams")
-                    const teamClusters = [];
-                    for (const clusterId in teamsByClusterId) {
-                      const teamsInCluster = teamsByClusterId[clusterId];
-                      if (teamsInCluster && teamsInCluster.some((t: any) => t.id === team.id)) {
-                        const cluster = clusters.find(c => c.id === parseInt(clusterId));
-                        if (cluster && cluster.cluster_name !== 'All Teams') {
-                          teamClusters.push(cluster);
-                        }
-                      }
-                    }
-                    
-                    // Return the first specific cluster found, or fallback to "All Teams" or team ID
-                    if (teamClusters.length > 0) {
-                      return teamClusters[0].cluster_name;
-                    }
-                    
-                    // If no specific cluster found, check if team is in "All Teams" cluster
-                    for (const clusterId in teamsByClusterId) {
-                      const teamsInCluster = teamsByClusterId[clusterId];
-                      if (teamsInCluster && teamsInCluster.some((t: any) => t.id === team.id)) {
-                        const cluster = clusters.find(c => c.id === parseInt(clusterId));
-                        if (cluster && cluster.cluster_name === 'All Teams') {
-                          return 'Unassigned';
-                        }
-                      }
-                    }
-                    
+                    // Simplified cluster display - just show team ID
                     return `ID: ${team.id}`;
                   })()}
                     </Typography>
@@ -274,37 +208,37 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
                   <TableCell align="center">
                     {resultType === 'preliminary' ? team.preliminary_journal_score :
                      resultType === 'championship' ? team.preliminary_journal_score : // Championship uses preliminary journal score
-                     team.redesign_journal_score}
+                     resultType === 'redesign' ? team.redesign_journal_score : 0}
                   </TableCell>
                   <TableCell align="center">
                     {resultType === 'preliminary' ? team.preliminary_presentation_score :
                      resultType === 'championship' ? (team.championship_presentation_score ?? 0) :
-                     team.redesign_presentation_score}
+                     resultType === 'redesign' ? team.redesign_presentation_score : 0}
                   </TableCell>
                   <TableCell align="center">
                     {resultType === 'preliminary' ? team.preliminary_machinedesign_score :
                      resultType === 'championship' ? (team.championship_machinedesign_score ?? 0) :
-                     team.redesign_machinedesign_score}
+                     resultType === 'redesign' ? team.redesign_machinedesign_score : 0}
                   </TableCell>
 
                   {/* General Penalties */}
                   <TableCell align="center" sx={{ color: "error.main", fontWeight: 600 }}>
                     -{Number(resultType === 'preliminary' ? team.preliminary_penalties_score ?? 0 :
-                         resultType === 'championship' ? team.championship_penalties_score ?? 0 :
-                         team.redesign_penalties_score ?? 0).toFixed(1)}
+                         resultType === 'championship' ? team.championship_general_penalties_score ?? 0 :
+                         resultType === 'redesign' ? team.redesign_penalties_score ?? 0 : 0).toFixed(1)}
                   </TableCell>
                   {/* Run Penalties */}
                   <TableCell align="center" sx={{ color: "error.main", fontWeight: 600 }}>
                     -{Number(resultType === 'preliminary' ? team.penalties_score ?? 0 :
-                         resultType === 'championship' ? team.championship_penalties_score ?? 0 :
-                         team.redesign_penalties_score ?? 0).toFixed(1)}
+                         resultType === 'championship' ? team.championship_run_penalties_score ?? 0 :
+                         resultType === 'redesign' ? team.redesign_penalties_score ?? 0 : 0).toFixed(1)}
                   </TableCell>
 
                   {/* Total Penalties */}
                   <TableCell align="center" sx={{ color: "error.main", fontWeight: 800 }}>
                     -{Number(resultType === 'preliminary' ? (team.preliminary_penalties_score ?? 0) + (team.penalties_score ?? 0) :
-                         resultType === 'championship' ? team.championship_penalties_score ?? 0 :
-                         team.redesign_penalties_score ?? 0).toFixed(1)}
+                         resultType === 'championship' ? (team.championship_general_penalties_score ?? 0) + (team.championship_run_penalties_score ?? 0) :
+                         resultType === 'redesign' ? team.redesign_penalties_score ?? 0 : 0).toFixed(1)}
                   </TableCell>
 
                   <TableCell
@@ -324,7 +258,7 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
                               (team.championship_presentation_score || 0) + 
                               (team.championship_machinedesign_score || 0) - 
                               (team.championship_penalties_score || 0)).toFixed(1) :
-                     Number(team.redesign_score || 0).toFixed(1)}
+                     resultType === 'redesign' ? Number(team.redesign_score || 0).toFixed(1) : 0}
                   </TableCell>
 
                   <TableCell align="center">

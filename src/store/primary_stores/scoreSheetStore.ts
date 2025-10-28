@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import axios from "axios";
+import toast from "react-hot-toast";
 import { ScoreSheet, ScoreSheetDetails } from "../../types";
 
 interface ScoreSheetState {
@@ -16,6 +17,7 @@ interface ScoreSheetState {
   createScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>;
   editScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>;
   updateScores: (data: Partial<ScoreSheet>) => Promise<void>;
+  submitScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>; // New optimized submission method
   editScoreSheetField: (
     id: number,
     field: string | number,
@@ -33,6 +35,7 @@ interface ScoreSheetState {
   clearScoreSheet: () => void;
   getScoreSheetBreakdown: (teamId: number) => Promise<void>;
   clearScoreBreakdown: () => void;
+  setScoreSheet: (scoreSheet: ScoreSheet) => void;
   
   // New methods
   fetchMultipleScoreSheets: (teamIds: number[], judgeId: number, sheetType: number) => Promise<void>;
@@ -72,6 +75,45 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
               "Error clearing out score sheet breakdown in state",
           });
           throw new Error("Error clearing out score sheet breakdown in state");
+        }
+      },
+
+      // Direct method to set scoresheet data (for optimized loading)
+      setScoreSheet: (scoreSheet: ScoreSheet) => {
+        set({ scoreSheet, scoreSheetError: null });
+      },
+
+      // Optimized submission method - no loading state for instant response
+      submitScoreSheet: async (data: Partial<ScoreSheet>) => {
+        try {
+          const token = localStorage.getItem("token");
+          const response = await axios.post(`/api/scoreSheet/edit/`, data, {
+            headers: {
+              Authorization: `Token ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+          
+          set({ scoreSheet: response.data.edit_score_sheets });
+          set({ scoreSheetError: null });
+          
+          // Show success toast based on sheet type
+          const sheetTypeNames = {
+            1: "Presentation",
+            2: "Journal", 
+            3: "Machine Design",
+            4: "Run Penalties",
+            5: "Other Penalties",
+            6: "Redesign",
+            7: "Championship"
+          };
+          
+          const sheetTypeName = sheetTypeNames[data.sheetType as keyof typeof sheetTypeNames] || "Score Sheet";
+          toast.success(`${sheetTypeName} scoresheet submitted successfully!`);
+        } catch (scoreSheetError: any) {
+          set({ scoreSheetError: "Failed to submit score sheet" });
+          toast.error("Failed to submit scoresheet. Please try again.");
+          throw new Error("Failed to submit score sheet");
         }
       },
 
@@ -153,8 +195,28 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
           });
           set({ scoreSheet: response.data.edit_score_sheets });
           set({ scoreSheetError: null });
+          
+          // Show success toast based on sheet type
+          const sheetTypeNames = {
+            1: "Presentation",
+            2: "Journal", 
+            3: "Machine Design",
+            4: "Run Penalties",
+            5: "Other Penalties",
+            6: "Redesign",
+            7: "Championship"
+          };
+          
+          const sheetTypeName = sheetTypeNames[data.sheetType as keyof typeof sheetTypeNames] || "Score Sheet";
+          
+          if (data.isSubmitted) {
+            toast.success(`${sheetTypeName} scoresheet submitted successfully!`);
+          } else {
+            toast.success(`${sheetTypeName} scoresheet saved successfully!`);
+          }
         } catch (scoreSheetError: any) {
           set({ scoreSheetError: "Failed to edit score sheet" });
+          toast.error("Failed to save scoresheet. Please try again.");
           throw new Error("Failed to edit score sheet");
         } finally {
           set({ isLoadingScoreSheet: false });
@@ -178,8 +240,12 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
           );
           set({ scoreSheet: response.data.updated_sheet });
           set({ scoreSheetError: null });
+          
+          // Show success toast for draft save
+          toast.success("Scoresheet saved as draft!");
         } catch (scoreSheetError: any) {
           set({ scoreSheetError: "Failed to update score sheet" });
+          toast.error("Failed to save scoresheet. Please try again.");
           throw new Error("Failed to update score sheet");
         } finally {
           set({ isLoadingScoreSheet: false });
@@ -383,8 +449,12 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
           
           await Promise.all(submitPromises);
           set({ scoreSheetError: null });
+          
+          // Show success toast for multiple submissions
+          toast.success(`${scoreSheets.length} scoresheets submitted successfully!`);
         } catch (error) {
           set({ scoreSheetError: "Failed to submit multiple score sheets" });
+          toast.error("Failed to submit scoresheets. Please try again.");
           console.error("Failed to submit multiple score sheets:", error);
         } finally {
           set({ isLoadingScoreSheet: false });

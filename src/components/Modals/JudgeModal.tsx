@@ -1,12 +1,7 @@
 /**
  * JudgeModal Component
  * 
- * Modal for creating and editing judges with modern theme styling.
- * Features:
- * - Clean white background with subtle borders
- * - Green success theme for buttons
- * - Consistent typography with bold titles
- * - Modern form styling with proper spacing
+ * Modal for creating and editing judges
  */
 import {
   Button,
@@ -23,6 +18,7 @@ import {
   Box,
   Chip,
   IconButton,
+  Typography,
 } from "@mui/material";
 import Modal from "./Modal";
 import theme from "../../theme";
@@ -62,13 +58,13 @@ export default function JudgeModal(props: IJudgeModalProps) {
   const [selectedTitle, setSelectedTitle] = useState(0);
 
   const scoringSheetOptions = [
-    { label: "Journal", value: "journalSS" },
-    { label: "Presentation", value: "presSS" },
-    { label: "Machine Design & Operation", value: "mdoSS" },
-    { label: "Run Penalties", value: "runPenSS" },
-    { label: "General Penalties", value: "genPenSS" },
-    { label: "Redesign", value: "redesignSS" },
-    { label: "Championship", value: "championshipSS" },
+    { label: "Journal", value: "journalSS", isPreliminary: true },
+    { label: "Presentation", value: "presSS", isPreliminary: true },
+    { label: "Machine Design & Operation", value: "mdoSS", isPreliminary: true },
+    { label: "Run Penalties", value: "runPenSS", isPreliminary: true },
+    { label: "General Penalties", value: "genPenSS", isPreliminary: true },
+    { label: "Redesign", value: "redesignSS", isPreliminary: false },
+    { label: "Championship", value: "championshipSS", isPreliminary: false },
   ];
 
   const titleOptions = [
@@ -91,6 +87,19 @@ export default function JudgeModal(props: IJudgeModalProps) {
                                currentCluster?.cluster_name?.toLowerCase().includes('championship');
   const isRedesignCluster = currentCluster?.cluster_type === 'redesign' || 
                             currentCluster?.cluster_name?.toLowerCase().includes('redesign');
+  const isPreliminaryCluster = !isChampionshipCluster && !isRedesignCluster;
+
+  // Helper function to determine if a scoresheet option should be disabled
+  const isScoresheetDisabled = (option: typeof scoringSheetOptions[0]) => {
+    if (isChampionshipCluster) {
+      return option.value !== "championshipSS";
+    } else if (isRedesignCluster) {
+      return option.value !== "redesignSS";
+    } else if (isPreliminaryCluster) {
+      return !option.isPreliminary;
+    }
+    return false;
+  };
 
   useEffect(() => {
     if (judgeData) {
@@ -99,19 +108,21 @@ export default function JudgeModal(props: IJudgeModalProps) {
   }, [judgeData, getUserByRole]);
 
   useEffect(() => {
-    if (judgeData && user) {
+    if (judgeData) {
       setFirstName(judgeData.firstName || '');
       setLastName(judgeData.lastName || '');
-      setEmail(user.username || '');
+      setEmail(judgeData.firstName ? user?.username || '' : '');
       setClusterId(judgeData.cluster?.id || -1);
       setPhoneNumber(judgeData.phoneNumber || '');
       const initialSheets = scoringSheetOptions
         .filter((option) => judgeData[option.value as keyof typeof judgeData])
         .map((option) => option.value);
+      
+      
       setSelectedSheets(initialSheets);
       setSelectedTitle(Number(judgeData.role) || 0);
     }
-  }, [user, judgeData]);
+  }, [judgeData, user]);
 
   const handleCloseModal = () => {
     handleClose();
@@ -127,17 +138,32 @@ export default function JudgeModal(props: IJudgeModalProps) {
 
   const validateForm = () => {
     const isClusterInvalid = clusterId === -1;
-    //const areScoreSheetsInvalid = selectedSheets.length === 0;
     const areTitlesInvalid = selectedTitle === 0;
+    
+    // Validate scoresheet combinations
+    const hasPreliminarySheets = selectedSheets.some(sheet => 
+      scoringSheetOptions.find(opt => opt.value === sheet)?.isPreliminary
+    );
+    const hasRedesignSheets = selectedSheets.includes("redesignSS");
+    const hasChampionshipSheets = selectedSheets.includes("championshipSS");
+    
+    let areScoreSheetsInvalid = false;
+    
+    if (isChampionshipCluster && (hasPreliminarySheets || hasRedesignSheets)) {
+      areScoreSheetsInvalid = true;
+    } else if (isRedesignCluster && (hasPreliminarySheets || hasChampionshipSheets)) {
+      areScoreSheetsInvalid = true;
+    } else if (isPreliminaryCluster && (hasRedesignSheets || hasChampionshipSheets)) {
+      areScoreSheetsInvalid = true;
+    }
 
     setErrors({
       cluster: isClusterInvalid,
-      //scoreSheets: areScoreSheetsInvalid,
-      scoreSheets: false,
+      scoreSheets: areScoreSheetsInvalid,
       titles: areTitlesInvalid,
     });
-    //&& !areScoreSheetsInvalid
-    return !isClusterInvalid && !areTitlesInvalid;
+
+    return !isClusterInvalid && !areTitlesInvalid && !areScoreSheetsInvalid;
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -164,7 +190,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
         // Prepare judge data with form inputs and score sheet assignments
         const judgeData = {
           first_name: firstName || "n/a",
-          last_name: lastName || "n/a",
+          last_name: lastName || "",
           phone_number: phoneNumber || "n/a",
           presentation: selectedSheets.includes("presSS"),
           mdo: selectedSheets.includes("mdoSS"),
@@ -243,26 +269,59 @@ export default function JudgeModal(props: IJudgeModalProps) {
         const isRedesignCluster = currentCluster?.cluster_type === 'redesign' || 
                                 currentCluster?.cluster_name?.toLowerCase().includes('redesign');
         
-        // For championship clusters, only allow championship scoresheets
-        // For redesign clusters, only allow redesign scoresheets
-        // For preliminary clusters, allow all scoresheets
+        // Determine if any actual changes were made
+        const originalClusterId = judgeData.cluster?.id;
+        const clusterChanged = originalClusterId !== clusterId;
+        
+        // Get original scoresheet assignments from judgeData
+        const originalSheets = scoringSheetOptions
+          .filter((option) => judgeData[option.value as keyof typeof judgeData])
+          .map((option) => option.value);
+        
+        // Check if scoresheets have changed
+        const scoresheetsChanged = JSON.stringify(selectedSheets.sort()) !== JSON.stringify(originalSheets.sort());
+        
+        // Only apply validation and filtering if there are actual changes
         let allowedSheets = selectedSheets;
-        if (isChampionshipCluster) {
-          // Only keep championship scoresheet if it's selected
-          allowedSheets = selectedSheets.filter(sheet => sheet === "championshipSS");
-          // If no championship sheet is selected, add it automatically
-          if (!allowedSheets.includes("championshipSS")) {
-            allowedSheets = ["championshipSS"];
+        
+        if (clusterChanged || scoresheetsChanged) {
+          // Changes were made - apply appropriate validation based on cluster type
+          if (isChampionshipCluster) {
+            // Championship clusters can only have championship scoresheets
+            allowedSheets = selectedSheets.filter(sheet => sheet === "championshipSS");
+            // If no championship sheet is selected, add it automatically
+            if (!allowedSheets.includes("championshipSS")) {
+              allowedSheets = ["championshipSS"];
+            }
+          } else if (isRedesignCluster) {
+            // Redesign clusters can only have redesign scoresheets
+            allowedSheets = selectedSheets.filter(sheet => sheet === "redesignSS");
+            // If no redesign sheet is selected, add it automatically
+            if (!allowedSheets.includes("redesignSS")) {
+              allowedSheets = ["redesignSS"];
+            }
           }
-        } else if (isRedesignCluster) {
-          // Only keep redesign scoresheet if it's selected
-          allowedSheets = selectedSheets.filter(sheet => sheet === "redesignSS");
-          // If no redesign sheet is selected, add it automatically
-          if (!allowedSheets.includes("redesignSS")) {
-            allowedSheets = ["redesignSS"];
-          }
+          // For preliminary clusters, keep all selected sheets as-is
+        } else {
+          // No changes made - preserve existing scoresheet assignments exactly as they were
+          allowedSheets = originalSheets;
         }
         
+
+        // Check if any actual changes were made to prevent unnecessary API calls
+        const hasActualChanges = clusterChanged || scoresheetsChanged || 
+          firstName !== judgeData.firstName ||
+          lastName !== judgeData.lastName ||
+          phoneNumber !== judgeData.phoneNumber ||
+          email !== (user?.username || '') ||
+          selectedTitle !== Number(judgeData.role);
+
+        if (!hasActualChanges) {
+          toast.success("No changes to update");
+          handleCloseModal();
+          return;
+        }
+
         // Prepare updated judge data with current form values
         const updatedData = {
           id: judgeData.id,
@@ -348,7 +407,30 @@ export default function JudgeModal(props: IJudgeModalProps) {
   };
 
   const handleScoringSheetsChange = (event: any) => {
-    setSelectedSheets(event.target.value);
+    const value = event.target.value as string[];
+    
+    // Validate scoresheet combinations to prevent mixing types
+    const hasPreliminarySheets = value.some(sheet => 
+      scoringSheetOptions.find(opt => opt.value === sheet)?.isPreliminary
+    );
+    const hasRedesignSheets = value.includes("redesignSS");
+    const hasChampionshipSheets = value.includes("championshipSS");
+    
+    // If adding redesign or championship, clear all preliminary sheets
+    if (hasRedesignSheets || hasChampionshipSheets) {
+      const nonPreliminarySheets = value.filter(sheet => 
+        !scoringSheetOptions.find(opt => opt.value === sheet)?.isPreliminary
+      );
+      setSelectedSheets(nonPreliminarySheets);
+    } else if (hasPreliminarySheets) {
+      // If adding preliminary sheets, clear redesign and championship
+      const preliminarySheets = value.filter(sheet => 
+        scoringSheetOptions.find(opt => opt.value === sheet)?.isPreliminary
+      );
+      setSelectedSheets(preliminarySheets);
+    } else {
+      setSelectedSheets(value);
+    }
   };
 
   // Auto-select appropriate scoresheet when cluster changes
@@ -469,26 +551,32 @@ export default function JudgeModal(props: IJudgeModalProps) {
               <FormHelperText sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>Please select a cluster.</FormHelperText>
             )}
           </FormControl>
+          {/* Show cluster type info - positioned outside FormControl to prevent overlap */}
+          {(isChampionshipCluster || isRedesignCluster) && (
+            <Box sx={{ 
+              mt: { xs: 2, sm: 3 },
+              mb: 2,
+              p: 1.5, 
+              bgcolor: isChampionshipCluster ? 'success.light' : 'warning.light',
+              borderRadius: 1,
+              fontSize: '0.875rem',
+              color: isChampionshipCluster ? 'success.dark' : 'warning.dark',
+              fontWeight: 500,
+              border: `1px solid ${isChampionshipCluster ? theme.palette.success.main : theme.palette.warning.main}`,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              width: { xs: "100%", sm: 350 }
+            }}>
+              {isChampionshipCluster ? 'Championship Cluster: Only Championship scoresheets are allowed' : 
+               'Redesign Cluster: Only Redesign scoresheets are allowed'}
+            </Box>
+          )}
+          
           <FormControl sx={{ 
-            mt: { xs: 2, sm: 3 }, 
+            mt: { xs: 1, sm: 2 }, 
             width: { xs: "100%", sm: 350 }, 
             position: "relative" 
           }}>
             <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Score Sheets</InputLabel>
-            {/* Show cluster type info */}
-            {(isChampionshipCluster || isRedesignCluster) && (
-              <Box sx={{ 
-                mb: 1, 
-                p: 1, 
-                bgcolor: isChampionshipCluster ? 'success.light' : 'warning.light',
-                borderRadius: 1,
-                fontSize: '0.875rem',
-                color: isChampionshipCluster ? 'success.dark' : 'warning.dark'
-              }}>
-                {isChampionshipCluster ? 'Championship Cluster: Only Championship scoresheets are allowed' : 
-                 'Redesign Cluster: Only Redesign scoresheets are allowed'}
-              </Box>
-            )}
             <Select
               multiple
               value={selectedSheets}
@@ -526,42 +614,81 @@ export default function JudgeModal(props: IJudgeModalProps) {
                   <CloseIcon />
                 </IconButton>
               </Box>
-              {scoringSheetOptions
-                .filter(option => {
-                  // Filter scoresheets based on cluster type
-                  if (isChampionshipCluster) {
-                    return option.value === "championshipSS";
-                  } else if (isRedesignCluster) {
-                    return option.value === "redesignSS";
-                  }
-                  // For preliminary clusters, show all options
-                  return true;
-                })
-                .map((option) => (
-                  <MenuItem key={option.value} value={option.value} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
+              {scoringSheetOptions.map((option) => {
+                const isDisabled = isScoresheetDisabled(option);
+                let disabledReason = "";
+                
+                if (isChampionshipCluster && option.value !== "championshipSS") {
+                  disabledReason = "Championship clusters can only have Championship scoresheets";
+                } else if (isRedesignCluster && option.value !== "redesignSS") {
+                  disabledReason = "Redesign clusters can only have Redesign scoresheets";
+                } else if (isPreliminaryCluster && !option.isPreliminary) {
+                  disabledReason = "Preliminary clusters cannot have Redesign or Championship scoresheets";
+                }
+                
+                return (
+                  <MenuItem 
+                    key={option.value} 
+                    value={option.value} 
+                    disabled={isDisabled}
+                    sx={{ 
+                      fontSize: { xs: "0.9rem", sm: "1rem" },
+                      opacity: isDisabled ? 0.5 : 1,
+                      "&.Mui-disabled": {
+                        color: theme.palette.grey[500]
+                      }
+                    }}
+                  >
                     <Checkbox 
                       checked={selectedSheets.includes(option.value)} 
+                      disabled={isDisabled}
                       sx={{ 
                         padding: { xs: 0.5, sm: 1 },
                         "& .MuiSvgIcon-root": { 
                           fontSize: { xs: "1.2rem", sm: "1.5rem" } 
+                        },
+                        "&.Mui-disabled": {
+                          color: theme.palette.grey[400]
                         }
                       }}
                     />
                     <ListItemText 
-                      primary={option.label} 
-                      sx={{ 
-                        "& .MuiListItemText-primary": { 
-                          fontSize: { xs: "0.9rem", sm: "1rem" } 
-                        } 
-                      }} 
+                      primary={
+                        <Box>
+                          <Typography variant="body2" sx={{ 
+                            fontSize: { xs: "0.9rem", sm: "1rem" },
+                            color: isDisabled ? theme.palette.grey[500] : "inherit"
+                          }}>
+                            {option.label}
+                          </Typography>
+                          {isDisabled && (
+                            <Typography 
+                              variant="caption" 
+                              sx={{ 
+                                display: "block", 
+                                color: theme.palette.error.main,
+                                fontSize: "0.75rem",
+                                mt: 0.5
+                              }}
+                            >
+                              {disabledReason}
+                            </Typography>
+                          )}
+                        </Box>
+                      }
                     />
                   </MenuItem>
-                ))}
+                );
+              })}
             </Select>
             {errors.scoreSheets && (
               <FormHelperText error sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
-                Please select at least one scoring sheet.
+                {isChampionshipCluster 
+                  ? "Championship clusters can only have Championship scoresheets"
+                  : isRedesignCluster 
+                  ? "Redesign clusters can only have Redesign scoresheets"
+                  : "Preliminary clusters cannot have Redesign or Championship scoresheets"
+                }
               </FormHelperText>
             )}
             <FormHelperText sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>Select one or more scoring sheets</FormHelperText>

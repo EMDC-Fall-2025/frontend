@@ -200,7 +200,6 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
       },
 
       fetchJudgesForMultipleContests: async (contestIds: number[]) => {
-        console.log('Store: fetchJudgesForMultipleContests called with:', contestIds);
         set({ isLoadingMapContestJudge: true });
         try {
           const contestJudgesMap: {[contestId: number]: Judge[]} = {};
@@ -217,14 +216,12 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
                 }
               );
               contestJudgesMap[contestId] = response.data.Judges || [];
-              console.log(`Store: Fetched ${response.data.Judges?.length || 0} judges for contest ${contestId}`);
             } catch (error) {
               console.warn(`Failed to fetch judges for contest ${contestId}`);
               contestJudgesMap[contestId] = [];
             }
           }
           
-          console.log('Store: Setting contestJudges to:', contestJudgesMap);
           set({ 
             contestJudges: contestJudgesMap,
             mapContestJudgeError: null,

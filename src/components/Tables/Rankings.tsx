@@ -150,7 +150,6 @@ const Ranking = () => {
       }
 
       try {
-        console.log('Undoing championship advancement for contest:', selectedContest.id)
         
         // Call the undo championship advancement API
         await undoChampionshipAdvancement(selectedContest.id)

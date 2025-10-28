@@ -48,8 +48,6 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
               },
             }
           );
-          console.log('API Response for clusters:', response.data);
-          console.log('Clusters from API:', response.data.Clusters);
           set({ clusters: response.data.Clusters, isLoadingMapClusterToTeam: false });
         } catch (error) {
           handleError(error, set, "Error fetching clusters");

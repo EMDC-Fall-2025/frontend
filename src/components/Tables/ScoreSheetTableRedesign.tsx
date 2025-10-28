@@ -27,6 +27,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckIcon from "@mui/icons-material/Check";
 import AreYouSureModal from "../Modals/AreYouSureModal";
+import toast from "react-hot-toast";
 
 type IScoreSheetTableProps = {
   sheetType: number;
@@ -48,14 +49,14 @@ export default function ScoreSheetTableRedesign({
   const [openRows, setOpenRows] = React.useState<{ [key: number]: boolean }>(
     {}
   );
-  const { scoreSheetId, fetchScoreSheetId } = useMapScoreSheetStore();
+  const { fetchScoreSheetWithData } = useMapScoreSheetStore();
   const {
     scoreSheet,
-    fetchScoreSheetById,
     isLoadingScoreSheet,
     updateScores,
-    editScoreSheet,
-    clearScoreSheet
+    submitScoreSheet,
+    clearScoreSheet,
+    setScoreSheet,
   } = useScoreSheetStore();
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
 
@@ -71,15 +72,23 @@ export default function ScoreSheetTableRedesign({
   useEffect(() => {
     if (teamId && judgeId) {
       clearScoreSheet();
-      fetchScoreSheetId(judgeId, teamId, sheetType);
+      
+      // Use optimized method that gets both mapping and data in one call
+      fetchScoreSheetWithData(judgeId, teamId, sheetType)
+        .then((scoresheetData) => {
+          // Set the scoresheet data directly without needing a second API call
+          setScoreSheet(scoresheetData);
+        })
+        .catch((error) => {
+          console.error('Error fetching scoresheet:', error);
+        });
     }
-  }, [teamId, judgeId, fetchScoreSheetId, clearScoreSheet]);
+  }, [teamId, judgeId, sheetType]); // Added sheetType to dependencies, removed clearScoreSheet and fetchScoreSheetId
 
-  useEffect(() => {
-    if (scoreSheetId) {
-      fetchScoreSheetById(scoreSheetId);
-    }
-  }, [scoreSheetId, fetchScoreSheetById]);
+  /**
+   * Remove the second useEffect since we now get the data directly in the first call
+   * This eliminates the unnecessary second API call and loading state
+   */
 
   const [formData, setFormData] = useState<{
     [key: number]: number | string | undefined;
@@ -109,7 +118,7 @@ export default function ScoreSheetTableRedesign({
     } else {
       setFormData({});
     }
-  }, [scoreSheet, judgeId, teamId]);
+  }, [scoreSheet]); // Removed judgeId, teamId as they're not needed for form data updates
 
   useEffect(() => {
     const handlePageHide = () => {
@@ -201,7 +210,7 @@ export default function ScoreSheetTableRedesign({
   const handleSubmit = async () => {
     try {
       if (scoreSheet) {
-        await editScoreSheet({
+        await submitScoreSheet({
           id: scoreSheet.id,
           isSubmitted: true,
           sheetType: sheetType,
@@ -212,16 +221,26 @@ export default function ScoreSheetTableRedesign({
           field5: formData[5],
           field6: formData[6],
           field7: formData[7],
-          field8: formData[8]?.toString(),
+          field9: formData[8]?.toString(),
         });
       }
       setOpenAreYouSure(false);
-      navigate(-1);
-    } catch {}
+      
+      // Small delay to ensure toast is visible before navigation
+      setTimeout(() => {
+        navigate(-1);
+      }, 100);
+    } catch (error) {
+      console.error('Error submitting redesign scoresheet:', error);
+      toast.error("Failed to submit redesign scoresheet. Please try again.");
+      setOpenAreYouSure(false);
+    }
   };
 
   return isLoadingScoreSheet ? (
-    <CircularProgress />
+    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+      <CircularProgress />
+    </Box>
   ) : (
     <>
       {/* Back link to the judging dashboard */}

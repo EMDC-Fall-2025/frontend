@@ -27,6 +27,7 @@ interface IJudgesTableProps {
   judges: any[];
   clusters: any[];
   contestid: number;
+  currentCluster?: Cluster;
 }
 
 interface IOrganizerClustersTeamsTableProps {
@@ -147,29 +148,21 @@ function JudgeRow(props: { row: ReturnType<typeof createDataJudge> }) {
 }
 
 function JudgesTable(props: IJudgesTableProps) {
-  const { judges, clusters, contestid } = props;
+  const { judges, clusters, contestid, currentCluster } = props;
   const navigate = useNavigate();
   const [openJudgeModal, setOpenJudgeModal] = useState(false);
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
   const [judgeData, setJudgeData] = useState<JudgeData | undefined>(undefined);
-  const { submissionStatus, checkAllScoreSheetsSubmitted } = useJudgeStore();
+  const { submissionStatus } = useJudgeStore();
   const [judgeId, setJudgeId] = useState(0);
   const { fetchJudgesByClusterId, removeJudgeFromCluster, fetchClustersForJudges } = useMapClusterJudgeStore();
 
   const { judgeClusters } = useMapClusterJudgeStore();
 
-
   const titles = ["Lead", "Technical", "General", "Journal"];
 
-  // Ensure we compute the all-submitted status for each judge when data changes
-  React.useEffect(() => {
-    if (judges && judges.length > 0) {
-      checkAllScoreSheetsSubmitted(judges as any);
-    }
-    
-  }, [judges]);
 
-  // Fetch cluster information for judges when judges data changes
+
   React.useEffect(() => {
     if (judges && judges.length > 0) {
       fetchClustersForJudges(judges as any);
@@ -188,41 +181,21 @@ function JudgesTable(props: IJudgesTableProps) {
 
   const handleDelete = async (judgeId: number) => {
     try {
-      // Get the judge's cluster information
       const judgeCluster = judgeClusters[judgeId];
-      
       if (!judgeCluster) {
-        // Fallback: try to get cluster info from the judges data
-        
-        // Find the judge in the judges array to get cluster info
         const judge = judges.find(j => j.id === judgeId);
         if (!judge) {
           toast.error("Could not find judge information");
           return;
         }
-        
-        // Try to get cluster from the judge's current cluster assignment
-        // This is a fallback - ideally the judgeClusters should be populated
         toast.error("Cluster information not loaded. Please refresh the page and try again.");
         return;
       }
-      
-      console.log(`Attempting to remove judge ${judgeId} from cluster ${judgeCluster.id}`);
-      
-      // Remove judge from the specific cluster only (not from the entire contest)
-      const response = await removeJudgeFromCluster(judgeId, judgeCluster.id);
-      console.log("Remove judge from cluster response:", response);
-      
-      // Refresh judges for this specific cluster to reflect removal
+      await removeJudgeFromCluster(judgeId, judgeCluster.id);
       await fetchJudgesByClusterId(judgeCluster.id);
-      
       toast.success(`Judge removed from ${judgeCluster.cluster_name} cluster successfully!`);
     } catch (error: any) {
-      console.error("Error removing judge from cluster:", error);
-      
-      // Show more specific error messages
       let errorMessage = "Failed to remove judge from cluster. Please try again.";
-      
       if (error?.response?.data?.error) {
         errorMessage = `Failed to remove judge: ${error.response.data.error}`;
       } else if (error?.response?.data?.detail) {
@@ -230,7 +203,6 @@ function JudgesTable(props: IJudgesTableProps) {
       } else if (error?.message) {
         errorMessage = `Failed to remove judge: ${error.message}`;
       }
-      
       toast.error(errorMessage);
     }
   };
@@ -240,19 +212,32 @@ function JudgesTable(props: IJudgesTableProps) {
   };
 
   const getScoreSheets = (judge: any) => {
-    const scoreSheets = [];
+    const scoreSheets: string[] = [];
+
+    // Use the specific cluster row's context if available to avoid stale mappings
+    const clusterType = (currentCluster?.cluster_type || "preliminary").toLowerCase();
+
+    if (clusterType === "redesign") {
+      scoreSheets.push("Redesign");
+      return scoreSheets;
+    }
+
+    if (clusterType === "championship") {
+      scoreSheets.push("Championship");
+      return scoreSheets;
+    }
+
     if (judge.journal) scoreSheets.push("Journal");
     if (judge.presentation) scoreSheets.push("Presentation");
     if (judge.mdo) scoreSheets.push("Machine Design & Operation");
     if (judge.otherpenalties) scoreSheets.push("General Penalties");
     if (judge.runpenalties) scoreSheets.push("Run Penalties");
-
     return scoreSheets;
   };
 
-  // Populate table with store data
-  const rows = judges.map((judge) =>
-    createDataJudge(
+  const rows = judges.map((judge) => {
+    const isSubmitted = submissionStatus ? submissionStatus[judge.id] : false;
+    return createDataJudge(
       `${judge.first_name} ${judge.last_name}`,
       `${titles[judge.role - 1]}`,
       <Button
@@ -299,7 +284,8 @@ function JudgesTable(props: IJudgesTableProps) {
       >
         Edit Judge
       </Button>,
-      judgeClusters[judge.id]?.cluster_name,
+      // Display the specific cluster name for this row
+      currentCluster?.cluster_name || judgeClusters[judge.id]?.cluster_name,
       getScoreSheets(judge),
       <Button
         variant="outlined"
@@ -365,9 +351,9 @@ function JudgesTable(props: IJudgesTableProps) {
       >
         Delete
       </Button>,
-      submissionStatus ? submissionStatus[judge.id] : false
-    )
-  );
+      isSubmitted
+    );
+  });
 
   return (
     <TableContainer component={Box}>
@@ -413,6 +399,19 @@ export default function OrganizerJudgesTable(
   const [clusterData, setClusterData] = useState<Cluster | undefined>(
     undefined
   );
+  const { checkAllScoreSheetsSubmitted } = useJudgeStore();
+
+  // Compute submission status for ALL judges across clusters to avoid per-section overwrites
+  React.useEffect(() => {
+    try {
+      const allJudges: any[] = Object.values(judgesByClusterId || {}).flat();
+      if (allJudges.length > 0) {
+        checkAllScoreSheetsSubmitted(allJudges as any);
+      }
+    } catch (e) {
+      // noop: defensive guard
+    }
+  }, [judgesByClusterId, checkAllScoreSheetsSubmitted]);
 
   const handleToggleRow = (clusterId: number) => {
     setOpenClusterIds((prevIds) =>
@@ -509,6 +508,7 @@ export default function OrganizerJudgesTable(
                         judges={judgesByClusterId[cluster.id]}
                         clusters={clusters}
                         contestid={contestid}
+                        currentCluster={cluster}
                       />
                     )}
                   </Collapse>

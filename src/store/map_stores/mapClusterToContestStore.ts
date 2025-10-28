@@ -46,8 +46,14 @@ export const useMapClusterToContestStore = create<MapClusterContestState>()(
               },
             }
           );
-          set({ clusters: response.data.Clusters });
+          // Ensure cluster_type is present and normalized
+          const clusters = (response.data.Clusters || []).map((c: any) => ({
+            ...c,
+            cluster_type: (c.cluster_type ?? "preliminary").toLowerCase(),
+          }));
+          set({ clusters });
           set({ mapClusterContestError: null });
+          return clusters; // Return the clusters for immediate use
         } catch (mapClusterContestError: any) {
           const errorMessage = "Failed to fetch clusters";
           set({ mapClusterContestError: errorMessage });
@@ -69,7 +75,6 @@ export const useMapClusterToContestStore = create<MapClusterContestState>()(
       },
 
       fetchClustersForMultipleContests: async (contestIds: number[]) => {
-        console.log('Store: fetchClustersForMultipleContests called with:', contestIds);
         set({ isLoadingMapClusterContest: true });
         try {
           const contestClustersMap: {[contestId: number]: Cluster[]} = {};
@@ -87,14 +92,12 @@ export const useMapClusterToContestStore = create<MapClusterContestState>()(
                 }
               );
               contestClustersMap[contestId] = response.data.Clusters || [];
-              console.log(`Store: Fetched ${response.data.Clusters?.length || 0} clusters for contest ${contestId}`);
             } catch (error) {
               console.warn(`Failed to fetch clusters for contest ${contestId}`);
               contestClustersMap[contestId] = [];
             }
           }
           
-          console.log('Store: Setting contestClusters to:', contestClustersMap);
           set({ 
             contestClusters: contestClustersMap,
             mapClusterContestError: null,

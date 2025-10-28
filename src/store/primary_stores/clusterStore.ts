@@ -44,7 +44,8 @@ export const useClusterStore = create<ClusterState>()(
               "Content-Type": "application/json",
             },
           });
-          set({ cluster: response.data });
+          // API returns { Cluster: {...} }
+          set({ cluster: (response.data as any)?.Cluster ?? null });
           set({ clusterError: null });
         } catch (error) {
           const errorMessage = "Failed to fetch cluster";
@@ -84,17 +85,21 @@ export const useClusterStore = create<ClusterState>()(
         set({ isLoadingCluster: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.post(`/api/cluster/edit/`, data, {
+          const res = await axios.post(`/api/cluster/edit/`, data, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
             },
           });
+          if (res.status !== 200) {
+            throw new Error(`Unexpected status ${res.status}`);
+          }
           set({ clusterError: null });
-        } catch (error) {
-          const errorMessage = "Failed to edit cluster";
-          set({ clusterError: errorMessage });
-          throw new Error(errorMessage);
+          return (res.data as any)?.cluster;
+        } catch (error: any) {
+          const msg = error?.response?.data?.detail || error?.message || "Failed to edit cluster";
+          set({ clusterError: msg });
+          throw new Error(msg);
         } finally {
           set({ isLoadingCluster: false });
         }

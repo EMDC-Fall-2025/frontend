@@ -65,7 +65,7 @@ export default function TeamModal(props: ITeamModalProps) {
           username: coachEmail,
           password: "password",
           first_name: coachFirstName || "n/a",
-          last_name: coachLastName || "n/a",
+          last_name: coachLastName || "",
           contestid: contestId,
         });
         

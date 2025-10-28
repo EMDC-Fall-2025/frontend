@@ -22,6 +22,11 @@ interface MapScoreSheetState {
     teamId: number,
     sheetType: number
   ) => Promise<void>;
+  fetchScoreSheetWithData: (
+    judgeId: number,
+    teamId: number,
+    sheetType: number
+  ) => Promise<ScoreSheet>;
   createScoreSheetMapping: (
     mapping: Partial<ScoreSheetMapping>
   ) => Promise<number | null>;
@@ -179,6 +184,39 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
           set({ mapScoreSheetError: null });
         } catch (error) {
           const errorMessage = "Failed to fetch score sheet ID";
+          set({ mapScoreSheetError: errorMessage });
+          throw new Error(errorMessage);
+        } finally {
+          set({ isLoadingMapScoreSheet: false });
+        }
+      },
+
+      // Optimized method that fetches both mapping and scoresheet data in one call
+      fetchScoreSheetWithData: async (
+        judgeId: number,
+        teamId: number,
+        sheetType: number
+      ) => {
+        set({ isLoadingMapScoreSheet: true });
+        try {
+          const token = localStorage.getItem("token");
+          const response = await axios.get(
+            `/api/mapping/scoreSheet/getByTeamJudge/${sheetType}/${judgeId}/${teamId}/`,
+            {
+              headers: {
+                Authorization: `Token ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          const fetchedScoreSheetId = response.data.ScoreSheet.id;
+          set({ scoreSheetId: fetchedScoreSheetId });
+          set({ mapScoreSheetError: null });
+          
+          // Return the scoresheet data directly to avoid second API call
+          return response.data.ScoreSheet;
+        } catch (error) {
+          const errorMessage = "Failed to fetch score sheet data";
           set({ mapScoreSheetError: errorMessage });
           throw new Error(errorMessage);
         } finally {

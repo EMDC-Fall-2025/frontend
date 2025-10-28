@@ -87,15 +87,13 @@ export default function ManageContest() {
   const { fetchCoachesByTeams, clearCoachesByTeams } =
     useMapCoachToTeamStore();
 
-  // Load all contest-related data on component mount
+  // Load all contest-related data on component mount - OPTIMIZED VERSION
   useEffect(() => {
     const loadAllData = async () => {
       if (parsedContestId) {
-        // Load contest details first
-        await fetchContestById(parsedContestId);
-        
-        // Then load judges and clusters in parallel
+        // Load contest details, judges, and clusters in parallel for faster loading
         await Promise.all([
+          fetchContestById(parsedContestId),
           getAllJudgesByContestId(parsedContestId),
           fetchClustersByContestId(parsedContestId)
         ]);
@@ -111,13 +109,13 @@ export default function ManageContest() {
     };
   }, [parsedContestId]);
 
-  // Load teams for each cluster when clusters are available
+  // Load teams for each cluster when clusters are available - OPTIMIZED VERSION
   useEffect(() => {
     const loadTeams = async () => {
       if (clusters && clusters.length > 0) {
-        for (const cluster of clusters) {
-          await getTeamsByClusterId(cluster.id);
-        }
+        // Load teams for all clusters in parallel instead of sequentially
+        const teamPromises = clusters.map(cluster => getTeamsByClusterId(cluster.id));
+        await Promise.all(teamPromises);
       }
     };
 
@@ -130,13 +128,13 @@ export default function ManageContest() {
     };
   }, [clusters.length]);
 
-  // Load judges for each cluster when clusters are available
+  // Load judges for each cluster when clusters are available - OPTIMIZED VERSION
   useEffect(() => {
     const loadJudges = async () => {
       if (clusters && clusters.length > 0) {
-        for (const cluster of clusters) {
-          await fetchJudgesByClusterId(cluster.id);
-        }
+        // Load judges for all clusters in parallel instead of sequentially
+        const judgePromises = clusters.map(cluster => fetchJudgesByClusterId(cluster.id));
+        await Promise.all(judgePromises);
       }
     };
 
@@ -149,15 +147,18 @@ export default function ManageContest() {
     };
   }, [clusters.length]);
 
-  // Load coaches when teams are available
+  // Load coaches when teams are available - OPTIMIZED VERSION
   useEffect(() => {
     const loadCoaches = async () => {
       if (clusters && clusters.length > 0) {
-        for (const cluster of clusters) {
+        // Collect all teams from all clusters and load coaches in parallel
+        const allTeams = clusters.reduce((acc, cluster) => {
           const teams = teamsByClusterId[cluster.id];
-          if (teams && teams.length > 0) {
-            await fetchCoachesByTeams(teams);
-          }
+          return teams ? [...acc, ...teams] : acc;
+        }, [] as any[]);
+
+        if (allTeams.length > 0) {
+          await fetchCoachesByTeams(allTeams);
         }
       }
     };
@@ -207,9 +208,10 @@ export default function ManageContest() {
   };
 
 
-  return isLoadingContest? (
-    
+  return isLoadingContest ? (
+    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
       <CircularProgress />
+    </Box>
   ) : (
   <>
     {/* Back to Dashboard */}
@@ -453,16 +455,17 @@ export default function ManageContest() {
       mode="new"
       clusters={clusters}
       contestid={parsedContestId}
-      onSuccess={() => {
-        // Refresh all data after successful judge creation
-        getAllJudgesByContestId(parsedContestId);
-        fetchClustersByContestId(parsedContestId);
+      onSuccess={async () => {
+        // Refresh all data after successful judge creation in parallel
+        await Promise.all([
+          getAllJudgesByContestId(parsedContestId),
+          fetchClustersByContestId(parsedContestId)
+        ]);
         
-        // Refresh judges for all clusters
+        // Refresh judges for all clusters in parallel
         if (clusters && clusters.length > 0) {
-          clusters.forEach(cluster => {
-            fetchJudgesByClusterId(cluster.id);
-          });
+          const judgePromises = clusters.map(cluster => fetchJudgesByClusterId(cluster.id));
+          await Promise.all(judgePromises);
         }
       }}
     />
@@ -485,25 +488,33 @@ export default function ManageContest() {
         setOpenAssignJudgeModal(false);
       }}
       onSuccess={async () => {
-        // Refresh judges after successful assignment
-        await getAllJudgesByContestId(parsedContestId);
-        // Also refresh clusters and teams to ensure all data is up to date
-        await fetchClustersByContestId(parsedContestId);
-        
-        // Refresh judges for each cluster to update judgesByClusterId
-        if (clusters && clusters.length > 0) {
-          for (const cluster of clusters) {
-            try {
-              await fetchJudgesByClusterId(cluster.id);
-            } catch (error) {
-              console.error(`Error fetching judges for cluster ${cluster.id}:`, error);
-            }
+        try {
+          // Refresh judges and clusters in parallel after successful assignment
+          const [judgesResult, updatedClusters] = await Promise.all([
+            getAllJudgesByContestId(parsedContestId),
+            fetchClustersByContestId(parsedContestId)
+          ]);
+          
+          // Refresh judges for each cluster in parallel to update judgesByClusterId
+          if (updatedClusters && updatedClusters.length > 0) {
+            const judgePromises = updatedClusters.map(async (cluster) => {
+              try {
+                await fetchJudgesByClusterId(cluster.id);
+              } catch (error) {
+                console.error(`Error fetching judges for cluster ${cluster.id}:`, error);
+              }
+            });
+            await Promise.all(judgePromises);
           }
+          
+          // Trigger a refresh of the UI components
+          setRefreshTrigger(prev => prev + 1);
+          setOpenAssignJudgeModal(false);
+        } catch (error) {
+          console.error('Error refreshing data after judge assignment:', error);
+          // Still close the modal even if refresh fails
+          setOpenAssignJudgeModal(false);
         }
-        
-        // Trigger a refresh of the UI components
-        setRefreshTrigger(prev => prev + 1);
-        setOpenAssignJudgeModal(false);
       }}
     />
   </>
