@@ -18,7 +18,7 @@ import {
 } from "@mui/material";
 import theme from "../theme";
 import OrganizerContestTable from "../components/Tables/OrganizerContestTable";
-import  ContestOverviewTable from "../components/Tables/ContestOverview";
+import ContestOverviewTable from "../components/Tables/ContestOverview";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import useMapContestOrganizerStore from "../store/map_stores/mapContestToOrganizerStore";
 import useMapScoreSheetStore from "../store/map_stores/mapScoreSheetStore";
@@ -87,16 +87,16 @@ export default function Organizer() {
         <Stack spacing={1} sx={{ mt: 4, mb: 3 }}>
           <Typography
             variant="h4"
-            sx={{ 
-              fontWeight: 800, 
+            sx={{
+              fontWeight: 800,
               color: theme.palette.success.main,
               fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" }
             }}
           >
             Organizer Dashboard
           </Typography>
-          <Typography 
-            variant="subtitle1" 
+          <Typography
+            variant="subtitle1"
             color="text.secondary"
             sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
           >
@@ -252,7 +252,7 @@ export default function Organizer() {
           >
             <Box sx={{ px: 3, py: 2 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                Overall stats 
+                Overall stats
               </Typography>
             </Box>
             <Divider />

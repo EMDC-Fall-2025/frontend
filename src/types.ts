@@ -237,6 +237,14 @@ export interface Team {
   judge_disqualified: boolean;
   organizer_disqualified: boolean;
   advanced_to_championship?: boolean;
+  // Championship fields
+  championship_score?: number;
+  championship_total_score?: number;
+  championship_rank?: number;
+  // Redesign fields
+  redesign_score?: number;
+  redesign_total_score?: number;
+  redesign_rank?: number;
 }
 
 export interface TeamData {

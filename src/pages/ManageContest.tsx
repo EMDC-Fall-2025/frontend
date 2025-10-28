@@ -490,14 +490,14 @@ export default function ManageContest() {
       onSuccess={async () => {
         try {
           // Refresh judges and clusters in parallel after successful assignment
-          const [judgesResult, updatedClusters] = await Promise.all([
+          await Promise.all([
             getAllJudgesByContestId(parsedContestId),
             fetchClustersByContestId(parsedContestId)
           ]);
           
           // Refresh judges for each cluster in parallel to update judgesByClusterId
-          if (updatedClusters && updatedClusters.length > 0) {
-            const judgePromises = updatedClusters.map(async (cluster) => {
+          if (clusters && clusters.length > 0) {
+            const judgePromises = clusters.map(async (cluster) => {
               try {
                 await fetchJudgesByClusterId(cluster.id);
               } catch (error) {
@@ -520,4 +520,3 @@ export default function ManageContest() {
   </>
 );
 }
-

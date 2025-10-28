@@ -1,8 +1,8 @@
 import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
 import theme from "../../theme";
+
 // FILE OVERVIEW: table component for results page
 
-// Define the structure of a row
 interface ContestResultsRow {
   id: number;
   team_name: string;
@@ -13,15 +13,20 @@ interface ContestResultsRow {
   awards: string;
 }
 
-// Define the props for table
 interface ContestResultsTableProps {
-  rows: ContestResultsRow[]; 
+  rows: ContestResultsRow[];
 }
 
 export default function ContestResultsTable({ rows }: ContestResultsTableProps) {
   return (
     <TableContainer component={Paper} elevation={3} sx={{ width: "100%", borderRadius: 2 }}>
-      <Table>
+      <Table
+        sx={{
+          "& th:first-of-type, & td:first-of-type": {
+            pl: 1,
+          },
+        }}
+      >
         <TableHead>
           <TableRow sx={{ bgcolor: theme.palette.primary.main }}>
             <TableCell sx={{ color: "white", fontWeight: "bold" }}>Team Name</TableCell>
@@ -32,6 +37,7 @@ export default function ContestResultsTable({ rows }: ContestResultsTableProps) 
             <TableCell sx={{ color: "white", fontWeight: "bold" }}>Awards</TableCell>
           </TableRow>
         </TableHead>
+
         <TableBody>
           {rows.map((row) => (
             <TableRow key={row.id} sx={{ "&:nth-of-type(odd)": { bgcolor: theme.palette.action.hover } }}>

@@ -20,8 +20,7 @@ import InternalResults from "./pages/InternalResults";
 import GeneralPenalties from "./pages/GeneralPenalties";
 import ScoreBreakdown from "./pages/ScoreBreakdown";
 import RunPenalties from "./pages/RunPenalties";
-import ContestPage from "./pages/ContestsPage";
-import ContestScores from "./pages/ContestScores";
+
 import AdminSpecialAwardsPage from "./pages/AdminSpecialAwards";
 import OrganizerSpecialAwards from "./pages/OrganizerSpecialAwards";
 import JudgeSpecialAwards from "./pages/JudgeSpecialAwards";
@@ -32,6 +31,11 @@ import MultiTeamMachineDesignScore from "./pages/MachineDesignMultiTeamScore";
 import ChampionshipScore from "./pages/ChampionshipScore";
 import ChampionshipScoreBreakdown from "./pages/ChampionshipScoreBreakdown";
 import RedesignScoreBreakdown from "./pages/RedesignScoreBreakdown";
+import ContestScores from "./pages/ContestScores";
+import ContestPage from "./pages/ContestsPage";
+/*import MasterScorePage from "./pages/MasterScorePage";*/
+
+
 import { Toaster } from "react-hot-toast";
 import Ranking from "./components/Tables/Rankings";
 
@@ -52,7 +56,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/forgot-password/" element={<ForgotPassword />} />
           <Route path="/contestresults/:contestId" element={<ContestScores />} />
-          <Route path="/rank" element={<Ranking/>}/>
+          <Route path="/rank" element={<Ranking />} />
           <Route path="/login/" element={<Login />} />
           <Route path="/contestPage/" element={<ContestPage />} />
           <Route path="/set-password/" element={<SetPassword />} />
@@ -117,7 +121,7 @@ function App() {
             <Route path="/results/:contestId" element={<InternalResults />} />
           )}
           <Route path="/set-password/" element={<SetPassword />} />
-          
+
 
           {isAuthenticated && (
             <Route path="/manage-contest/:contestId/" element={<ManageContest />} />
@@ -142,10 +146,12 @@ function App() {
               element={<RedesignScoreBreakdown />}
             />
           )}
+
+          {isAuthenticated && <Route path="/score-breakdown/:teamId" element={<ScoreBreakdown />} />}
         </Routes>
-        
-        
-        <Toaster 
+
+
+        <Toaster
           position="top-center"
           toastOptions={{
             duration: 4000,
