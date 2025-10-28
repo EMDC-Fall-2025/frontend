@@ -30,8 +30,9 @@ import MultiTeamPresentationScore from "./pages/PresentationMultiTeamScore"
 import MultiTeamJournalScore from "./pages/JournalMultiTeamScore";
 import MultiTeamMachineDesignScore from "./pages/MachineDesignMultiTeamScore";
 import ChampionshipScore from "./pages/ChampionshipScore";
-import { Toaster } from "react-hot-toast";
-import Ranking from "./components/Tables/Rankings";
+import MasterScoreSheet from "./pages/MasterScoreSheet";
+import GeneralPenaltiesMultiTeam from "./pages/GeneralPenaltiesMultiTeam";
+import RunPenaltiesMultiTeam from "./pages/RunPenaltiesMultiTeam";
 
 function App() {
   const currentLink = useLocation().pathname;
@@ -48,7 +49,6 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/forgot-password/" element={<ForgotPassword />} />
           <Route path="/contestresults/:contestId" element={<ContestScores />} />
-          <Route path="/rank" element={<Ranking/>}/>
           {isAuthenticated && role?.user_type != 4 && (
             <Route path="/judging/:judgeId/" element={<Judging />} />
           )}
@@ -162,7 +162,6 @@ function App() {
             <Route path="/results/:contestId" element={<InternalResults />} />
           )}
           <Route path="/set-password/" element={<SetPassword />} />
-          
           {isAuthenticated && (
             <Route
               path="/manage-contest/:contestId/"
@@ -177,52 +176,23 @@ function App() {
               element={<ScoreBreakdown />}
             />
           )}
-        
+          <Route path="/_dev/master" element={<MasterScoreSheet />} />
+
+          {isAuthenticated && role?.user_type != 4 && (
+            <Route
+              path="/multi-team-general-penalties/:judgeId/:contestId/"
+              element={<GeneralPenaltiesMultiTeam />}
+            />
+          )}
+
+          {isAuthenticated && role?.user_type != 4 && (
+            <Route
+              path="/multi-team-run-penalties/:judgeId/:contestId/"
+              element={<RunPenaltiesMultiTeam />}
+            />
+          )}
+
         </Routes>
-        
-        
-        <Toaster 
-          position="top-center"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#ffffff',
-              color: '#000000',
-              border: '1px solid #00a353',
-              borderRadius: '8px',
-              boxShadow: '0 4px 12px rgba(0, 163, 83, 0.15)',
-              fontFamily: 'Open Sans, sans-serif',
-              fontSize: '16px',
-              fontWeight: '500',
-            },
-            success: {
-              duration: 3000,
-              style: {
-                background: '#e8eddb',
-                color: '#00a353',
-                border: '1px solid #00a353',
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0, 163, 83, 0.2)',
-                fontFamily: 'Open Sans, sans-serif',
-                fontSize: '14px',
-                fontWeight: '500',
-              },
-            },
-            error: {
-              duration: 5000,
-              style: {
-                background: '#fff5f5',
-                color: '#d32f2f',
-                border: '1px solid #d32f2f',
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(211, 47, 47, 0.15)',
-                fontFamily: 'Open Sans, sans-serif',
-                fontSize: '16px',
-                fontWeight: '500',
-              },
-            },
-          }}
-        />
       </ThemeProvider>
     </>
   );

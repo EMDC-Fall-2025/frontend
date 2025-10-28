@@ -36,6 +36,7 @@ interface ScoreSheetState {
   
   // New methods
   fetchMultipleScoreSheets: (teamIds: number[], judgeId: number, sheetType: number) => Promise<void>;
+  fetchMultiTeamPenalties: (judgeId: number, contestId: number, sheetType: number) => Promise<void>;
   updateMultipleScores: (scoreSheets: Partial<ScoreSheet>[]) => Promise<void>;
   submitMultipleScoreSheets: (scoreSheets: Partial<ScoreSheet>[]) => Promise<void>;
 }
@@ -321,6 +322,39 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
         } catch (error) {
           set({ scoreSheetError: "Failed to fetch multiple score sheets" });
           console.error("Failed to fetch multiple score sheets:", error);
+        } finally {
+          set({ isLoadingScoreSheet: false });
+        }
+      },
+
+      fetchMultiTeamPenalties: async (judgeId: number, contestId: number, sheetType: number) => {
+        set({ isLoadingScoreSheet: true });
+        try {
+          const token = localStorage.getItem("token");
+          
+          // Choose the right endpoint based on sheet type
+          const endpoint = sheetType === 4 
+            ? `/api/scoreSheet/multiTeamRunPenalties/${judgeId}/${contestId}/`
+            : `/api/scoreSheet/multiTeamGeneralPenalties/${judgeId}/${contestId}/`;
+          
+          const response = await axios.get(endpoint, {
+            headers: {
+              Authorization: `Token ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+          
+          if (response.data && response.data.teams) {
+            const sheets = response.data.teams.map((team: any) => ({
+              ...team.scoresheet,
+              teamId: team.team_id,
+              teamName: team.team_name,
+            }));
+            set({ multipleScoreSheets: sheets, scoreSheetError: null });
+          }
+        } catch (error) {
+          console.error("Failed to fetch multi-team penalties:", error);
+          set({ scoreSheetError: "Failed to load penalty sheets" });
         } finally {
           set({ isLoadingScoreSheet: false });
         }

@@ -170,10 +170,11 @@ export default function Judging() {
               </Box>
               <Divider />
               <Box sx={{ px: 3, pb: 3 }}>
-                {teams.length > 0 ? (
-                  <JudgeDashboardTable teams={teams} />
-                ) : (
-                  <Typography>No teams available for this cluster.</Typography>
+                <JudgeDashboardTable teams={teams} />
+                {teams.length === 0 && (
+                  <Typography sx={{ mt: 2, textAlign: "center" }}>
+                    No teams available for this cluster.
+                  </Typography>
                 )}
               </Box>
             </Box>

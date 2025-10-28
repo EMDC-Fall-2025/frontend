@@ -68,11 +68,14 @@ export default function MultiTeamPenaltyTable({
 
   // Only render teams that have a sheet record
   const filteredTeams = React.useMemo(() => {
-    if (!multipleScoreSheets) return [];
-    return teams.filter((team) =>
-      multipleScoreSheets.some((sheet) => sheet.teamId === team.id)
-    );
-  }, [teams, multipleScoreSheets]);
+  if (!multipleScoreSheets || multipleScoreSheets.length === 0) return [];
+  
+  // Build teams list directly from multipleScoreSheets
+  return multipleScoreSheets.map((sheet) => ({
+    id: sheet.teamId,
+    name: sheet.teamName || `Team ${sheet.teamId}`
+  }));
+}, [multipleScoreSheets]);
 
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
   const navigate = useNavigate();
@@ -389,7 +392,9 @@ export default function MultiTeamPenaltyTable({
             </TableHead>
 
             <TableBody>
-              {Object.entries(penaltiesByCategory).map(([category, categoryPenalties]) => (
+              {Object.entries(penaltiesByCategory)
+                .filter(([category, categoryPenalties]) => categoryPenalties.length > 0 && category !== "")
+                .map(([category, categoryPenalties]) => (
                 <React.Fragment key={category}>
                   {/* Category header row */}
                   <TableRow

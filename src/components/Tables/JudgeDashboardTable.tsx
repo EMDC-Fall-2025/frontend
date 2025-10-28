@@ -70,10 +70,10 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
   const [currentTeam, setCurrentTeam] = useState(-1);
   const [currentSheetType, setCurrentSheetType] = useState(-1);
 
-  // NEW: multi-team scoring dialog state
+  // UPDATED: Added penalty types to multi-team scoring dialog
   const [openMultiDialog, setOpenMultiDialog] = useState(false);
   const [multiType, setMultiType] = useState<
-    "presentation" | "journal" | "machine-design"
+    "presentation" | "journal" | "machine-design" | "general-penalties" | "run-penalties"
   >("presentation");
 
   const handleToggle = (teamId: number) => {
@@ -188,13 +188,32 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
   };
   const handleCancelMulti = () => setOpenMultiDialog(false);
 
-  // NEW: confirm multi-team selection → route
+  // UPDATED: Added penalty routing logic
   const handleConfirmMulti = () => {
     if (!judge || !contest?.id) return;
 
-    // keep slugs consistent with your routes
-    const typePath = multiType === "machine-design" ? "machinedesign" : multiType;
-    const route = `/multi-team-${typePath}-score/${judge.id}/${contest.id}/`;
+    // Handle routing based on selection
+    let route = "";
+    
+    switch(multiType) {
+      case "presentation":
+        route = `/multi-team-presentation-score/${judge.id}/${contest.id}/`;
+        break;
+      case "journal":
+        route = `/multi-team-journal-score/${judge.id}/${contest.id}/`;
+        break;
+      case "machine-design":
+        route = `/multi-team-machinedesign-score/${judge.id}/${contest.id}/`;
+        break;
+      case "general-penalties":
+        route = `/multi-team-general-penalties/${judge.id}/${contest.id}/`;
+        break;
+      case "run-penalties":
+        route = `/multi-team-run-penalties/${judge.id}/${contest.id}/`;
+        break;
+      default:
+        return;
+    }
     
     // Navigate to scoring page
     navigate(route);
@@ -344,7 +363,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
             Expand All Teams
           </Button>
 
-          {/* NEW: Score Multiple Teams – styled to match your success button theme */}
+          {/* Score Multiple Teams button */}
           <Button
             variant="contained"
             onClick={handleMultiTeamScore}
@@ -358,7 +377,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
               width: 220,
               height: 44,
             }}
-            disabled={!contest?.id} // prevent bad route if contest not loaded
+            disabled={!contest?.id}
           >
             Score Multiple Teams
           </Button>
@@ -419,7 +438,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                         mr: 1,
                         fontWeight: 600,
                         fontFamily: t.typography.h1.fontFamily,
-                        minWidth: 300, // Ensure enough space for team name + contest
+                        minWidth: 300,
                       })}
                     >
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -450,7 +469,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                                 overflow: "hidden",
                                 textOverflow: "ellipsis"
                               }}
-                              title={teamContestMap[team.id]} // Show full name on hover
+                              title={teamContestMap[team.id]}
                             >
                               {teamContestMap[team.id]}
                             </Typography>
@@ -488,7 +507,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                           }}
                         >
                           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                            {/* Journal - not tied to contest.is_open */}
+                            {/* Journal */}
                             <ScoreSheetButton
                               team={team}
                               type={2}
@@ -512,7 +531,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                               buttonText="Machine Design and Operation"
                             />
 
-                            {/* Redesign - tied to contest.is_open */}
+                            {/* Redesign */}
                             {contest?.is_open && (
                               <ScoreSheetButton
                                 team={team}
@@ -522,7 +541,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                               />
                             )}
 
-                            {/* Championship - tied to contest.is_open */}
+                            {/* Championship */}
                             {contest?.is_open && (
                               <ScoreSheetButton
                                 team={team}
@@ -532,7 +551,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                               />
                             )}
 
-                            {/* Run Penalties - not tied to contest.is_open */}
+                            {/* Run Penalties */}
                             <ScoreSheetButton
                               team={team}
                               type={4}
@@ -540,7 +559,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                               buttonText="Run Penalties"
                             />
 
-                            {/* General Penalties - not tied to contest.is_open */}
+                            {/* General Penalties */}
                             <ScoreSheetButton
                               team={team}
                               type={5}
@@ -559,7 +578,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
         </TableContainer>
       </Container>
 
-      {/* existing unsubmit modal */}
+      {/* Unsubmit modal */}
       <AreYouSureModal
         open={openAreYouSure}
         handleClose={() => setOpenAreYouSure(false)}
@@ -567,7 +586,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
         handleSubmit={handleUnsubmitSheet}
       />
 
-      {/* NEW: multi-team dialog (kept simple, matches theme) */}
+      {/* UPDATED: Multi-team dialog with penalty options added */}
       <Dialog open={openMultiDialog} onClose={handleCancelMulti}>
         <DialogTitle>Score Multiple Teams</DialogTitle>
         <DialogContent sx={{ pt: 1 }}>
@@ -580,6 +599,8 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
               <FormControlLabel value="presentation" control={<Radio />} label="Presentation" />
               <FormControlLabel value="journal" control={<Radio />} label="Journal" />
               <FormControlLabel value="machine-design" control={<Radio />} label="Machine Design" />
+              <FormControlLabel value="general-penalties" control={<Radio />} label="General Penalties" />
+              <FormControlLabel value="run-penalties" control={<Radio />} label="Run Penalties" />
             </RadioGroup>
           </FormControl>
         </DialogContent>
