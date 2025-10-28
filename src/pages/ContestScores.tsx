@@ -8,7 +8,7 @@ import useSpecialAwardStore from "../store/map_stores/mapAwardToTeamStore";
 import { useMapCoachToTeamStore } from "../store/map_stores/mapCoachToTeamStore";
 import ContestResultsTable from "../components/Tables/ContestResultsTable";
 import AwardWinners from "../components/Tables/AwardWinners";
-import ContestHighlightPage from "../components/Tables/ContestHighlight"
+import ContestHighlightPage from "../components/Tables/ContestHighlight";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import MilitaryTechIcon from "@mui/icons-material/MilitaryTech";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
@@ -16,8 +16,6 @@ import StarIcon from "@mui/icons-material/Star";
 import { useContestStore } from "../store/primary_stores/contestStore";
 import { useMapClusterToContestStore } from "../store/map_stores/mapClusterToContestStore";
 import useContestJudgeStore from "../store/map_stores/mapContestToJudgeStore";
-
-
 
 export default function ContestScores() {
   const { contestId } = useParams<{ contestId: string }>();
@@ -58,7 +56,6 @@ export default function ContestScores() {
     if (teamsByContest.length > 0) {
       const teamData = teamsByContest.map((team) => ({ id: team.id }));
       fetchCoachesByTeams(teamData);
-
       teamsByContest.forEach((team) => {
         AwardsByTeamTable(team.id);
       });
@@ -99,7 +96,6 @@ export default function ContestScores() {
     awards: teamAwards[team.id] || "N/A",
   }));
 
-  // placeholder data for Championship & Redesign
   const championshipRows = [
     { id: 1, team_name: "Nexus", team_rank: 1, total_score: 188, coachName: "Coach A", awards: "Champion" },
     { id: 2, team_name: "Robo", team_rank: 2, total_score: 176, coachName: "Coach B", awards: "Runner-Up" },
@@ -118,99 +114,120 @@ export default function ContestScores() {
   return (
     <>
       {/* Page Title */}
-      <Stack spacing={1} sx={{ ml: "2%", mt: 4, mb: 4 }}>
-        <Typography variant="h1">Contest Results</Typography>
-      </Stack>
-
-      {/* Back link */}
-      <Link
-        to="/contestPage/"
-        style={{
-          textDecoration: "none",
-          color: "inherit",
-          display: "inline-block",
+      <Container
+        maxWidth="lg"
+        sx={{
+          px: { xs: 3, sm: 5 },
+          mt: 5,
+          mb: 2,
         }}
       >
-        <Typography variant="body2" sx={{ ml: 2, mt: 2 }}>
-          {"<"} Back to Contests{" "}
-        </Typography>
-      </Link>
+        <Stack spacing={1} sx={{ mb: 1 }}>
+          <Typography
+            variant="h1"
+            sx={{
+              fontSize: "2rem",
+              fontWeight: 800,
+            }}
+          >
+            Contest Results
+          </Typography>
+        </Stack>
 
-      {/* Tabs Section */}
-      <Box sx={{ width: "90%", ml: "2%", mt: 3 }}>
-        <Tabs
-          value={activeTab}
-          onChange={(_, newValue) => setActiveTab(newValue)}
-          textColor="primary"
-          indicatorColor="primary"
-          variant="scrollable"
-          sx={{
-            borderBottom: `1px solid ${theme.palette.grey[300]}`,
-            mb: 2,
+        {/* Back link */}
+        <Link
+          to="/contestPage/"
+          style={{
+            textDecoration: "none",
+            color: "inherit",
+            display: "inline-block",
           }}
         >
-          <Tab
-            value="prelim"
-            iconPosition="start"
-            icon={<MilitaryTechIcon />}
-            label={
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <span style={{ fontWeight: 700, fontSize: "1rem" }}>Preliminary</span>
-              </Stack>
-            }
-          />
+          <Typography
+            variant="body2"
+            sx={{
+              mb: 3,
+              fontSize: "1.05rem",
+            }}
+          >
+            {"<"} Back to Contests{" "}
+          </Typography>
+        </Link>
 
-          <Tab
-            value="championship"
-            iconPosition="start"
-            icon={<WorkspacePremiumIcon />}
-            label={
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <span style={{ fontWeight: 700, fontSize: "1rem" }}>
-                  Championship & Redesign
-                </span>
-              </Stack>
-            }
-          />
-
-          <Tab
-            value="winners"
-            iconPosition="start"
-            icon={<EmojiEventsIcon />}
-            label={
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <span style={{ fontWeight: 700, fontSize: "1rem" }}>Award Winners</span>
-              </Stack>
-            }
-          />
-
-          <Tab
-            value="highlights"
-            iconPosition="start"
-            icon={<StarIcon />}
-            label={
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <span style={{ fontWeight: 700, fontSize: "1rem" }}>Highlights</span>
-              </Stack>
-            }
-          />
-        </Tabs>
-      </Box>
-
+        {/* Tabs Section */}
+        <Box sx={{ width: "100%", mt: 2 }}>
+          <Tabs
+            value={activeTab}
+            onChange={(_, newValue) => setActiveTab(newValue)}
+            textColor="primary"
+            indicatorColor="primary"
+            variant="scrollable"
+            sx={{
+              borderBottom: `1px solid ${theme.palette.grey[300]}`,
+              mb: 2,
+            }}
+          >
+            <Tab
+              value="prelim"
+              iconPosition="start"
+              icon={<MilitaryTechIcon sx={{ fontSize: 26 }} />}
+              label={
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>Preliminary</span>
+                </Stack>
+              }
+            />
+            <Tab
+              value="championship"
+              iconPosition="start"
+              icon={<WorkspacePremiumIcon sx={{ fontSize: 26 }} />}
+              label={
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>
+                    Championship & Redesign
+                  </span>
+                </Stack>
+              }
+            />
+            <Tab
+              value="winners"
+              iconPosition="start"
+              icon={<EmojiEventsIcon sx={{ fontSize: 26 }} />}
+              label={
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>Award Winners</span>
+                </Stack>
+              }
+            />
+            <Tab
+              value="highlights"
+              iconPosition="start"
+              icon={<StarIcon sx={{ fontSize: 26 }} />}
+              label={
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>Highlights</span>
+                </Stack>
+              }
+            />
+          </Tabs>
+        </Box>
+      </Container>
 
       {/* Prelim Tab */}
       {activeTab === "prelim" && (
         <Container
+          maxWidth="lg"
           sx={{
             border: `1px solid ${theme.palette.grey[300]}`,
-            borderRadius: 3,
+            borderRadius: 4,
             backgroundColor: "#fff",
-            p: 3,
+            p: 4,
+            mb: 5,
           }}
         >
           <Typography
             variant="h5"
-            sx={{ fontWeight: 700, mb: 2, textAlign: "center" }}
+            sx={{ fontWeight: 700, mb: 3, textAlign: "center", fontSize: "1.3rem" }}
           >
             Preliminary Round – Top 6
           </Typography>
@@ -222,19 +239,21 @@ export default function ContestScores() {
         </Container>
       )}
 
-      {/* Championship/Redesign Tab (fake data for demo) */}
+      {/* Championship/Redesign Tab */}
       {activeTab === "championship" && (
         <Container
+          maxWidth="lg"
           sx={{
             border: `1px solid ${theme.palette.grey[300]}`,
-            borderRadius: 3,
+            borderRadius: 4,
             backgroundColor: "#fff",
-            p: 3,
+            p: 4,
+            mb: 5,
           }}
         >
           <Typography
             variant="h5"
-            sx={{ fontWeight: 700, mb: 2, textAlign: "center" }}
+            sx={{ fontWeight: 700, mb: 3, textAlign: "center", fontSize: "1.3rem" }}
           >
             Championship Round - Top 6
           </Typography>
@@ -242,7 +261,7 @@ export default function ContestScores() {
 
           <Typography
             variant="h5"
-            sx={{ fontWeight: 700, mb: 2, textAlign: "center", mt: 4 }}
+            sx={{ fontWeight: 700, mb: 3, textAlign: "center", mt: 5, fontSize: "1.3rem" }}
           >
             Redesign Round – Top 3
           </Typography>
@@ -253,16 +272,18 @@ export default function ContestScores() {
       {/* Award Winners Tab */}
       {activeTab === "winners" && (
         <Container
+          maxWidth="lg"
           sx={{
             border: `1px solid ${theme.palette.grey[300]}`,
-            borderRadius: 3,
+            borderRadius: 4,
             backgroundColor: "#fff",
-            p: 3,
+            p: 4,
+            mb: 5,
           }}
         >
           <Typography
             variant="h5"
-            sx={{ fontWeight: 700, mb: 3, textAlign: "center" }}
+            sx={{ fontWeight: 700, mb: 3, textAlign: "center", fontSize: "1.3rem" }}
           >
             Award Winners
           </Typography>
@@ -278,27 +299,27 @@ export default function ContestScores() {
         </Container>
       )}
 
-
       {/* Highlights Tab */}
       {activeTab === "highlights" && (
         <Container
+          maxWidth="lg"
           sx={{
             border: `1px solid ${theme.palette.grey[300]}`,
-            borderRadius: 3,
+            borderRadius: 4,
             backgroundColor: "#fff",
-            p: 3,
+            p: 4,
+            mb: 5,
           }}
         >
           <Typography
             variant="h5"
-            sx={{ fontWeight: 700, mb: 3, textAlign: "center" }}
+            sx={{ fontWeight: 700, mb: 3, textAlign: "center", fontSize: "1.3rem" }}
           >
             Contest Highlights
           </Typography>
           <ContestHighlightPage />
         </Container>
       )}
-
     </>
   );
 }

@@ -6,7 +6,6 @@ import theme from "../theme";
 import { useContestStore } from "../store/primary_stores/contestStore";
 import ContestTable from "../components/Tables/ContestTable";
 
-
 // FILE OVERVIEW: page for displaying contests
 export default function Contests() {
   const { allContests, fetchAllContests, isLoadingContest } = useContestStore();
@@ -39,8 +38,6 @@ export default function Contests() {
     return { id, name, date, status };
   }
 
-
-
   // Navigate to specific contest results
   const handleRowClick = (contestId: number) => {
     navigate(`/contestresults/${contestId}`);
@@ -51,23 +48,27 @@ export default function Contests() {
     .map((contest: { id: number; name: string; date: string; is_open: boolean }) =>
       createData(contest.id, contest.name, contest.date, contest.is_open)
     )
-    .sort((a: { status: string; }, b: { status: string; }) => {
-      const order = { "Finalized": 1, "In Progress": 2, "Not Started": 3 };
+    .sort((a: { status: string }, b: { status: string }) => {
+      const order = { Finalized: 1, "In Progress": 2, "Not Started": 3 };
       return order[a.status as keyof typeof order] - order[b.status as keyof typeof order];
     });
 
-
   return (
     <>
-      <Stack spacing={1} sx={{ mt: 4, mb: 3, ml: "2%" }}>
+      {/* Title Section */}
+      <Stack spacing={1} sx={{ mt: 5, mb: 3, ml: { xs: 3, sm: 6, md: 10 } }}>
         <Typography
           variant="h4"
-          sx={{ fontWeight: 800, color: theme.palette.primary.main }}
+          sx={{
+            fontWeight: 800,
+            color: theme.palette.primary.main,
+          }}
         >
           Contests
         </Typography>
       </Stack>
 
+      {/* Table Container */}
       <Container
         maxWidth="lg"
         sx={{
@@ -77,7 +78,6 @@ export default function Contests() {
           p: 3,
         }}
       >
-        {/* ContestTable component */}
         <ContestTable
           rows={rows}
           isLoading={isLoadingContest}
