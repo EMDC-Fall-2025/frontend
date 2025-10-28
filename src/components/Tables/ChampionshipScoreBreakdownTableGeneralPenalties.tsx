@@ -88,9 +88,15 @@ export default function ChampionshipScoreBreakdownTableGeneralPenalties() {
           }}>
             {scoreSheetBreakdown &&
             scoreSheetBreakdown[ScoreSheetType.Championship] &&
-            scoreSheetBreakdown[ScoreSheetType.Championship][field as keyof ChampionshipScoreSheetDetails] &&
-            scoreSheetBreakdown[ScoreSheetType.Championship][field as keyof ChampionshipScoreSheetDetails].length > 0
-              ? scoreSheetBreakdown[ScoreSheetType.Championship][field as keyof ChampionshipScoreSheetDetails].join(", ")
+            scoreSheetBreakdown[ScoreSheetType.Championship][
+              ChampionshipScoreSheetFields[`field${19 + generalPenaltiesQuestions.findIndex(q => q.field === field)}` as keyof typeof ChampionshipScoreSheetFields]
+            ] &&
+            scoreSheetBreakdown[ScoreSheetType.Championship][
+              ChampionshipScoreSheetFields[`field${19 + generalPenaltiesQuestions.findIndex(q => q.field === field)}` as keyof typeof ChampionshipScoreSheetFields]
+            ].length > 0
+              ? scoreSheetBreakdown[ScoreSheetType.Championship][
+                  ChampionshipScoreSheetFields[`field${19 + generalPenaltiesQuestions.findIndex(q => q.field === field)}` as keyof typeof ChampionshipScoreSheetFields]
+                ].join(", ")
               : "0"}
           </Typography>
         </TableCell>
@@ -178,20 +184,15 @@ export default function ChampionshipScoreBreakdownTableGeneralPenalties() {
 
         {/* Body rows */}
         <TableBody>
-          {generalPenaltiesQuestions.map((penalty, index) => {
-            // Map preliminary penalty field to championship penalty field
-            // field1 -> field19, field2 -> field20, etc.
-            const championshipField = `field${19 + index}`;
-            return (
-              <PenaltiesRow
-                key={penalty.field}
-                text={penalty.questionText}
-                field={championshipField}
-                pointValue={penalty.pointValue}
-                penaltyType={penalty.penaltyType}
-              />
-            );
-          })}
+          {generalPenaltiesQuestions.map((penalty) => (
+            <PenaltiesRow
+              key={penalty.field}
+              text={penalty.questionText}
+              field={penalty.field}
+              pointValue={penalty.pointValue}
+              penaltyType={penalty.penaltyType}
+            />
+          ))}
         </TableBody>
       </Table>
     </TableContainer>
