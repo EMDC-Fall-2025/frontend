@@ -47,11 +47,13 @@ export default function Organizer() {
     }
   }, [organizerId, fetchContestsByOrganizerId]);
 
+  const safeContests = contests ?? [];
+
   useEffect(() => {
-    if (contests.length > 0) {
-      allSheetsSubmittedForContests(contests);
+    if (safeContests.length > 0) {
+      allSheetsSubmittedForContests(safeContests);
     }
-  }, [contests]);
+  }, [safeContests, allSheetsSubmittedForContests]);
 
   const handleChange = (_event: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);
@@ -107,7 +109,7 @@ export default function Organizer() {
         {/* Stat Cards */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard value={contests.length} label="Total Contests" />
+            <StatCard value={safeContests.length} label="Total Contests" />
           </Grid>
         </Grid>
         <Button
@@ -257,7 +259,7 @@ export default function Organizer() {
             </Box>
             <Divider />
             <Box sx={{ px: 3, pb: 3 }}>
-              <ContestOverviewTable contests={contests} />
+              <ContestOverviewTable contests={safeContests} />
             </Box>
           </TabPanel>
 

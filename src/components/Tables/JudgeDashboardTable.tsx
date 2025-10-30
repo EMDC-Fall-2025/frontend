@@ -333,14 +333,14 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
     return data?.scoresheet?.id;
   }, [mappings]);
 
-  // NEW: open/close multi-team dialog
+  // open/close multi-team dialog
   const handleMultiTeamScore = () => {
     // Handle multi-team scoring
     setOpenMultiDialog(true);
   };
   const handleCancelMulti = () => setOpenMultiDialog(false);
 
-  // NEW: confirm multi-team selection → route
+  // confirm multi-team selection → route
   const handleConfirmMulti = () => {
     if (!judge || !contest?.id) return;
 
@@ -740,29 +740,32 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                             justifyContent: { xs: "center", sm: "flex-start" },
                             alignItems: { xs: "center", sm: "flex-start" }
                           }}>
-                            {/* Journal - not tied to contest.is_open */}
+                            {/* Journal -  tied to contest.is_open */}
+                            {contest?.is_open && (
                             <ScoreSheetButton
                               team={team}
                               type={2}
                               url="journal-score"
                               buttonText="Journal"
-                            />
+                            />)}
 
                             {/* Presentation */}
+                            {contest?.is_open && (
                             <ScoreSheetButton
                               team={team}
                               type={1}
                               url="presentation-score"
                               buttonText="Presentation"
-                            />
+                            />)}
 
                             {/* Machine Design */}
+                            {contest?.is_open && (
                             <ScoreSheetButton
                               team={team}
                               type={3}
                               url="machine-score"
                               buttonText="Machine Design and Operation"
-                            />
+                            />)}
 
                             {/* Redesign - tied to contest.is_open */}
                             {contest?.is_open && (
@@ -784,21 +787,23 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                               />
                             )}
 
-                            {/* Run Penalties - not tied to contest.is_open */}
+                            {/* Run Penalties - tied to contest.is_open */}
+                            {contest?.is_open && (
                             <ScoreSheetButton
                               team={team}
                               type={4}
                               url="run-penalties"
                               buttonText="Run Penalties"
-                            />
+                            />)}
 
                             {/* General Penalties - not tied to contest.is_open */}
+                            {contest?.is_open && (
                             <ScoreSheetButton
                               team={team}
                               type={5}
                               url="general-penalties"
                               buttonText="General Penalties"
-                            />
+                            />)}
                           </Box>
                         </Box>
                       </Collapse>
