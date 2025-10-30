@@ -13,8 +13,8 @@ import {
   TableContainer,
   TableRow,
   Typography,
-  Stack,    // for tidy header layout
-  Divider,  // visual separator between header and content
+  Stack,    
+  Divider,  
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "../store/primary_stores/authStore";

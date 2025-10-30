@@ -63,19 +63,14 @@ export default function MultiTeamPenaltyTable({
     fetchMultipleScoreSheets,
     updateMultipleScores,
     submitMultipleScoreSheets,
-    scoreSheetError,
   } = useScoreSheetStore();
 
-  // Only render teams that have a sheet record
+  // Only render teams that have a sheet record (use names from props)
   const filteredTeams = React.useMemo(() => {
-  if (!multipleScoreSheets || multipleScoreSheets.length === 0) return [];
-  
-  // Build teams list directly from multipleScoreSheets
-  return multipleScoreSheets.map((sheet) => ({
-    id: sheet.teamId,
-    name: sheet.teamName || `Team ${sheet.teamId}`
-  }));
-}, [multipleScoreSheets]);
+    if (!multipleScoreSheets?.length) return [];
+    const haveSheetIds = new Set(multipleScoreSheets.map(s => s.teamId));
+    return teams.filter(t => haveSheetIds.has(t.id));
+  }, [multipleScoreSheets, teams]);
 
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
   const navigate = useNavigate();
@@ -523,7 +518,6 @@ export default function MultiTeamPenaltyTable({
           handleClose={() => setOpenAreYouSure(false)}
           title="Are you sure you want to submit penalties for all teams?"
           handleSubmit={() => handleSubmit()}
-          error={scoreSheetError}
         />
       </Container>
     </>

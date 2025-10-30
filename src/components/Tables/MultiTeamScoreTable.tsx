@@ -1,18 +1,5 @@
 /**
  * MultiTeamScoreTable Component
- *
- * Goal
- * ----
- * Judges can enter scores/comments for multiple teams in one screen,
- * save drafts, and submit all at once. UI is aligned to the modern
- * green/white theme used across the app.
- *
- * What to know
- * ------------
- * - Rows = questions/criteria; columns (after the second column) = teams.
- * - Row 9 is a text comment field; other rows are numeric with bounds.
- * - Uses Zustand store (useScoreSheetStore) for fetching/saving/submitting.
- * - Expand/Collapse reveals detailed scoring criteria (Jr/Sr aware on Q4).
  */
 
 import * as React from "react";
@@ -68,8 +55,7 @@ export default function MultiTeamScoreSheet({
     multipleScoreSheets,           // Array of sheets keyed by teamId (fetched)
     fetchMultipleScoreSheets,      // Fetch sheets for teams/judge/sheetType
     updateMultipleScores,          // Save (draft) updates
-    submitMultipleScoreSheets,     // Final submit
-    scoreSheetError,               // Error text from store actions (if any)
+    submitMultipleScoreSheets,     
   } = useScoreSheetStore();
 
   // Only render teams that have a sheet record (prevents empty columns)
@@ -201,22 +187,12 @@ export default function MultiTeamScoreSheet({
   const handleSaveScoreSheets = async () => {
     if (!multipleScoreSheets || multipleScoreSheets.length === 0) return;
 
-    const updatedSheets: Array<{
-      id: number;
-      field1?: number | string;
-      field2?: number | string;
-      field3?: number | string;
-      field4?: number | string;
-      field5?: number | string;
-      field6?: number | string;
-      field7?: number | string;
-      field8?: number | string;
-      field9?: string;
-    }> = [];
+    const updatedSheets: Array<any> = [];
 
     for (const team of filteredTeams) {
       const sheet = multipleScoreSheets.find(s => s.teamId === team.id);
       if (sheet && formData[team.id]) {
+        const comment = formData[team.id][9];
         updatedSheets.push({
           id: sheet.id,
           field1: formData[team.id][1],
@@ -227,7 +203,7 @@ export default function MultiTeamScoreSheet({
           field6: formData[team.id][6],
           field7: formData[team.id][7],
           field8: formData[team.id][8],
-          field9: formData[team.id][9]?.toString(), // normalize comments to string
+          ...(comment !== undefined ? { field9: String(comment) } : {}),
         });
       }
     }
@@ -265,6 +241,7 @@ export default function MultiTeamScoreSheet({
     for (const team of filteredTeams) {
       const sheet = multipleScoreSheets.find(s => s.teamId === team.id);
       if (sheet && formData[team.id]) {
+        const comment = formData[team.id][9];
         updatedSheets.push({
           id: sheet.id,
           sheetType,
@@ -277,7 +254,7 @@ export default function MultiTeamScoreSheet({
           field6: formData[team.id][6],
           field7: formData[team.id][7],
           field8: formData[team.id][8],
-          field9: formData[team.id][9]?.toString(),
+          ...(comment !== undefined ? { field9: String(comment) } : {}),
         });
       }
     }
@@ -451,21 +428,17 @@ export default function MultiTeamScoreSheet({
                               }}
                               // Validate bounds; clear value if outside range
                               onChange={(e) => {
-                                let value = e.target.value;
-
-                                if (value !== undefined) {
-                                  if (value === "") {
-                                    value = undefined; // Clear the field
-                                  } else if (Number(value) < question.lowPoints) {
-                                    value = undefined; // Clear if below range
-                                  } else if (Number(value) > question.highPoints) {
-                                    value = undefined; // Clear if above range
-                                  } else {
-                                    value = Number(value); // Convert to number if valid
-                                  }
+                                let newVal: number | string | undefined = e.target.value;
+                                if (newVal === "") {
+                                  newVal = undefined;
+                                } else if (Number(newVal) < question.lowPoints) {
+                                  newVal = undefined;
+                                } else if (Number(newVal) > question.highPoints) {
+                                  newVal = undefined;
+                                } else {
+                                  newVal = Number(newVal);
                                 }
-
-                                handleScoreChange(team.id, question.id, value);
+                                handleScoreChange(team.id, question.id, newVal);
                               }}
                               // Disable arrow key step to avoid accidental changes
                               onKeyDown={(e) => {
@@ -676,7 +649,6 @@ export default function MultiTeamScoreSheet({
           handleClose={() => setOpenAreYouSure(false)}
           title="Are you sure you want to submit scores for all teams?"
           handleSubmit={() => handleSubmit()}
-          error={scoreSheetError}
         />
       </Container>
     </>

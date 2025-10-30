@@ -11,7 +11,7 @@ interface ScoreSheetState {
   scoreSheetBreakdown: ScoreSheetDetails;
   multipleScoreSheets: ScoreSheet[] | null;
   
-  // Existing methods
+
   fetchScoreSheetById: (scoresId: number) => Promise<void>;
   createScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>;
   editScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>;
@@ -34,7 +34,7 @@ interface ScoreSheetState {
   getScoreSheetBreakdown: (teamId: number) => Promise<void>;
   clearScoreBreakdown: () => void;
   
-  // New methods
+  
   fetchMultipleScoreSheets: (teamIds: number[], judgeId: number, sheetType: number) => Promise<void>;
   fetchMultiTeamPenalties: (judgeId: number, contestId: number, sheetType: number) => Promise<void>;
   updateMultipleScores: (scoreSheets: Partial<ScoreSheet>[]) => Promise<void>;
