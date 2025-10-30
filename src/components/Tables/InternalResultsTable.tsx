@@ -13,7 +13,7 @@ import {
 import { alpha } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
 import { useMapContestToTeamStore } from "../../store/map_stores/mapContestToTeamStore";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 const COLS = [
   { key: "rank", label: "Rank", width: "6%", align: "center" as const },
@@ -43,6 +43,13 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
   
 
   const rows = (teamsByContest ?? []) as any[];
+
+  // For redesign, only show rank, team, school, total, details
+  const visibleCols = useMemo(() => {
+    if (resultType !== 'redesign') return COLS;
+    const keep = new Set(["rank", "team", "school", "total", "details"]);
+    return COLS.filter(c => keep.has(c.key));
+  }, [resultType]);
   
   
   // Filter and sort rows based on result type
@@ -65,13 +72,7 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
     return rows;
   })();
  
-  // Fetch teams when contest changes
-  useEffect(() => {
-    if (contestId) {
-      // The teamsByContest data is already fetched by the parent component
-      // No need for additional fetching here
-    }
-  }, [contestId]);
+
 
 
   return (
@@ -100,7 +101,7 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
         >
           <TableHead>
             <TableRow sx={{ bgcolor: (t) => alpha(t.palette.success.main, 0.08) }}>
-              {COLS.map((c) => {
+              {visibleCols.map((c) => {
                 const isPenaltyHeader =
                   c.key === "general_penalties" || c.key === "run_penalties";
 
@@ -116,7 +117,6 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
                       py: { xs: isPenaltyHeader ? 1.0 : 0.6, sm: 1 },
                       px: { xs: isPenaltyHeader ? 0.5 : 0.5, sm: 1 },
 
-                      // ✅ Fix overflow only for penalties headers (allow wrap)
                       ...(isPenaltyHeader && {
                         whiteSpace: "normal",
                         wordBreak: "break-word",
@@ -205,41 +205,42 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
                     <Typography variant="body2">{school}</Typography>
                   </TableCell>
 
-                  <TableCell align="center">
-                    {resultType === 'preliminary' ? team.preliminary_journal_score :
-                     resultType === 'championship' ? team.preliminary_journal_score : // Championship uses preliminary journal score
-                     resultType === 'redesign' ? team.redesign_journal_score : 0}
-                  </TableCell>
-                  <TableCell align="center">
-                    {resultType === 'preliminary' ? team.preliminary_presentation_score :
-                     resultType === 'championship' ? (team.championship_presentation_score ?? 0) :
-                     resultType === 'redesign' ? team.redesign_presentation_score : 0}
-                  </TableCell>
-                  <TableCell align="center">
-                    {resultType === 'preliminary' ? team.preliminary_machinedesign_score :
-                     resultType === 'championship' ? (team.championship_machinedesign_score ?? 0) :
-                     resultType === 'redesign' ? team.redesign_machinedesign_score : 0}
-                  </TableCell>
+                  {resultType !== 'redesign' && (
+                    <>
+                      <TableCell align="center">
+                        {resultType === 'preliminary' ? team.preliminary_journal_score :
+                         resultType === 'championship' ? team.preliminary_journal_score : 0}
+                      </TableCell>
+                      <TableCell align="center">
+                        {resultType === 'preliminary' ? team.preliminary_presentation_score :
+                         resultType === 'championship' ? (team.championship_presentation_score ?? 0) : 0}
+                      </TableCell>
+                      <TableCell align="center">
+                        {resultType === 'preliminary' ? team.preliminary_machinedesign_score :
+                         resultType === 'championship' ? (team.championship_machinedesign_score ?? 0) : 0}
+                      </TableCell>
+                    </>
+                  )}
 
-                  {/* General Penalties */}
-                  <TableCell align="center" sx={{ color: "error.main", fontWeight: 600 }}>
-                    -{Number(resultType === 'preliminary' ? team.preliminary_penalties_score ?? 0 :
-                         resultType === 'championship' ? team.championship_general_penalties_score ?? 0 :
-                         resultType === 'redesign' ? team.redesign_penalties_score ?? 0 : 0).toFixed(1)}
-                  </TableCell>
-                  {/* Run Penalties */}
-                  <TableCell align="center" sx={{ color: "error.main", fontWeight: 600 }}>
-                    -{Number(resultType === 'preliminary' ? team.penalties_score ?? 0 :
-                         resultType === 'championship' ? team.championship_run_penalties_score ?? 0 :
-                         resultType === 'redesign' ? team.redesign_penalties_score ?? 0 : 0).toFixed(1)}
-                  </TableCell>
-
-                  {/* Total Penalties */}
-                  <TableCell align="center" sx={{ color: "error.main", fontWeight: 800 }}>
-                    -{Number(resultType === 'preliminary' ? (team.preliminary_penalties_score ?? 0) + (team.penalties_score ?? 0) :
-                         resultType === 'championship' ? (team.championship_general_penalties_score ?? 0) + (team.championship_run_penalties_score ?? 0) :
-                         resultType === 'redesign' ? team.redesign_penalties_score ?? 0 : 0).toFixed(1)}
-                  </TableCell>
+                  {resultType !== 'redesign' && (
+                    <>
+                      {/* General Penalties */}
+                      <TableCell align="center" sx={{ color: "error.main", fontWeight: 600 }}>
+                        -{Number(resultType === 'preliminary' ? team.preliminary_penalties_score ?? 0 :
+                             resultType === 'championship' ? team.championship_general_penalties_score ?? 0 : 0).toFixed(1)}
+                      </TableCell>
+                      {/* Run Penalties */}
+                      <TableCell align="center" sx={{ color: "error.main", fontWeight: 600 }}>
+                        -{Number(resultType === 'preliminary' ? team.penalties_score ?? 0 :
+                             resultType === 'championship' ? team.championship_run_penalties_score ?? 0 : 0).toFixed(1)}
+                      </TableCell>
+                      {/* Total Penalties */}
+                      <TableCell align="center" sx={{ color: "error.main", fontWeight: 800 }}>
+                        -{Number(resultType === 'preliminary' ? (team.preliminary_penalties_score ?? 0) + (team.penalties_score ?? 0) :
+                             resultType === 'championship' ? (team.championship_general_penalties_score ?? 0) + (team.championship_run_penalties_score ?? 0) : 0).toFixed(1)}
+                      </TableCell>
+                    </>
+                  )}
 
                   <TableCell
                     align="center"
@@ -258,7 +259,7 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
                               (team.championship_presentation_score || 0) + 
                               (team.championship_machinedesign_score || 0) - 
                               (team.championship_penalties_score || 0)).toFixed(1) :
-                     resultType === 'redesign' ? Number(team.redesign_score || 0).toFixed(1) : 0}
+                     resultType === 'redesign' ? Number((team.total_score ?? team.redesign_score) || 0).toFixed(1) : 0}
                   </TableCell>
 
                   <TableCell align="center">
