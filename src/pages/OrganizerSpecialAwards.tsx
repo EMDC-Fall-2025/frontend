@@ -21,7 +21,7 @@ import {
 import useSpecialAwardStore, { SpecialAward } from "../store/map_stores/mapAwardToTeamStore";
 import { useTeamStore } from "../store/primary_stores/teamStore";
 import { useNavigate } from "react-router-dom";
-import theme from "../theme";
+
 
 export default function OrganizerSpecialAwards() {
   const navigate = useNavigate();

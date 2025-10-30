@@ -147,7 +147,7 @@ export default function ManageContest() {
     };
   }, [clusters.length]);
 
-  // Load coaches when teams are available - OPTIMIZED VERSION
+  // Load coaches when teams are available 
   useEffect(() => {
     const loadCoaches = async () => {
       if (clusters && clusters.length > 0) {

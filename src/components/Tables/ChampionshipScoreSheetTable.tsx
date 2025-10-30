@@ -430,7 +430,7 @@ export default function ChampionshipScoreSheetTable({
           ...allFields,
         });
         
-        // No need to refresh the scoresheet - we're navigating away
+     
       }
       setOpenAreYouSure(false);
       
@@ -1051,16 +1051,16 @@ export default function ChampionshipScoreSheetTable({
                                     value={formData[index + 10] || ""}
                                     disabled={scoreSheet?.isSubmitted}
                                     onChange={(e) => {
-                                      // enforce allowed range: [lowPoints, highPoints] or empty
+                          
                                       let value: any = e.target.value;
 
                                       if (value !== undefined) {
                                         if (value === "") {
-                                          value = undefined; // Clear the field
+                                          value = undefined; 
                                         } else if (Number(value) < question.lowPoints) {
-                                          value = undefined; // Clear if below range
+                                          value = undefined; 
                                         } else if (Number(value) > question.highPoints) {
-                                          value = undefined; // Clear if above range
+                                          value = undefined; 
                                         } else {
                                           value = Number(value); // Convert to number if valid
                                         }

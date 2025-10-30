@@ -30,7 +30,7 @@ import GavelIcon from "@mui/icons-material/Gavel";
 import Ranking from "../components/Tables/Rankings";
 import { AwardIcon, Trophy } from "lucide-react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { AddIcCallOutlined, Event, EventAvailable } from "@mui/icons-material";
+
 
 export default function Organizer() {
   const [value, setValue] = useState("1");
