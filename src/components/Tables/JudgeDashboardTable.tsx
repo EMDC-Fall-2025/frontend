@@ -21,6 +21,7 @@ import {
   FormControlLabel,
   Radio,
   Typography,
+  Alert,
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
@@ -740,6 +741,11 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                             justifyContent: { xs: "center", sm: "flex-start" },
                             alignItems: { xs: "center", sm: "flex-start" }
                           }}>
+                            {contest && contest.is_open === false && (
+                              <Box sx={{ width: "100%", mb: 1 }}>
+                                <Alert severity="info">Contest has not started yet.</Alert>
+                              </Box>
+                            )}
                             {/* Journal -  tied to contest.is_open */}
                             {contest?.is_open && (
                             <ScoreSheetButton

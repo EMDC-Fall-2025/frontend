@@ -1,7 +1,7 @@
 // ContestScores.tsx
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Typography, Container, Tabs, Tab, Box, Stack } from "@mui/material";
+import { Typography, Container, Tabs, Tab, Box, Stack, Alert } from "@mui/material";
 import theme from "../theme";
 import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
 import useSpecialAwardStore from "../store/map_stores/mapAwardToTeamStore";
@@ -16,11 +16,14 @@ import StarIcon from "@mui/icons-material/Star";
 import { useContestStore } from "../store/primary_stores/contestStore";
 import { useMapClusterToContestStore } from "../store/map_stores/mapClusterToContestStore";
 import useContestJudgeStore from "../store/map_stores/mapContestToJudgeStore";
+import { useAuthStore } from "../store/primary_stores/authStore";
 
 export default function ContestScores() {
   const { contestId } = useParams<{ contestId: string }>();
   const contestIdNumber = contestId ? parseInt(contestId, 10) : null;
-  const { fetchContestById } = useContestStore();
+  const { role } = useAuthStore();
+  const isCoach = role?.user_type === 4;
+  const { fetchContestById, contest } = useContestStore();
   const { fetchClustersByContestId } = useMapClusterToContestStore();
   const { getAllJudgesByContestId } = useContestJudgeStore();
 
@@ -137,6 +140,14 @@ export default function ContestScores() {
     }))
     .sort((a, b) => b.total_score - a.total_score)
     .slice(0, 3);
+
+    if (isCoach && contest && contest.is_open === true) {
+    return (
+      <Container sx={{ mt: 3 }}>
+        <Alert severity="info">Results will be visible after the contest ends.</Alert>
+      </Container>
+    );
+  }
 
   return (
     <>

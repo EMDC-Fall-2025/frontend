@@ -114,7 +114,10 @@ export default function Coach() {
           <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
             <Collapse in={open} timeout="auto" unmountOnExit>
               <Box sx={{ m: 2 }}>
-                <CoachTeamScoresTable team={teams[index]} />
+                <CoachTeamScoresTable 
+                  team={teams[index]} 
+                  contest={contestsForTeams[teams[index].id]} 
+                />
               </Box>
             </Collapse>
           </TableCell>

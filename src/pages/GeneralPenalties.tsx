@@ -13,8 +13,8 @@ import {
   TableContainer,
   TableRow,
   Typography,
-  Stack,    // for tidy header layout
-  Divider,  // visual separator between header and content
+  Stack,    
+  Divider,  
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "../store/primary_stores/authStore";
@@ -37,13 +37,13 @@ export default function GeneralPenalties() {
   const { role } = useAuthStore();
   const { judgeId, teamId } = useParams();
   const { team, fetchTeamById } = useTeamStore();
-  const { fetchScoreSheetWithData } = useMapScoreSheetStore();
+  const { scoreSheetId, fetchScoreSheetId } = useMapScoreSheetStore();
   const {
     scoreSheet,
+    fetchScoreSheetById,
     isLoadingScoreSheet,
     updateScores,
-    submitScoreSheet,
-    setScoreSheet,
+    editScoreSheet,
   } = useScoreSheetStore();
   const { judgeDisqualifyTeam } = useJudgeStore();
   const navigate = useNavigate();
@@ -81,18 +81,19 @@ export default function GeneralPenalties() {
     }
   }, [parsedTeamId, fetchTeamById]);
 
-  // Load scoresheet data in one optimized call (sheetType 5 = general penalties)
+  // Resolve scoreSheetId mapping for this judge+team (sheetType 5 = general penalties)
   useEffect(() => {
     if (parsedJudgeId && parsedTeamId) {
-      fetchScoreSheetWithData(parsedJudgeId, parsedTeamId, 5)
-        .then((scoresheetData) => {
-          setScoreSheet(scoresheetData);
-        })
-        .catch((error) => {
-          console.error('Error fetching general penalties scoresheet:', error);
-        });
+      fetchScoreSheetId(parsedJudgeId, parsedTeamId, 5);
     }
-  }, [parsedTeamId, parsedJudgeId, fetchScoreSheetWithData, setScoreSheet]);
+  }, [parsedTeamId, parsedJudgeId, fetchScoreSheetId]);
+
+  // Load the score sheet after we know the id
+  useEffect(() => {
+    if (scoreSheetId) {
+      fetchScoreSheetById(scoreSheetId);
+    }
+  }, [scoreSheetId, fetchScoreSheetById]);
 
   // Populate local penalty state from the scoreSheet.
   // NOTE: Stored fields are total points; we display counts, so divide by per-occurrence point value.
@@ -110,7 +111,7 @@ export default function GeneralPenalties() {
     } else {
       setPenaltyState({});
     }
-  }, [scoreSheet]);
+  }, [scoreSheet, parsedJudgeId, parsedTeamId]);
 
   // Convert current counts to scored fields (points) before save/submit
   const calculatePenalties = () => {
@@ -136,7 +137,7 @@ export default function GeneralPenalties() {
     try {
       if (scoreSheet) {
         const penalties = calculatePenalties();
-        await submitScoreSheet({
+        await editScoreSheet({
           id: scoreSheet.id,
           sheetType: scoreSheet.sheetType,
           isSubmitted: true,
@@ -144,15 +145,9 @@ export default function GeneralPenalties() {
         });
       }
       setOpenAreYouSure(false);
-      
-      // Small delay to ensure toast is visible before navigation
-      setTimeout(() => {
-        navigate(-1);
-      }, 100);
+      navigate(-1);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to submit penalties. Please try again.");
-      setOpenAreYouSure(false);
     }
   };
 
