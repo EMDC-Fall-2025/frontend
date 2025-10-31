@@ -40,6 +40,9 @@ export default function ContestScores() {
   const [coachNames, setCoachNames] = useState<{ [key: number]: string }>({});
   const [teamAwards, setTeamAwards] = useState<{ [key: number]: string }>({});
   const [activeTab, setActiveTab] = useState("prelim");
+  // Check if championship advancement has occurred
+            
+  const hasChampionshipAdvance = teamsByContest.some((team) => team.advanced_to_championship === true);
 
   useEffect(() => {
     if (contestIdNumber) {
@@ -215,6 +218,8 @@ export default function ContestScores() {
                 </Stack>
               }
             />
+
+            {hasChampionshipAdvance && (
             <Tab
               value="championship"
               iconPosition="start"
@@ -227,6 +232,7 @@ export default function ContestScores() {
                 </Stack>
               }
             />
+          )}
             <Tab
               value="winners"
               iconPosition="start"

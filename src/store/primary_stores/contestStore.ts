@@ -18,7 +18,7 @@ interface ContestState {
 
 export const useContestStore = create<ContestState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       allContests: [],
       contest: null,
       isLoadingContest: false,
@@ -45,6 +45,12 @@ export const useContestStore = create<ContestState>()(
       },
 
       fetchAllContests: async () => {
+        // Check cache first - if we already have contests, return early
+        const cachedContests = get().allContests;
+        if (cachedContests && cachedContests.length > 0) {
+          return; // Use cached data
+        }
+        
         set({ isLoadingContest: true });
         try {
           const token = localStorage.getItem("token");
@@ -64,6 +70,19 @@ export const useContestStore = create<ContestState>()(
       },
 
       fetchContestById: async (contestId: number) => {
+        // Check cache first - if we already have this contest, return early
+        const cachedContest = get().contest;
+        if (cachedContest && cachedContest.id === contestId) {
+          return; // Use cached data
+        }
+        
+        // Also check allContests array for the contest
+        const cachedInAll = get().allContests.find(c => c.id === contestId);
+        if (cachedInAll) {
+          set({ contest: cachedInAll });
+          return; // Use cached data
+        }
+        
         set({ isLoadingContest: true });
         try {
           const token = localStorage.getItem("token");

@@ -16,7 +16,7 @@ interface MapContestToTeamState {
 
 export const useMapContestToTeamStore = create<MapContestToTeamState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       contestsForTeams: {},
       isLoadingMapContestToTeam: false,
       mapContestToTeamError: null,
@@ -54,6 +54,17 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
       },
 
       fetchTeamsByContest: async (contestId: number) => {
+        // Check cache first - if we already have teams for this contest, return early
+        // Note: teamsByContest is a single array, so we check if it's already populated
+        const cachedTeams = get().teamsByContest;
+        if (cachedTeams && cachedTeams.length > 0) {
+          // Check if any team belongs to this contest
+          const hasTeamsForContest = cachedTeams.some(team => (team as any).contest_id === contestId);
+          if (hasTeamsForContest) {
+            return; // Use cached data
+          }
+        }
+        
         set({ isLoadingMapContestToTeam: true });
         try {
           const token = localStorage.getItem("token");

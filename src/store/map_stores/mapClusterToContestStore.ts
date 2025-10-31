@@ -16,7 +16,7 @@ interface MapClusterContestState {
 
 export const useMapClusterToContestStore = create<MapClusterContestState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       clusters: [],
       contestClusters: {},
       isLoadingMapClusterContest: false,
@@ -34,6 +34,13 @@ export const useMapClusterToContestStore = create<MapClusterContestState>()(
       },
 
       fetchClustersByContestId: async (contestId: number) => {
+        // Check cache first - if we already have clusters for this contest, return early
+        const cachedClusters = get().contestClusters[contestId];
+        if (cachedClusters && cachedClusters.length > 0) {
+          set({ clusters: cachedClusters });
+          return cachedClusters; // Use cached data
+        }
+        
         set({ isLoadingMapClusterContest: true });
         try {
           const token = localStorage.getItem("token");
@@ -51,7 +58,13 @@ export const useMapClusterToContestStore = create<MapClusterContestState>()(
             ...c,
             cluster_type: (c.cluster_type ?? "preliminary").toLowerCase(),
           }));
-          set({ clusters });
+          set({ 
+            clusters,
+            contestClusters: {
+              ...get().contestClusters,
+              [contestId]: clusters,
+            }
+          });
           set({ mapClusterContestError: null });
           return clusters; // Return the clusters for immediate use
         } catch (mapClusterContestError: any) {
@@ -75,11 +88,19 @@ export const useMapClusterToContestStore = create<MapClusterContestState>()(
       },
 
       fetchClustersForMultipleContests: async (contestIds: number[]) => {
+        // Check cache first - only fetch for contests we don't have data for
+        const cachedContestClusters = get().contestClusters;
+        const contestClustersMap: {[contestId: number]: Cluster[]} = { ...cachedContestClusters };
+        const contestsToFetch = contestIds.filter(id => !cachedContestClusters[id] || cachedContestClusters[id].length === 0);
+        
+        // If all contests are cached, return early
+        if (contestsToFetch.length === 0) {
+          return; // Use cached data
+        }
+        
         set({ isLoadingMapClusterContest: true });
         try {
-          const contestClustersMap: {[contestId: number]: Cluster[]} = {};
-          
-          for (const contestId of contestIds) {
+          for (const contestId of contestsToFetch) {
             try {
               const token = localStorage.getItem("token");
               const response = await axios.get(

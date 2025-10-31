@@ -25,7 +25,7 @@ interface MapContestJudgeState {
 
 export const useMapContestJudgeStore = create<MapContestJudgeState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       judges: [],
       contest: null,
       mappings: [],
@@ -94,6 +94,13 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
       },
 
       getAllJudgesByContestId: async (contestId: number) => {
+        // Check cache first - if we already have judges for this contest, return early
+        const cachedJudges = get().contestJudges[contestId];
+        if (cachedJudges && cachedJudges.length > 0) {
+          set({ judges: cachedJudges });
+          return; // Use cached data
+        }
+        
         set({ isLoadingMapContestJudge: true });
         try {
           const token = localStorage.getItem("token");
@@ -105,9 +112,14 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
               },
             }
           );
-          // Update judges and clear error in a single set call to prevent multiple re-renders
+          // Update judges and contestJudges map
+          const judges = response.data.Judges || [];
           set({
-            judges: response.data.Judges,
+            judges: judges,
+            contestJudges: {
+              ...get().contestJudges,
+              [contestId]: judges,
+            },
             mapContestJudgeError: null,
             isLoadingMapContestJudge: false,
           });
@@ -122,6 +134,12 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
       },
 
       getContestByJudgeId: async (judgeId: number) => {
+        // Check cache first - if we already have this contest, return early
+        const cachedContest = get().contest;
+        if (cachedContest) {
+          return; // Use cached data
+        }
+        
         set({ isLoadingMapContestJudge: true });
         try {
           const token = localStorage.getItem("token");
@@ -200,11 +218,19 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
       },
 
       fetchJudgesForMultipleContests: async (contestIds: number[]) => {
+        // Check cache first - only fetch for contests we don't have data for
+        const cachedContestJudges = get().contestJudges;
+        const contestJudgesMap: {[contestId: number]: Judge[]} = { ...cachedContestJudges };
+        const contestsToFetch = contestIds.filter(id => !cachedContestJudges[id] || cachedContestJudges[id].length === 0);
+        
+        // If all contests are cached, return early
+        if (contestsToFetch.length === 0) {
+          return; // Use cached data
+        }
+        
         set({ isLoadingMapContestJudge: true });
         try {
-          const contestJudgesMap: {[contestId: number]: Judge[]} = {};
-          
-          for (const contestId of contestIds) {
+          for (const contestId of contestsToFetch) {
             try {
               const token = localStorage.getItem("token");
               const response = await axios.get(

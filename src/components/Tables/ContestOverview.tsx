@@ -7,6 +7,14 @@ import {
   CardContent,
   Grid,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  List,
+  ListItem,
+  ListItemText,
 } from "@mui/material";
 import { useContestStore } from "../../store/primary_stores/contestStore";
 import { useMapContestOrganizerStore } from "../../store/map_stores/mapContestToOrganizerStore";
@@ -28,6 +36,7 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
   const { role } = useAuthStore();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [openJudgeDialog, setOpenJudgeDialog] = useState<number | null>(null);
 
   // Determine which contests to display based on user role
   // Organizers see only their assigned contests, judges see their assigned contest, admins see all contests
@@ -314,15 +323,19 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
                           label={`+${contestJudges[contest.id].length - 4} more`}
                           size="small"
                           variant="outlined"
+                          onClick={() => setOpenJudgeDialog(contest.id)}
                           sx={{ 
                             fontSize: "0.75rem",
                             fontWeight: 600,
                             borderColor: theme.palette.grey[400],
                             color: theme.palette.grey[600],
                             backgroundColor: theme.palette.grey[100],
+                            cursor: "pointer",
                             "&:hover": {
                               backgroundColor: theme.palette.grey[200],
                               transform: "scale(1.05)",
+                              borderColor: theme.palette.primary.main,
+                              color: theme.palette.primary.main,
                             },
                             transition: "all 0.2s ease",
                           }}
@@ -337,6 +350,93 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
         ))}
       </Grid>
 
+      {/* Dialog to show all judges */}
+      {openJudgeDialog !== null && contestJudges[openJudgeDialog] && (
+        <Dialog
+          open={openJudgeDialog !== null}
+          onClose={() => setOpenJudgeDialog(null)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 3,
+              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.2)",
+            },
+          }}
+        >
+          <DialogTitle
+            sx={{
+              fontWeight: 700,
+              fontSize: "1.25rem",
+              borderBottom: `1px solid ${theme.palette.grey[200]}`,
+              pb: 2,
+            }}
+          >
+            All Judges
+            <Typography
+              variant="body2"
+              sx={{
+                color: theme.palette.text.secondary,
+                fontWeight: 400,
+                mt: 0.5,
+                fontSize: "0.875rem",
+              }}
+            >
+              {contestJudges[openJudgeDialog].length} judge{contestJudges[openJudgeDialog].length !== 1 ? "s" : ""} assigned
+            </Typography>
+          </DialogTitle>
+          <DialogContent sx={{ pt: 3 }}>
+            <List sx={{ p: 0 }}>
+              {contestJudges[openJudgeDialog].map((judge, index) => (
+                <ListItem
+                  key={index}
+                  sx={{
+                    px: 2,
+                    py: 1.5,
+                    borderRadius: 1,
+                    mb: 1,
+                    backgroundColor: index % 2 === 0 ? theme.palette.grey[50] : "#fff",
+                    border: `1px solid ${theme.palette.grey[200]}`,
+                    "&:hover": {
+                      backgroundColor: theme.palette.primary.light + "10",
+                      borderColor: theme.palette.primary.main,
+                    },
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <ListItemText
+                    primary={`${judge.first_name} ${judge.last_name}`}
+                    secondary={judge.email || ""}
+                    primaryTypographyProps={{
+                      fontWeight: 600,
+                      color: theme.palette.grey[800],
+                      fontSize: "0.95rem",
+                    }}
+                    secondaryTypographyProps={{
+                      fontSize: "0.85rem",
+                      color: theme.palette.text.secondary,
+                    }}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </DialogContent>
+          <DialogActions sx={{ p: 2, borderTop: `1px solid ${theme.palette.grey[200]}` }}>
+            <Button
+              onClick={() => setOpenJudgeDialog(null)}
+              variant="contained"
+              sx={{
+                textTransform: "none",
+                borderRadius: 2,
+                px: 3,
+                fontWeight: 600,
+              }}
+            >
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </Box>
   );
 }

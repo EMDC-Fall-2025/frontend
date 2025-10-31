@@ -5,6 +5,7 @@ import { Container, Stack } from "@mui/material";
 import theme from "../theme";
 import { useContestStore } from "../store/primary_stores/contestStore";
 import ContestTable from "../components/Tables/ContestTable";
+import toast from "react-hot-toast";
 
 // FILE OVERVIEW: page for displaying contests
 export default function Contests() {
@@ -40,7 +41,31 @@ export default function Contests() {
 
   // Navigate to specific contest results
   const handleRowClick = (contestId: number) => {
+    const contest = allContests.find((c: any) => c.id === contestId);
+    if (contest && contest.is_open == false && contest.is_tabulated == true){
     navigate(`/contestresults/${contestId}`);
+    }
+    else{
+      toast.success(
+        "🎉 Stay tuned! Results will be available once the contest ends and scores are finalized!",
+        {
+          duration: 4000,
+          style: {
+            background: '#4caf50',
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: '15px',
+            padding: '16px 20px',
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+          },
+          iconTheme: {
+            primary: '#fff',
+            secondary: '#4caf50',
+          },
+        }
+      );
+    }
   };
 
   // transforms array into rows
