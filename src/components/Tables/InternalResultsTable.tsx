@@ -13,6 +13,7 @@ import {
 import { alpha } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
 import { useMapContestToTeamStore } from "../../store/map_stores/mapContestToTeamStore";
+import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
 import { useEffect, useMemo } from "react";
 
 const COLS = [
@@ -39,10 +40,49 @@ const bgBronze = () => alpha(BRONZE, 0.18);
 
 export default function InternalResultsTable({ contestId, resultType='preliminary' }: { contestId?: number; resultType?: 'preliminary' | 'championship' | 'redesign'; }) {
   const { teamsByContest } = useMapContestToTeamStore();
+  const { clusters, teamsByClusterId, fetchClustersByContestId, getTeamsByClusterId } = useMapClusterTeamStore();
   const navigate = useNavigate();
   
 
   const rows = (teamsByContest ?? []) as any[];
+
+  // Fetch clusters when contestId is available
+  useEffect(() => {
+    if (contestId) {
+      fetchClustersByContestId(contestId);
+    }
+  }, [contestId, fetchClustersByContestId]);
+
+  // Fetch teams for each cluster when clusters are available
+  useEffect(() => {
+    if (clusters && clusters.length > 0 && contestId) {
+      clusters.forEach((cluster: any) => {
+        // Only fetch if we don't already have teams for this cluster
+        if (!teamsByClusterId[cluster.id]) {
+          getTeamsByClusterId(cluster.id);
+        }
+      });
+    }
+  }, [clusters, contestId, getTeamsByClusterId, teamsByClusterId]);
+
+  // Create a mapping from team ID to cluster name (only for preliminary clusters)
+  const clusterNameByTeamId = useMemo(() => {
+    const mapping: { [teamId: number]: string } = {};
+    
+    // Iterate through each cluster, but only include preliminary type clusters
+    clusters.forEach((cluster: any) => {
+      // Only process clusters with type 'preliminary'
+      if (cluster.cluster_type === 'preliminary') {
+        const teams = teamsByClusterId[cluster.id] || [];
+        // For each team in this cluster, map its ID to the cluster name
+        teams.forEach((team: any) => {
+          mapping[team.id] = cluster.cluster_name;
+        });
+      }
+    });
+    
+    return mapping;
+  }, [clusters, teamsByClusterId]);
 
   // For redesign, only show rank, team, school, total, details
   const visibleCols = useMemo(() => {
@@ -188,16 +228,7 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
                   <TableCell>
                     <Typography fontWeight={700}>{team.team_name}</Typography>
                     <Typography variant="caption" color="text.disabled">
-                    {(() => {
-                      // Find which cluster this team belongs to
-                    // format: teamsByClusterId = {
-                    //     "29": [team1, team2, team3],     // Cluster 29 has 3 teams
-                    //     "50": [team4, team5],            // Cluster 50 has 2 teams  
-                    //     "51": [team6],                   // Cluster 51 has 1 team
-                    //     "32": [team7, team8, team9]       // Cluster 32 has 3 teams
-                    // Simplified cluster display - just show team ID
-                    return `ID: ${team.id}`;
-                  })()}
+                      {clusterNameByTeamId[team.id] || `ID: ${team.id}`}
                     </Typography>
                   </TableCell>
 
