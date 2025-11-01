@@ -75,7 +75,10 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
         organizerId: number,
         contestId: number
       ) => {
+<<<<<<< HEAD
 
+=======
+>>>>>>> 62dba9427b4cff56df4860d87c1dc0941d126d01
         set({
           mapContestOrganizerError: null,
         });
@@ -123,8 +126,13 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
             }
           }
           
+<<<<<<< HEAD
           if (contest) {
             set((state) => {
+=======
+            if (contest) {
+              set((state) => {
+>>>>>>> 62dba9427b4cff56df4860d87c1dc0941d126d01
               const currentContests = state.contestsByOrganizers[organizerId] || [];
               const currentOrganizerNames = (state.organizerNamesByContests[contestId] || []) as string[];
               

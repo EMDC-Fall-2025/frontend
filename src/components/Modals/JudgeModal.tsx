@@ -295,8 +295,8 @@ export default function JudgeModal(props: IJudgeModalProps) {
             // If no redesign sheet is selected, add it automatically
             if (!allowedSheets.includes("redesignSS")) {
               allowedSheets = ["redesignSS"];
+              }
             }
-          }
         } else {
           // No changes made - preserve existing scoresheet assignments exactly as they were
           allowedSheets = originalSheets;
