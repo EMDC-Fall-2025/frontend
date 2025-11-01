@@ -42,7 +42,7 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
   const { coachesByTeams } = useMapCoachToTeamStore();
   const { teamsByClusterId } = useMapClusterTeamStore();
   const { deleteCluster } = useClusterStore();
-  const { fetchClustersByContestId } = useMapClusterToContestStore();
+  const { removeClusterFromContest} = useMapClusterToContestStore();
   const [openDisqualificationModal, setOpenDisqualificationModal] =
     useState(false);
   const [openDeleteConfirmModal, setOpenDeleteConfirmModal] = useState(false);
@@ -69,8 +69,8 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
       try {
         await deleteCluster(clusterToDelete); // Delete from backend
         toast.success('Cluster deleted successfully!');
-        // Refresh clusters list
-        fetchClustersByContestId(contestId);
+        // Remove cluster from state directly - no fetch needed!
+        removeClusterFromContest(contestId, clusterToDelete);
         setOpenDeleteConfirmModal(false);
         setClusterToDelete(null);
       } catch (error) {
@@ -231,7 +231,13 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
   }
 
   return teamsByClusterId ? (
-    <TableContainer component={Box}>
+    <TableContainer 
+      component={Box}
+      sx={{
+        overflowAnchor: "none",
+        contain: "layout",
+      }}
+    >
       <Table
         sx={{
           "& .MuiTableCell-root": { 
@@ -318,18 +324,35 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
                 <TableCell
                   style={{ paddingBottom: 0, paddingTop: 0 }}
                   colSpan={5}
+                  sx={{
+                    position: "relative",
+                    overflow: "hidden",
+                    overflowAnchor: "none",
+                    containIntrinsicSize: "auto",
+                  }}
                 >
                   <Collapse
                     in={openClusterIds.includes(cluster.id)}
                     timeout="auto"
                     unmountOnExit
+                    sx={{
+                      willChange: "height",
+                      contain: "layout style",
+                    }}
                   >
-                    {teamsByClusterId[cluster.id] && (
-                      <TeamTable
-                        teams={teamsByClusterId[cluster.id]}
-                        cluster={cluster.id}
-                      />
-                    )}
+                    <Box 
+                      sx={{ 
+                        py: 1,
+                        isolation: "isolate",
+                      }}
+                    >
+                      {teamsByClusterId[cluster.id] && (
+                        <TeamTable
+                          teams={teamsByClusterId[cluster.id]}
+                          cluster={cluster.id}
+                        />
+                      )}
+                    </Box>
                   </Collapse>
                 </TableCell>
               </TableRow>
@@ -343,10 +366,8 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
         mode="edit"
         clusterData={clusterData}
         contestid={contestId}
-        onSuccess={async () => {
-          try {
-            await fetchClustersByContestId(contestId);
-          } catch {}
+        onSuccess={() => {
+          // Data already updated directly in modal, no refresh needed!
         }}
       />
       <TeamModal

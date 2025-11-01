@@ -173,6 +173,10 @@ export default function ManageContest() {
         borderRadius: 3,
         boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
         border: `1px solid ${theme.palette.divider}`,
+        contain: "layout style",
+        overflowAnchor: "none",
+        position: "relative",
+        isolation: "isolate",
       }}
     >
       {/* Action Buttons */}
@@ -329,6 +333,9 @@ export default function ManageContest() {
             borderBottomRightRadius: 8,
             border: `1px solid ${theme.palette.divider}`,
             borderTop: "none",
+            overflowAnchor: "none",
+            position: "relative",
+            minHeight: 200,
           }}
         >
           <OrganizerJudgesTable
@@ -347,6 +354,9 @@ export default function ManageContest() {
             borderBottomRightRadius: 8,
             border: `1px solid ${theme.palette.divider}`,
             borderTop: "none",
+            overflowAnchor: "none",
+            position: "relative",
+            minHeight: 200,
           }}
         >
           {isTeamsTab && (
@@ -367,17 +377,7 @@ export default function ManageContest() {
       clusters={clusters}
       contestid={parsedContestId}
       onSuccess={async () => {
-        // Refresh all data after successful judge creation in parallel
-        await Promise.all([
-          getAllJudgesByContestId(parsedContestId),
-          fetchClustersByContestId(parsedContestId)
-        ]);
-        
-        // Refresh judges for all clusters in parallel
-        if (clusters && clusters.length > 0) {
-          const judgePromises = clusters.map(cluster => fetchJudgesByClusterId(cluster.id));
-          await Promise.all(judgePromises);
-        }
+       
       }}
     />
     <ClusterModal
@@ -399,31 +399,7 @@ export default function ManageContest() {
         setOpenAssignJudgeModal(false);
       }}
       onSuccess={async () => {
-        try {
-          // Refresh judges and clusters in parallel after successful assignment
-          await Promise.all([
-            getAllJudgesByContestId(parsedContestId),
-            fetchClustersByContestId(parsedContestId)
-          ]);
-          
-          // Refresh judges for each cluster in parallel to update judgesByClusterId
-          if (clusters && clusters.length > 0) {
-            const judgePromises = clusters.map(async (cluster) => {
-              try {
-                await fetchJudgesByClusterId(cluster.id);
-              } catch (error) {
-                console.error(`Error fetching judges for cluster ${cluster.id}:`, error);
-              }
-            });
-            await Promise.all(judgePromises);
-          }
-          
-          setOpenAssignJudgeModal(false);
-        } catch (error) {
-          console.error('Error refreshing data after judge assignment:', error);
-          // Still close the modal even if refresh fails
-          setOpenAssignJudgeModal(false);
-        }
+        setOpenAssignJudgeModal(false);
       }}
     />
   </>

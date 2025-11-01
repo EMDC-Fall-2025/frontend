@@ -435,7 +435,13 @@ function OrganizerJudgesTable(
   };
 
   return judgesByClusterId ? (
-    <TableContainer component={Box}>
+    <TableContainer 
+      component={Box}
+      sx={{
+        overflowAnchor: "none",
+        contain: "layout",
+      }}
+    >
       <Table
         sx={{
           "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 },
@@ -497,20 +503,37 @@ function OrganizerJudgesTable(
                 <TableCell
                   style={{ paddingBottom: 0, paddingTop: 0 }}
                   colSpan={5}
+                  sx={{
+                    position: "relative",
+                    overflow: "hidden",
+                    overflowAnchor: "none",
+                    containIntrinsicSize: "auto",
+                  }}
                 >
                   <Collapse
                     in={openClusterIds.includes(cluster.id)}
                     timeout="auto"
                     unmountOnExit
+                    sx={{
+                      willChange: "height",
+                      contain: "layout style",
+                    }}
                   >
-                    {judgesByClusterId[cluster.id] && (
-                      <JudgesTable
-                        judges={judgesByClusterId[cluster.id]}
-                        clusters={clusters}
-                        contestid={contestid}
-                        currentCluster={cluster}
-                      />
-                    )}
+                    <Box 
+                      sx={{ 
+                        py: 1,
+                        isolation: "isolate",
+                      }}
+                    >
+                      {judgesByClusterId[cluster.id] && (
+                        <JudgesTable
+                          judges={judgesByClusterId[cluster.id]}
+                          clusters={clusters}
+                          contestid={contestid}
+                          currentCluster={cluster}
+                        />
+                      )}
+                    </Box>
                   </Collapse>
                 </TableCell>
               </TableRow>

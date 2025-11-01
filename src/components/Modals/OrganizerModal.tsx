@@ -39,28 +39,41 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
   const organizerid = organizerData?.id;
   const { user, getUserByRole } = useUserRoleStore();
 
-  const { createOrganizer, editOrganizer, fetchAllOrganizers } =
-    useOrganizerStore();
+  const { createOrganizer, editOrganizer } = useOrganizerStore();
 
   useEffect(() => {
-    if (organizerData) {
-      getUserByRole(organizerData.id, 2);
+    if (organizerData && organizerData.id) {
+      getUserByRole(organizerData.id, 2).catch((error) => {
+        // Silently handle 404 - organizer might not have a user mapping yet
+        console.warn("Failed to fetch user by role for organizer:", error);
+      });
     }
   }, [organizerData, getUserByRole]);
 
   useEffect(() => {
-    if (organizerData && user) {
+    if (mode === "new") {
+      // Reset fields when creating new organizer
+      setFirstName("");
+      setLastName("");
+      setUsername("");
+    } else if (organizerData && user) {
+      // Set fields when editing existing organizer
       setFirstName(organizerData.first_name);
       setLastName(organizerData.last_name);
       setUsername(user.username);
+    } else if (!organizerData) {
+      // Reset fields if no organizer data (safety check)
+      setFirstName("");
+      setLastName("");
+      setUsername("");
     }
-  }, [organizerData, user]);
+  }, [mode, organizerData, user]);
 
   const handleCloseModal = () => {
-    handleClose();
     setFirstName("");
     setLastName("");
     setUsername("");
+    handleClose();
   };
 
   /**
@@ -78,10 +91,9 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
         password: "password",
       });
       
-      // Refresh organizer list to show new organizer
-      await fetchAllOrganizers();
+      // Store updates directly, no fetch needed!
       toast.success("Organizer created successfully!");
-      handleClose();
+      handleCloseModal(); // Use handleCloseModal to reset fields
     } catch (error: any) {
       // Handle organizer creation errors with user-friendly messages
       let errorMessage = "";
@@ -132,10 +144,9 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
           password: "password",
         });
         
-        // Refresh organizer list to show updated information
-        await fetchAllOrganizers();
+        // Store updates directly, no fetch needed!
         toast.success("Organizer updated successfully!");
-        handleClose();
+        handleCloseModal(); // Use handleCloseModal to reset fields
       } catch (error: any) {
         // Handle organizer update errors
         toast.error("Failed to update organizer. Please try again.");

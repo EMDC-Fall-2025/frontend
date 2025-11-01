@@ -13,9 +13,11 @@ interface MapContestJudgeState {
 
   createContestJudgeMapping: (mapData: MapContestToJudge) => Promise<void>;
   getAllJudgesByContestId: (contestId: number) => Promise<void>;
+  addJudgeToContest: (contestId: number, judge: Judge) => void;
+  updateJudgeInContest: (contestId: number, updatedJudge: Judge) => void;
+  removeJudgeFromContest: (judgeId: number, contestId: number) => Promise<void>;
   getContestByJudgeId: (judgeId: number) => Promise<void>;
   deleteContestJudgeMappingById: (mapId: number) => Promise<void>;
-  removeJudgeFromContest: (judgeId: number, contestId: number) => Promise<void>;
   clearJudges: () => void;
   clearContest: () => void;
   clearMappings: () => void;
@@ -165,6 +167,34 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
         } finally {
           set({ isLoadingMapContestJudge: false });
         }
+      },
+
+      addJudgeToContest: (contestId: number, judge: Judge) => {
+        const state = get();
+        const existingJudges = state.contestJudges[contestId] || [];
+        
+        set({
+          judges: [...state.judges, judge],
+          contestJudges: {
+            ...state.contestJudges,
+            [contestId]: [...existingJudges, judge],
+          },
+        });
+      },
+
+      updateJudgeInContest: (contestId: number, updatedJudge: Judge) => {
+        const state = get();
+        set({
+          judges: state.judges.map((j) =>
+            j.id === updatedJudge.id ? updatedJudge : j
+          ),
+          contestJudges: {
+            ...state.contestJudges,
+            [contestId]: (state.contestJudges[contestId] || []).map((j) =>
+              j.id === updatedJudge.id ? updatedJudge : j
+            ),
+          },
+        });
       },
 
       deleteContestJudgeMappingById: async (mapId: number) => {

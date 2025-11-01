@@ -9,8 +9,8 @@ interface JudgeState {
   judgeError: string | null;
   submissionStatus: { [key: number]: boolean } | null;
   fetchJudgeById: (judgeId: number) => Promise<void>;
-  createJudge: (newJudge: NewJudge) => Promise<void>;
-  editJudge: (editedJudge: EditedJudge) => Promise<void>;
+  createJudge: (newJudge: NewJudge) => Promise<Judge>;
+  editJudge: (editedJudge: EditedJudge) => Promise<Judge>;
   deleteJudge: (judgeId: number) => Promise<void>;
   checkAllScoreSheetsSubmitted: (judges: Judge[]) => Promise<void>;
   judgeDisqualifyTeam: (
@@ -74,13 +74,15 @@ export const useJudgeStore = create<JudgeState>()(
         set({ isLoadingJudge: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.post(`/api/judge/create/`, newJudge, {
+          const response = await axios.post(`/api/judge/create/`, newJudge, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
             },
           });
-          set({ judgeError: null });
+          const createdJudge = (response.data as any)?.judge;
+          set({ judge: createdJudge, judgeError: null });
+          return createdJudge;
         } catch (judgeError: any) {
           // Convert error to string to prevent React rendering issues
           let errorMessage = "Error creating judge";
@@ -115,10 +117,12 @@ export const useJudgeStore = create<JudgeState>()(
               "Content-Type": "application/json",
             },
           });
+          const updatedJudge = response.data.judge;
           set(() => ({
-            judge: response.data.judge,
+            judge: updatedJudge,
           }));
           set({ judgeError: null });
+          return updatedJudge;
         } catch (judgeError: any) {
           // Convert error to string to prevent React rendering issues
           let errorMessage = "Error editing judge";

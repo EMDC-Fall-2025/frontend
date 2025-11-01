@@ -22,7 +22,7 @@ interface MapClusterTeamState {
 
 const useMapClusterTeamStore = create<MapClusterTeamState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       clusters: [],
       teamsByClusterId: {},
       clusterTeamMappings: [],
@@ -54,7 +54,13 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
         }
       },
 
-      getTeamsByClusterId: async (clusterId) => {
+      getTeamsByClusterId: async (clusterId: number) => {
+        // Check cache first - if we already have teams for this cluster, return early
+        const cachedTeams = get().teamsByClusterId[clusterId];
+        if (cachedTeams && cachedTeams.length > 0) {
+          return; // Use cached data - no API call, no re-render
+        }
+        
         set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
         try {
           const token = localStorage.getItem("token");

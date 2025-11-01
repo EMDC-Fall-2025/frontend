@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import axios from "axios";
 import { Contest, NewContest } from "../../types";
+import useMapContestOrganizerStore from "../map_stores/mapContestToOrganizerStore";
 
 interface ContestState {
   allContests: Contest[];
@@ -168,6 +169,10 @@ export const useContestStore = create<ContestState>()(
             allContests: state.allContests.filter((c) => c.id !== contestId),
             contestError: null,
           }));
+          
+          // Remove contest from all organizers' assigned contests
+          const { removeContestFromAllOrganizers } = useMapContestOrganizerStore.getState();
+          removeContestFromAllOrganizers(contestId);
         } catch (contestError) {
           set({ contestError: "Error deleting contest: " + contestError });
           throw Error("Error deleting contest: " + contestError);

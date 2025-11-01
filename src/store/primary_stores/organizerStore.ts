@@ -102,7 +102,12 @@ export const useOrganizerStore = create<OrganizerState>()(
               },
             }
           );
-          const createdOrganizer: Organizer = response.data;
+          // Extract organizer from response - backend returns { user, organizer, user_map }
+          const apiOrganizer = response.data.organizer || response.data;
+          const createdOrganizer: Organizer = {
+            ...apiOrganizer,
+            username: newOrganizer.username || response.data.user?.username || apiOrganizer.username || '',
+          };
           set((state) => ({
             allOrganizers: [...state.allOrganizers, createdOrganizer],
             organizerError: null,
@@ -135,15 +140,31 @@ export const useOrganizerStore = create<OrganizerState>()(
         set({ isLoadingOrganizer: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.post(`/api/organizer/edit/`, editedOrganizer, {
+          // Ensure id is included in the request body
+          const payload = {
+            id: editedOrganizer.id,
+            first_name: editedOrganizer.first_name,
+            last_name: editedOrganizer.last_name,
+            username: editedOrganizer.username,
+            password: editedOrganizer.password || "password", // Backend might need this
+          };
+          const response = await axios.post(`/api/organizer/edit/`, payload, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
             },
           });
+          
+          // Use the response data from backend to update state
+          const updatedOrganizer = response.data.organizer || editedOrganizer;
+          const finalOrganizer: Organizer = {
+            ...updatedOrganizer,
+            username: editedOrganizer.username, // Preserve username from request
+          };
+          
           set((state) => ({
             allOrganizers: state.allOrganizers.map((org) =>
-              org.id === editedOrganizer.id ? editedOrganizer : org
+              org.id === editedOrganizer.id ? finalOrganizer : org
             ),
             organizerError: null,
           }));
@@ -180,15 +201,32 @@ export const useOrganizerStore = create<OrganizerState>()(
               Authorization: `Token ${token}`,
             },
           });
+          // Only update state if deletion succeeds
           set((state) => ({
             allOrganizers: state.allOrganizers.filter(
               (org) => org.id !== organizerId
             ),
             organizerError: null,
           }));
-        } catch (error) {
-          set({ organizerError: "Error deleting organizer: " + error });
-          throw new Error("Error deleting organizer: " + error);
+        } catch (error: any) {
+          // Extract error message from backend response
+          let errorMessage = "Error deleting organizer";
+          if (error?.response?.data) {
+            const data = error.response.data;
+            if (typeof data === 'string') {
+              errorMessage = data;
+            } else if (data.error && typeof data.error === 'string') {
+              errorMessage = data.error;
+            } else if (data.detail && typeof data.detail === 'string') {
+              errorMessage = data.detail;
+            } else if (data.message && typeof data.message === 'string') {
+              errorMessage = data.message;
+            } else {
+              errorMessage = JSON.stringify(data);
+            }
+          }
+          set({ organizerError: errorMessage });
+          throw new Error(errorMessage);
         } finally {
           set({ isLoadingOrganizer: false });
         }

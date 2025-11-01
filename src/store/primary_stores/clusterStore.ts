@@ -12,8 +12,8 @@ interface ClusterState {
     cluster_name: string;
     cluster_type?: string;
     contestid: number;
-  }) => Promise<void>;
-  editCluster: (data: { id: number; cluster_name: string; cluster_type?: string }) => Promise<void>;
+  }) => Promise<Cluster>;
+  editCluster: (data: { id: number; cluster_name: string; cluster_type?: string }) => Promise<Cluster>;
   deleteCluster: (clusterId: number) => Promise<void>;
   clearCluster: () => void;
 }
@@ -70,8 +70,10 @@ export const useClusterStore = create<ClusterState>()(
               "Content-Type": "application/json",
             },
           });
-          set({ cluster: response.data });
+          const createdCluster = (response.data as any)?.cluster || response.data;
+          set({ cluster: createdCluster });
           set({ clusterError: null });
+          return createdCluster;
         } catch (error) {
           const errorMessage = "Failed to create cluster";
           set({ clusterError: errorMessage });

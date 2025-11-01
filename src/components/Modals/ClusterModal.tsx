@@ -34,7 +34,7 @@ export default function ClusterModal(props: IClusterModalProps) {
   const originalType = (clusterData?.cluster_type || "preliminary").toLowerCase();
   const [clusterName, setClusterName] = useState("");
   const [clusterType, setClusterType] = useState<ClusterType>("preliminary");
-  const { fetchClustersByContestId } = useMapClusterToContestStore();
+  const { addClusterToContest, updateClusterInContest } = useMapClusterToContestStore();
   const { createCluster, editCluster, fetchClusterById, cluster } = useClusterStore();
 
   //  read from provided data on open; reset in new mode
@@ -73,12 +73,15 @@ export default function ClusterModal(props: IClusterModalProps) {
     event.preventDefault();
     if (effectiveContestId) {
       try {
-        await createCluster({
+        const createdCluster = await createCluster({
           cluster_name: clusterName,
           cluster_type: clusterType,
           contestid: effectiveContestId,
         });
-        fetchClustersByContestId(effectiveContestId);
+        // Add cluster to state directly - no fetch needed!
+        if (createdCluster) {
+          addClusterToContest(effectiveContestId, createdCluster);
+        }
         toast.success("Cluster created successfully!");
         handleCloseModal();
       } catch (error) {
@@ -92,8 +95,11 @@ export default function ClusterModal(props: IClusterModalProps) {
     event.preventDefault();
     if (clusterData?.id && effectiveContestId) {
       try {
-        await editCluster({ id: clusterData.id, cluster_name: clusterName, cluster_type: clusterType });
-        await fetchClustersByContestId(effectiveContestId);
+        const updatedCluster = await editCluster({ id: clusterData.id, cluster_name: clusterName, cluster_type: clusterType });
+        // Update cluster in state directly - no fetch needed!
+        if (updatedCluster) {
+          updateClusterInContest(effectiveContestId, updatedCluster);
+        }
         toast.success("Cluster updated successfully!");
         handleCloseModal();
         onSuccess && onSuccess();

@@ -11,6 +11,9 @@ interface MapClusterJudgeState {
   mapClusterJudgeError: string | null;
 
   fetchJudgesByClusterId: (clusterId: number) => Promise<void>;
+  updateJudgeInCluster: (clusterId: number, updatedJudge: Judge) => void;
+  updateJudgeInAllClusters: (updatedJudge: Judge) => void;
+  addJudgeToCluster: (clusterId: number, judge: Judge) => void;
   fetchClusterByJudgeId: (judgeId: number) => Promise<void>;
   fetchClustersForJudges: (judges: Judge[]) => Promise<void>;
   fetchAllClustersByJudgeId: (judgeId: number) => Promise<Cluster[]>;
@@ -28,7 +31,7 @@ interface MapClusterJudgeState {
 
 export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       judgesByClusterId: {},
       judgeClusters: {},
       isLoadingMapClusterJudge: false,
@@ -68,7 +71,13 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
         }
       },
 
-      fetchJudgesByClusterId: async (clusterId) => {
+      fetchJudgesByClusterId: async (clusterId: number) => {
+        // Check cache first - if we already have judges for this cluster, return early
+        const cachedJudges = get().judgesByClusterId[clusterId];
+        if (cachedJudges && cachedJudges.length > 0) {
+          return; // Use cached data - no API call, no re-render
+        }
+        
         set({ isLoadingMapClusterJudge: true });
         try {
           const token = localStorage.getItem("token");
@@ -95,6 +104,39 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
         } finally {
           set({ isLoadingMapClusterJudge: false });
         }
+      },
+
+      updateJudgeInCluster: (clusterId: number, updatedJudge: Judge) => {
+        set((state) => ({
+          judgesByClusterId: {
+            ...state.judgesByClusterId,
+            [clusterId]: (state.judgesByClusterId[clusterId] || []).map((j) =>
+              j.id === updatedJudge.id ? updatedJudge : j
+            ),
+          },
+        }));
+      },
+
+      updateJudgeInAllClusters: (updatedJudge: Judge) => {
+        set((state) => {
+          const updatedJudgesByClusterId: { [key: number]: Judge[] } = {};
+          Object.keys(state.judgesByClusterId).forEach((clusterIdStr) => {
+            const clusterId = parseInt(clusterIdStr, 10);
+            updatedJudgesByClusterId[clusterId] = (
+              state.judgesByClusterId[clusterId] || []
+            ).map((j) => (j.id === updatedJudge.id ? updatedJudge : j));
+          });
+          return { judgesByClusterId: updatedJudgesByClusterId };
+        });
+      },
+
+      addJudgeToCluster: (clusterId: number, judge: Judge) => {
+        set((state) => ({
+          judgesByClusterId: {
+            ...state.judgesByClusterId,
+            [clusterId]: [...(state.judgesByClusterId[clusterId] || []), judge],
+          },
+        }));
       },
 
       fetchClusterByJudgeId: async (judgeId) => {

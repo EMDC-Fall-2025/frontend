@@ -39,7 +39,6 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
   const {
     contestsByOrganizers,
     createContestOrganizerMapping,
-    fetchContestsByOrganizers,
   } = useMapContestOrganizerStore();
   
   const title = "Assign Contest To Organizer";
@@ -65,7 +64,7 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
     if (organizerId) {
       try {
         await createContestOrganizerMapping(organizerId, contestId);
-        await fetchContestsByOrganizers();
+        // Store updates directly, no fetch needed!
         toast.success("Contest assigned to organizer successfully!");
         handleClose();
       } catch (error) {

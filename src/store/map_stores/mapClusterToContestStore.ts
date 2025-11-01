@@ -9,6 +9,9 @@ interface MapClusterContestState {
   isLoadingMapClusterContest: boolean;
   mapClusterContestError: string | null;
   fetchClustersByContestId: (contestId: number) => Promise<void>;
+  addClusterToContest: (contestId: number, cluster: Cluster) => void;
+  updateClusterInContest: (contestId: number, updatedCluster: Cluster) => void;
+  removeClusterFromContest: (contestId: number, clusterId: number) => void;
   clearClusters: () => void;
   clearContestClusters: () => Promise<void>;
   fetchClustersForMultipleContests: (contestIds: number[]) => Promise<void>;
@@ -74,6 +77,54 @@ export const useMapClusterToContestStore = create<MapClusterContestState>()(
         } finally {
           set({ isLoadingMapClusterContest: false });
         }
+      },
+
+      addClusterToContest: (contestId: number, cluster: Cluster) => {
+        const state = get();
+        const normalizedCluster: Cluster = {
+          ...cluster,
+          cluster_type: (cluster.cluster_type ?? "preliminary").toLowerCase() as any,
+        };
+        const existingClusters = state.contestClusters[contestId] || [];
+        
+        set({
+          clusters: [...state.clusters, normalizedCluster],
+          contestClusters: {
+            ...state.contestClusters,
+            [contestId]: [...existingClusters, normalizedCluster],
+          },
+        });
+      },
+
+      updateClusterInContest: (contestId: number, updatedCluster: Cluster) => {
+        const state = get();
+        const normalizedCluster: Cluster = {
+          ...updatedCluster,
+          cluster_type: (updatedCluster.cluster_type ?? "preliminary").toLowerCase() as any,
+        };
+        
+        set({
+          clusters: state.clusters.map((c) =>
+            c.id === normalizedCluster.id ? normalizedCluster : c
+          ),
+          contestClusters: {
+            ...state.contestClusters,
+            [contestId]: (state.contestClusters[contestId] || []).map((c) =>
+              c.id === normalizedCluster.id ? normalizedCluster : c
+            ),
+          },
+        });
+      },
+
+      removeClusterFromContest: (contestId: number, clusterId: number) => {
+        const state = get();
+        set({
+          clusters: state.clusters.filter((c) => c.id !== clusterId),
+          contestClusters: {
+            ...state.contestClusters,
+            [contestId]: (state.contestClusters[contestId] || []).filter((c) => c.id !== clusterId),
+          },
+        });
       },
 
       clearContestClusters: async () => {

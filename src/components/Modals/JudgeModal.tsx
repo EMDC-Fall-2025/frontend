@@ -45,8 +45,8 @@ export default function JudgeModal(props: IJudgeModalProps) {
   const { handleClose, open, mode, judgeData, clusters, contestid, onSuccess } = props;
 
   // Store hooks for refreshing data
-  const { getAllJudgesByContestId } = useContestJudgeStore();
-  const { fetchJudgesByClusterId } = useMapClusterJudgeStore();
+  const { addJudgeToContest, updateJudgeInContest } = useContestJudgeStore();
+  const { updateJudgeInCluster, addJudgeToCluster } = useMapClusterJudgeStore();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -206,13 +206,14 @@ export default function JudgeModal(props: IJudgeModalProps) {
           role: selectedTitle,
         };
 
-        // Create judge account and refresh judge list
-        await createJudge(judgeData);
-        getAllJudgesByContestId(contestid);
-
-        // Refresh judges for the specific cluster to show the new judge
-        if (clusterId !== -1) {
-          fetchJudgesByClusterId(clusterId);
+        // Create judge account and update state directly
+        const createdJudge = await createJudge(judgeData);
+        if (createdJudge && contestid) {
+          addJudgeToContest(contestid, createdJudge);
+          // Also add to cluster-judge store for scoresheet info display
+          if (clusterId !== -1) {
+            addJudgeToCluster(clusterId, createdJudge);
+          }
         }
 
         // Call parent component's success callback
@@ -224,7 +225,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
         // Handle judge creation errors with user-friendly messages
         let errorMessage = "";
 
-        // Extract error message from various possible response structures
+  
         if (error?.response?.data) {
           const data = error.response.data;
           if (typeof data === 'string') {
@@ -236,7 +237,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
           } else if (data.message && typeof data.message === 'string') {
             errorMessage = data.message;
           } else if (data.errors && typeof data.errors === 'object') {
-            // Handle Django-style error objects
+       
             errorMessage = JSON.stringify(data.errors);
           }
         } else if (error?.message && typeof error.message === 'string') {
@@ -263,15 +264,13 @@ export default function JudgeModal(props: IJudgeModalProps) {
     if (contestid && judgeData) {
       try {
         // Get the current cluster to determine what scoresheets are appropriate
-        const currentCluster = clusters?.find(cluster => cluster.id === clusterId);
+        // Note: cluster cannot be changed when editing - use the original cluster from judgeData
+        const originalClusterId = judgeData.cluster?.id || clusterId;
+        const currentCluster = clusters?.find(cluster => cluster.id === originalClusterId);
         const isChampionshipCluster = currentCluster?.cluster_type === 'championship' || 
                                    currentCluster?.cluster_name?.toLowerCase().includes('championship');
         const isRedesignCluster = currentCluster?.cluster_type === 'redesign' || 
                                 currentCluster?.cluster_name?.toLowerCase().includes('redesign');
-        
-        // Determine if any actual changes were made
-        const originalClusterId = judgeData.cluster?.id;
-        const clusterChanged = originalClusterId !== clusterId;
         
         // Get original scoresheet assignments from judgeData
         const originalSheets = scoringSheetOptions
@@ -284,7 +283,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
         // Only apply validation and filtering if there are actual changes
         let allowedSheets = selectedSheets;
         
-        if (clusterChanged || scoresheetsChanged) {
+        if (scoresheetsChanged) {
           // Changes were made - apply appropriate validation based on cluster type
           if (isChampionshipCluster) {
             // Championship clusters can only have championship scoresheets
@@ -309,7 +308,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
         
 
         // Check if any actual changes were made to prevent unnecessary API calls
-        const hasActualChanges = clusterChanged || scoresheetsChanged || 
+        const hasActualChanges = scoresheetsChanged || 
           firstName !== judgeData.firstName ||
           lastName !== judgeData.lastName ||
           phoneNumber !== judgeData.phoneNumber ||
@@ -322,7 +321,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
           return;
         }
 
-        // Prepare updated judge data with current form values
+
         const updatedData = {
           id: judgeData.id,
           first_name: firstName,
@@ -336,38 +335,22 @@ export default function JudgeModal(props: IJudgeModalProps) {
           redesign: allowedSheets.includes("redesignSS"),
           championship: allowedSheets.includes("championshipSS"),
           username: email,
-          clusterid: clusterId,
+          clusterid: originalClusterId,
           role: selectedTitle,
         };
 
-        // Update judge
-        await editJudge(updatedData);
+        // Update judge and update state directly in both stores
+        const updatedJudge = await editJudge(updatedData);
+        if (updatedJudge && contestid) {
+          updateJudgeInContest(contestid, updatedJudge);
+          // Update only in the original cluster where the judge was edited
+          if (originalClusterId !== -1) {
+            updateJudgeInCluster(originalClusterId, updatedJudge);
+          }
+        }
 
         toast.success("Judge updated successfully!");
         handleCloseModal();
-
-        // Refresh the judge list after modal closes to prevent UI conflicts
-        if (contestid) {
-          setTimeout(async () => {
-            try {
-              // Refresh the main judge store
-              await getAllJudgesByContestId(contestid);
-
-              // Also refresh judges for each cluster to update the cluster-specific data
-              if (clusters && clusters.length > 0) {
-                for (const cluster of clusters) {
-                  try {
-                    await fetchJudgesByClusterId(cluster.id);
-                  } catch (error) {
-                    console.error(`Error refreshing judges for cluster ${cluster.id}:`, error);
-                  }
-                }
-              }
-            } catch (error) {
-              console.error("Error refreshing judges:", error);
-            }
-          }, 100);
-        }
       } catch (error: any) {
         // Handle judge update errors with detailed error information
         console.error("Judge update error:", error);
@@ -529,6 +512,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
             <Select
               value={clusterId}
               label="Cluster"
+              disabled={mode === "edit"}
               sx={{ 
                 textAlign: "left",
                 fontSize: { xs: "0.9rem", sm: "1rem" }
