@@ -64,7 +64,6 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
     if (organizerId) {
       try {
         await createContestOrganizerMapping(organizerId, contestId);
-        // Store updates directly, no fetch needed!
         toast.success("Contest assigned to organizer successfully!");
         handleClose();
       } catch (error) {

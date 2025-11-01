@@ -283,7 +283,6 @@ export default function AdminOrganizerTable() {
 
   useEffect(() => {
     fetchAllOrganizers();
-    // Only fetch contests by organizers once on mount if cache is empty
     const { contestsByOrganizers, fetchContestsByOrganizers } = useMapContestOrganizerStore.getState();
     if (!contestsByOrganizers || Object.keys(contestsByOrganizers).length === 0) {
       fetchContestsByOrganizers();

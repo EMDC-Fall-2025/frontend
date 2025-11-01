@@ -67,9 +67,8 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
   const handleConfirmDelete = async () => {
     if (clusterToDelete) {
       try {
-        await deleteCluster(clusterToDelete); // Delete from backend
+        await deleteCluster(clusterToDelete);
         toast.success('Cluster deleted successfully!');
-        // Remove cluster from state directly - no fetch needed!
         removeClusterFromContest(contestId, clusterToDelete);
         setOpenDeleteConfirmModal(false);
         setClusterToDelete(null);
@@ -366,9 +365,7 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
         mode="edit"
         clusterData={clusterData}
         contestid={contestId}
-        onSuccess={() => {
-          // Data already updated directly in modal, no refresh needed!
-        }}
+        onSuccess={() => {}}
       />
       <TeamModal
         open={openTeamModal}

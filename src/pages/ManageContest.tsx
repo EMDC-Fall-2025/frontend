@@ -77,8 +77,6 @@ export default function ManageContest() {
    
   }, [parsedContestId]);
 
-  // Load teams and judges for clusters in parallel once clusters are available
-  // Skip if already loaded to avoid redundant fetches
   useEffect(() => {
     if (!clusters.length) return;
 
@@ -99,7 +97,6 @@ export default function ManageContest() {
     return clusters.flatMap(c => teamsByClusterId[c.id] ?? []);
   }, [clusterIds, teamsByClusterId]);
 
-  // Don't fetch coaches until Teams tab is open
   const isTeamsTab = value === "2";
 
   useEffect(() => {

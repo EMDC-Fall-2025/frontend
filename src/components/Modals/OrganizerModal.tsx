@@ -91,7 +91,6 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
         password: "password",
       });
       
-      // Store updates directly, no fetch needed!
       toast.success("Organizer created successfully!");
       handleCloseModal(); // Use handleCloseModal to reset fields
     } catch (error: any) {
@@ -144,7 +143,6 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
           password: "password",
         });
         
-        // Store updates directly, no fetch needed!
         toast.success("Organizer updated successfully!");
         handleCloseModal(); // Use handleCloseModal to reset fields
       } catch (error: any) {

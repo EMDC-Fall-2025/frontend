@@ -75,7 +75,7 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
         organizerId: number,
         contestId: number
       ) => {
-        // Don't set loading state - we're doing direct store updates
+
         set({
           mapContestOrganizerError: null,
         });
@@ -124,7 +124,6 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
           }
           
           if (contest) {
-            // Directly update the store - no fetch needed!
             set((state) => {
               const currentContests = state.contestsByOrganizers[organizerId] || [];
               const currentOrganizerNames = (state.organizerNamesByContests[contestId] || []) as string[];
@@ -162,7 +161,6 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
         organizerId: number,
         contestId: number
       ) => {
-        // Don't set loading state - we're doing direct store updates
         set({
           mapContestOrganizerError: null,
         });
@@ -185,7 +183,6 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
             ? `${organizer.first_name} ${organizer.last_name}`.trim()
             : null;
           
-          // Directly update the store - no fetch needed!
           set((state) => {
             const currentContests = state.contestsByOrganizers[organizerId] || [];
             const currentOrganizerNames = (state.organizerNamesByContests[contestId] || []) as string[];
