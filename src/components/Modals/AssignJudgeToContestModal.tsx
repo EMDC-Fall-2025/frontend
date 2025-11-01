@@ -198,7 +198,6 @@ export default function AssignJudgeToContestModal(
         championship: false,
       });
     } else {
-      // For preliminary clusters, don't auto-set - let user choose
       setScoreSheets({
         presentation: false,
         journal: false,

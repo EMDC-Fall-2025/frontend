@@ -44,7 +44,6 @@ export interface IJudgeModalProps {
 export default function JudgeModal(props: IJudgeModalProps) {
   const { handleClose, open, mode, judgeData, clusters, contestid, onSuccess } = props;
 
-  // Store hooks for refreshing data
   const { addJudgeToContest, updateJudgeInContest } = useContestJudgeStore();
   const { updateJudgeInCluster, addJudgeToCluster } = useMapClusterJudgeStore();
   const [firstName, setFirstName] = useState("");
@@ -206,11 +205,9 @@ export default function JudgeModal(props: IJudgeModalProps) {
           role: selectedTitle,
         };
 
-        // Create judge account and update state directly
         const createdJudge = await createJudge(judgeData);
         if (createdJudge && contestid) {
           addJudgeToContest(contestid, createdJudge);
-          // Also add to cluster-judge store for scoresheet info display
           if (clusterId !== -1) {
             addJudgeToCluster(clusterId, createdJudge);
           }
@@ -298,9 +295,8 @@ export default function JudgeModal(props: IJudgeModalProps) {
             // If no redesign sheet is selected, add it automatically
             if (!allowedSheets.includes("redesignSS")) {
               allowedSheets = ["redesignSS"];
+              }
             }
-          }
-          // For preliminary clusters, keep all selected sheets as-is
         } else {
           // No changes made - preserve existing scoresheet assignments exactly as they were
           allowedSheets = originalSheets;
@@ -339,11 +335,9 @@ export default function JudgeModal(props: IJudgeModalProps) {
           role: selectedTitle,
         };
 
-        // Update judge and update state directly in both stores
         const updatedJudge = await editJudge(updatedData);
         if (updatedJudge && contestid) {
           updateJudgeInContest(contestid, updatedJudge);
-          // Update only in the original cluster where the judge was edited
           if (originalClusterId !== -1) {
             updateJudgeInCluster(originalClusterId, updatedJudge);
           }
@@ -418,7 +412,6 @@ export default function JudgeModal(props: IJudgeModalProps) {
       } else if (isRedesignCluster) {
         setSelectedSheets(["redesignSS"]);
       }
-      // For preliminary clusters, don't auto-select anything
     }
   }, [clusterId, isChampionshipCluster, isRedesignCluster]);
 

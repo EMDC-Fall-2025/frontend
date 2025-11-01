@@ -78,7 +78,6 @@ export default function ClusterModal(props: IClusterModalProps) {
           cluster_type: clusterType,
           contestid: effectiveContestId,
         });
-        // Add cluster to state directly - no fetch needed!
         if (createdCluster) {
           addClusterToContest(effectiveContestId, createdCluster);
         }
@@ -96,7 +95,6 @@ export default function ClusterModal(props: IClusterModalProps) {
     if (clusterData?.id && effectiveContestId) {
       try {
         const updatedCluster = await editCluster({ id: clusterData.id, cluster_name: clusterName, cluster_type: clusterType });
-        // Update cluster in state directly - no fetch needed!
         if (updatedCluster) {
           updateClusterInContest(effectiveContestId, updatedCluster);
         }

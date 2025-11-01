@@ -205,31 +205,31 @@ function Row(props: {
                     <Box key={`org-${row.id}-contest-${contest.id}`} sx={{ py: 1, borderBottom: 1, borderColor: "divider" }}>
                       <Stack direction="row" spacing={1.25} alignItems="center" justifyContent="space-between">
                         <Stack direction="row" spacing={1.25} alignItems="center">
-                          <Box
-                            aria-hidden
-                            sx={{
+                              <Box
+                                aria-hidden
+                                sx={{
                               width: 28,
                               height: 28,
-                              borderRadius: "50%",
-                              bgcolor: (t) => alpha(t.palette.success.main, 0.1),
-                              color: "success.dark",
-                              display: "grid",
-                              placeItems: "center",
-                              flexShrink: 0,
-                            }}
-                          >
+                                  borderRadius: "50%",
+                                  bgcolor: (t) => alpha(t.palette.success.main, 0.1),
+                                  color: "success.dark",
+                                  display: "grid",
+                                  placeItems: "center",
+                                  flexShrink: 0,
+                                }}
+                              >
                             <CampaignIcon sx={{ fontSize: 16 }} />
-                          </Box>
+                              </Box>
                           <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                            {contest.name}
-                          </Typography>
-                        </Stack>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => handleOpenAreYouSureUnassign(row.id, contest.id)}
-                          sx={{
-                            textTransform: "none",
+                                {contest.name}
+                              </Typography>
+                            </Stack>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => handleOpenAreYouSureUnassign(row.id, contest.id)}
+                              sx={{
+                                textTransform: "none",
                             borderRadius: 2,
                             borderColor: (t) => alpha(t.palette.grey[400], 0.5),
                             color: "text.primary",
@@ -245,17 +245,17 @@ function Row(props: {
                             minWidth: { xs: "100%", sm: "80px" },
                             height: { xs: "24px", sm: "36px" },
                             transition: "all 0.2s ease",
-                          }}
-                        >
-                          Unassign
-                        </Button>
+                              }}
+                            >
+                              Unassign
+                            </Button>
                       </Stack>
                     </Box>
-                  ))
-                ) : (
+                      ))
+                    ) : (
                   <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
-                    No Contests Assigned
-                  </Typography>
+                            No Contests Assigned
+                          </Typography>
                 );
               })()}
             </Box>
@@ -280,10 +280,9 @@ export default function AdminOrganizerTable() {
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
   const [openAssignContest, setOpenAssignContest] = useState(false);
   const [organizerId, setOrganizerId] = useState(0);
-
+  
   useEffect(() => {
-    fetchAllOrganizers();
-    // Only fetch contests by organizers once on mount if cache is empty
+      fetchAllOrganizers();
     const { contestsByOrganizers, fetchContestsByOrganizers } = useMapContestOrganizerStore.getState();
     if (!contestsByOrganizers || Object.keys(contestsByOrganizers).length === 0) {
       fetchContestsByOrganizers();
@@ -324,7 +323,7 @@ export default function AdminOrganizerTable() {
         ? `${organizer.first_name} ${organizer.last_name}`.trim()
         : null;
       
-      await deleteOrganizer(id);
+    await deleteOrganizer(id);
       
       // Remove organizer from all contests they were assigned to
       if (organizerName) {
@@ -376,7 +375,7 @@ export default function AdminOrganizerTable() {
           {rows.map((row) => (
             <Row 
               key={row.id} 
-              row={row}
+              row={row} 
               onEdit={handleOpenEditOrganizer}
               onDelete={handleOpenAreYouSure}
               onAssign={handleOpenAssignContest}
