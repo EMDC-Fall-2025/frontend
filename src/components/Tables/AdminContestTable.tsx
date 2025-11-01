@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -58,18 +58,42 @@ export default function AdminContestTable() {
   const [openContestModal, setOpenContestModal] = useState(false);
   const [contestData, setContestData] = useState<any>();
 
-  // Fetch contests on component mount
+  // Delayed spinner - only show if loading takes more than 1.5 seconds
+  const [showSpinner, setShowSpinner] = useState(false);
+  
   useEffect(() => {
-    fetchAllContests();
-  }, [fetchAllContests]);
+    const loading = isLoadingContest || isLoadingMapContestOrganizer;
+    let timer: NodeJS.Timeout;
+    
+    if (loading) {
+      timer = setTimeout(() => setShowSpinner(true), 1500);
+    } else {
+      setShowSpinner(false);
+    }
+    
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [isLoadingContest, isLoadingMapContestOrganizer]);
 
-  // Fetch organizer names when contests are loaded
+  // Fetch contests on component mount (only if not cached)
   useEffect(() => {
-    fetchOrganizerNamesByContests();
-  }, [allContests, fetchOrganizerNamesByContests]);
+    if (allContests.length === 0) {
+      fetchAllContests();
+    }
+   
+  }, []);
+
+  // Fetch organizer names when contests are loaded (only if not cached)
+  useEffect(() => {
+    if (allContests.length > 0 && Object.keys(organizerNamesByContests || {}).length === 0) {
+      fetchOrganizerNamesByContests();
+    }
+  
+  }, [allContests.length]);
 
   // Transform contest data for table display
-  const rows = allContests.map((contest) =>
+  const rows = useMemo(() => allContests.map((contest) =>
     createData(
       contest.id,
       contest.name,
@@ -78,7 +102,7 @@ export default function AdminContestTable() {
       contest.is_tabulated,
       organizerNamesByContests[contest.id]
     )
-  );
+  ), [allContests, organizerNamesByContests]);
 
   // Open edit modal with contest data
   const handleOpenEditContest = (contest: any) => {
@@ -102,10 +126,7 @@ export default function AdminContestTable() {
     setOpenAreYouSure(true);
   };
 
-  // Check if any data is still loading
-  const loading = isLoadingContest || isLoadingMapContestOrganizer;
-
-  return loading ? (
+  return showSpinner ? (
     <Box sx={{ display: "grid", placeItems: "center", py: 10 }}>
       <CircularProgress />
     </Box>
@@ -137,7 +158,7 @@ export default function AdminContestTable() {
               },
             }}
           >
-            {/* Table headers with responsive visibility */}
+            {/* Table headers */}
             <TableCell align="left" sx={{ minWidth: { xs: "160px", sm: "250px" } }}>Name</TableCell>
             <TableCell align="center" sx={{ display: { xs: "none", sm: "table-cell" }, minWidth: "70px" }}>Date</TableCell>
             <TableCell align="center" sx={{ display: { xs: "none", md: "table-cell" }, minWidth: "60px" }}>Is Open</TableCell>
@@ -196,19 +217,24 @@ export default function AdminContestTable() {
                       {row.name}
                     </Typography>
 
-                    {/* Mobile summary: show date and organizer count when other columns are hidden */}
+                    {/* Summary with date and organizer count icons */}
                     <Stack
                       direction="row"
-                      spacing={{ xs: 1, sm: 2 }}
+                      spacing={{ xs: 1, sm: 1.5 }}
                       alignItems="center"
                       flexWrap="wrap"
-                      sx={{ mt: 0.25, display: { xs: "flex", sm: "none" } }}
+                      sx={{ mt: 0.25 }}
                     >
-                      <Typography variant="caption" color="text.secondary">
-                        {row.date.format("MM-DD-YYYY")}
-                      </Typography>
+                      {/* Date - only show on mobile */}
+                      <Stack direction="row" spacing={0.5} alignItems="center" sx={{ display: { xs: "flex", sm: "none" } }}>
+                        <CampaignIcon sx={{ fontSize: { xs: 12, sm: 14 }, color: "text.secondary" }} />
+                        <Typography variant="caption" color="text.secondary">
+                          {row.date.format("MM-DD-YYYY")}
+                        </Typography>
+                      </Stack>
+                      {/* Organizer count - show on all screen sizes */}
                       <Stack direction="row" spacing={0.5} alignItems="center">
-                        <GroupIcon sx={{ fontSize: 14 }} />
+                        <GroupIcon sx={{ fontSize: { xs: 12, sm: 14 }, color: "text.secondary" }} />
                         <Typography variant="caption" color="text.secondary">
                           {row.organizers?.length ?? 0}{" "}
                           {(row.organizers?.length ?? 0) === 1
@@ -289,7 +315,7 @@ export default function AdminContestTable() {
                   verticalAlign: "top",
                 }}
               >
-                {/* Action buttons - stacked on mobile, inline on desktop */}
+                {/* Action buttons */}
                 <Stack
                   direction={{ xs: "column", sm: "row" }}
                   spacing={{ xs: 0.5, sm: 0.75 }}
@@ -303,15 +329,21 @@ export default function AdminContestTable() {
                        size="small"
                        sx={{
                          textTransform: "none",
-                         borderRadius: 1,
-                         bgcolor: "success.main",
-                         "&:hover": { bgcolor: "success.dark" },
+                         borderRadius: 2,
+                         bgcolor: (t) => alpha(t.palette.success.main, 0.85),
+                         color: "white",
+                         boxShadow: "none",
+                         "&:hover": { 
+                           bgcolor: (t) => alpha(t.palette.success.main, 0.95),
+                           boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                         },
                          px: { xs: 0.75, sm: 2 },
                          py: { xs: 0.2, sm: 0.75 },
                          fontSize: { xs: "0.6rem", sm: "0.875rem" },
-                         fontWeight: 550,
+                         fontWeight: 500,
                          minWidth: { xs: "100%", sm: "80px" },
                          height: { xs: "24px", sm: "36px" },
+                         transition: "all 0.2s ease",
                        }}
                      >
                        Manage
@@ -322,32 +354,13 @@ export default function AdminContestTable() {
                        size="small"
                        sx={{
                          textTransform: "none",
-                         borderRadius: 1,
-                         borderColor: "grey.400",
+                         borderRadius: 2,
+                         borderColor: (t) => alpha(t.palette.grey[400], 0.5),
                          color: "text.primary",
-                         "&:hover": { borderColor: "text.primary", bgcolor: "grey.100" },
-                         px: { xs: 0.75, sm: 2 },
-                         py: { xs: 0.2, sm: 0.75 },
-                         fontSize: { xs: "0.6rem", sm: "0.875rem" },
-                         fontWeight: 550,
-                         minWidth: { xs: "100%", sm: "80px" },
-                         height: { xs: "24px", sm: "36px" },
-                       }}
-                     >
-                       Edit
-                     </Button>
-                     <Button
-                       onClick={() => handleOpenAreYouSure(row.id)}
-                       variant="outlined"
-                       color="error"
-                       size="small"
-                       sx={{
-                         textTransform: "none",
-                         borderRadius: 1,
-                         borderColor: "error.light",
-                         "&:hover": {
-                           borderColor: "error.main",
-                           bgcolor: "rgba(211,47,47,0.06)",
+                         bgcolor: "transparent",
+                         "&:hover": { 
+                           borderColor: (t) => alpha(t.palette.grey[600], 0.6),
+                           bgcolor: (t) => alpha(t.palette.grey[100], 0.5),
                          },
                          px: { xs: 0.75, sm: 2 },
                          py: { xs: 0.2, sm: 0.75 },
@@ -355,6 +368,32 @@ export default function AdminContestTable() {
                          fontWeight: 500,
                          minWidth: { xs: "100%", sm: "80px" },
                          height: { xs: "24px", sm: "36px" },
+                         transition: "all 0.2s ease",
+                       }}
+                     >
+                       Edit
+                     </Button>
+                     <Button
+                       onClick={() => handleOpenAreYouSure(row.id)}
+                       variant="outlined"
+                       size="small"
+                       sx={{
+                         textTransform: "none",
+                         borderRadius: 2,
+                         borderColor: (t) => alpha(t.palette.error.light, 0.5),
+                         color: (t) => alpha(t.palette.error.main, 0.8),
+                         bgcolor: "transparent",
+                         "&:hover": {
+                           borderColor: (t) => alpha(t.palette.error.main, 0.7),
+                           bgcolor: (t) => alpha(t.palette.error.main, 0.08),
+                         },
+                         px: { xs: 0.75, sm: 2 },
+                         py: { xs: 0.2, sm: 0.75 },
+                         fontSize: { xs: "0.6rem", sm: "0.875rem" },
+                         fontWeight: 500,
+                         minWidth: { xs: "100%", sm: "80px" },
+                         height: { xs: "24px", sm: "36px" },
+                         transition: "all 0.2s ease",
                        }}
                      >
                        Delete

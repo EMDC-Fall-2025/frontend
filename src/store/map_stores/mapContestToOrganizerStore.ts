@@ -29,7 +29,7 @@ interface MapContestOrganizerState {
 
 export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       contests: [],
       organizers: [],
       isLoadingMapContestOrganizer: false,
@@ -182,6 +182,12 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
         }
       },
       fetchContestsByOrganizers: async () => {
+        // Check cache first - if we already have contests by organizers, return early
+        const cachedContestsByOrganizers = get().contestsByOrganizers;
+        if (cachedContestsByOrganizers && Object.keys(cachedContestsByOrganizers).length > 0) {
+          return; // Use cached data
+        }
+        
         set({
           isLoadingMapContestOrganizer: true,
           mapContestOrganizerError: null,
@@ -210,6 +216,12 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
         }
       },
       fetchOrganizerNamesByContests: async () => {
+        // Check cache first - if we already have organizer names, return early
+        const cachedOrganizerNames = get().organizerNamesByContests;
+        if (cachedOrganizerNames && Object.keys(cachedOrganizerNames).length > 0) {
+          return; // Use cached data
+        }
+        
         set({
           isLoadingMapContestOrganizer: true,
           mapContestOrganizerError: null,

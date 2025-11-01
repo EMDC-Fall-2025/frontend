@@ -29,7 +29,7 @@ interface OrganizerState {
 
 export const useOrganizerStore = create<OrganizerState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       allOrganizers: [],
       organizer: null,
       isLoadingOrganizer: false,
@@ -40,6 +40,12 @@ export const useOrganizerStore = create<OrganizerState>()(
       },
 
       fetchAllOrganizers: async () => {
+        // Check cache first - if we already have organizers, return early
+        const cachedOrganizers = get().allOrganizers;
+        if (cachedOrganizers && cachedOrganizers.length > 0) {
+          return; // Use cached data
+        }
+        
         set({ isLoadingOrganizer: true });
         try {
           const token = localStorage.getItem("token");

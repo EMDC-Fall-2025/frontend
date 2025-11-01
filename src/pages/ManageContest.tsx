@@ -1,14 +1,13 @@
 import {
   Box,
   Button,
-  CircularProgress,
   Container,
   Link,
   Tab,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, Link as RouterLink } from "react-router-dom";
 import theme from "../theme";
 import TabContext from "@mui/lab/TabContext";
 import TabList from "@mui/lab/TabList";
@@ -23,7 +22,6 @@ import { useContestStore } from "../store/primary_stores/contestStore";
 import { useMapClusterToContestStore } from "../store/map_stores/mapClusterToContestStore";
 import useContestJudgeStore from "../store/map_stores/mapContestToJudgeStore";
 import { useMapClusterJudgeStore } from "../store/map_stores/mapClusterToJudgeStore";
-import { useJudgeStore } from "../store/primary_stores/judgeStore";
 import { useMapCoachToTeamStore } from "../store/map_stores/mapCoachToTeamStore";
 import useMapClusterTeamStore from "../store/map_stores/mapClusterToTeamStore";
 import { useAuthStore } from "../store/primary_stores/authStore";
@@ -32,14 +30,11 @@ import { useAuthStore } from "../store/primary_stores/authStore";
  * ManageContest Component
  * 
  * Main page for managing contest details including judges, teams, and clusters.
- * Provides tabbed interface for different management functions.
  */
 export default function ManageContest() {
   const { contestId } = useParams();
   const parsedContestId = contestId ? parseInt(contestId, 10) : 0;
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Tab state management - persists active tab across page reloads
   const [value, setValue] = useState(
     () => localStorage.getItem("activeTab") || "1"
   );
@@ -52,149 +47,68 @@ export default function ManageContest() {
   const { role } = useAuthStore();
 
   // Contest data management
-  const { contest, fetchContestById, clearContest, isLoadingContest } =
-    useContestStore();
-  // Judge data management for the contest
-  const {
-    getAllJudgesByContestId,
-    clearJudges
-  } = useContestJudgeStore();
-  // Cluster data management for the contest
-  const {
-    clusters,
-    fetchClustersByContestId,
-    clearClusters,
-  } = useMapClusterToContestStore();
-  // Team data management organized by clusters
-  const {
-    getTeamsByClusterId,
-    teamsByClusterId,
-    clearTeamsByClusterId,
-  } = useMapClusterTeamStore();
+  const { contest, fetchContestById } = useContestStore();
+  
+  const { getAllJudgesByContestId } = useContestJudgeStore();
+
+  const { clusters, fetchClustersByContestId } = useMapClusterToContestStore();
+
+  const { getTeamsByClusterId, teamsByClusterId } = useMapClusterTeamStore();
   // Judge-cluster mapping for organizing judges by clusters
-  const {
-
-    fetchJudgesByClusterId,
-    judgesByClusterId,
-    clearJudgesByClusterId,
-    clearJudgeClusters,
-  } = useMapClusterJudgeStore();
-  // Judge operations and score sheet management
-  const {
-    clearSubmissionStatus,
-  } = useJudgeStore();
+  const { fetchJudgesByClusterId, judgesByClusterId } = useMapClusterJudgeStore();
   // Coach data management for teams
-  const { fetchCoachesByTeams, clearCoachesByTeams } =
-    useMapCoachToTeamStore();
+  const { fetchCoachesByTeams } = useMapCoachToTeamStore();
 
-  // Load all contest-related data on component mount - OPTIMIZED VERSION
+  const clusterIds = useMemo(
+    () => clusters.map(c => c.id).sort((a, b) => a - b).join(','),
+    [clusters]
+  );
+
+  // Load initial contest data in parallel on mount
   useEffect(() => {
-    const loadAllData = async () => {
-      if (parsedContestId) {
-        // Load contest details, judges, and clusters in parallel for faster loading
-        await Promise.all([
-          fetchContestById(parsedContestId),
-          getAllJudgesByContestId(parsedContestId),
-          fetchClustersByContestId(parsedContestId)
-        ]);
-      }
-    };
+    if (!parsedContestId) return;
 
-    loadAllData();
+    Promise.all([
+      fetchContestById(parsedContestId),
+      getAllJudgesByContestId(parsedContestId),
+      fetchClustersByContestId(parsedContestId)
+    ]).catch(console.error);
     
-    return () => {
-      clearContest();
-      clearJudges();
-      clearClusters();
-    };
+   
   }, [parsedContestId]);
 
-  // Load teams for each cluster when clusters are available - OPTIMIZED VERSION
+  // Load teams and judges for clusters in parallel once clusters are available
+  // Skip if already loaded to avoid redundant fetches
   useEffect(() => {
-    const loadTeams = async () => {
-      if (clusters && clusters.length > 0) {
-        // Load teams for all clusters in parallel instead of sequentially
-        const teamPromises = clusters.map(cluster => getTeamsByClusterId(cluster.id));
-        await Promise.all(teamPromises);
-      }
-    };
+    if (!clusters.length) return;
 
-    if (clusters.length > 0) {
-      loadTeams();
-    }
+    Promise.all([
+      ...clusters
+        .filter(c => !(teamsByClusterId[c.id]?.length > 0))
+        .map(c => getTeamsByClusterId(c.id)),
+      ...clusters
+        .filter(c => !(judgesByClusterId[c.id]?.length > 0))
+        .map(c => fetchJudgesByClusterId(c.id))
+    ]).catch(console.error);
     
-    return () => {
-      clearTeamsByClusterId();
-    };
-  }, [clusters.length]);
+  
+  }, [clusterIds]);
 
-  // Load judges for each cluster when clusters are available - OPTIMIZED VERSION
+  // Load coaches when teams become available 
+  const allTeams = useMemo(() => {
+    return clusters.flatMap(c => teamsByClusterId[c.id] ?? []);
+  }, [clusterIds, teamsByClusterId]);
+
+  // Don't fetch coaches until Teams tab is open
+  const isTeamsTab = value === "2";
+
   useEffect(() => {
-    const loadJudges = async () => {
-      if (clusters && clusters.length > 0) {
-        // Load judges for all clusters in parallel instead of sequentially
-        const judgePromises = clusters.map(cluster => fetchJudgesByClusterId(cluster.id));
-        await Promise.all(judgePromises);
-      }
-    };
-
-    if (clusters.length > 0) {
-      loadJudges();
-    }
+    if (!isTeamsTab || allTeams.length === 0) return;
+    fetchCoachesByTeams(allTeams).catch(console.error);
     
-    return () => {
-      clearJudgesByClusterId();
-    };
-  }, [clusters.length]);
-
-  // Load coaches when teams are available 
-  useEffect(() => {
-    const loadCoaches = async () => {
-      if (clusters && clusters.length > 0) {
-        // Collect all teams from all clusters and load coaches in parallel
-        const allTeams = clusters.reduce((acc, cluster) => {
-          const teams = teamsByClusterId[cluster.id];
-          return teams ? [...acc, ...teams] : acc;
-        }, [] as any[]);
-
-        if (allTeams.length > 0) {
-          await fetchCoachesByTeams(allTeams);
-        }
-      }
-    };
-
-    const hasTeams = clusters.some(cluster => 
-      teamsByClusterId[cluster.id]?.length > 0
-    );
-
-    if (hasTeams) {
-      loadCoaches();
-    }
-    
-    return () => {
-      clearCoachesByTeams();
-    };
-  }, [clusters.length, Object.keys(teamsByClusterId).length]);
+  }, [isTeamsTab, allTeams.length]);
 
 
-  useEffect(() => {
-    const handlePageHide = () => {
-      clearClusters();
-      clearContest();
-      clearJudges();
-      clearJudgesByClusterId();
-      clearSubmissionStatus();
-      clearTeamsByClusterId();
-      clearJudgeClusters();
-      clearCoachesByTeams();
-    };
-
-    window.addEventListener("pagehide", handlePageHide);
-
-    return () => {
-      window.removeEventListener("pagehide", handlePageHide);
-    };
-  }, []);
 
   const hasClusters = clusters.length > 0;
   const hasTeams = clusters.some(
@@ -208,15 +122,11 @@ export default function ManageContest() {
   };
 
 
-  return isLoadingContest ? (
-    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-      <CircularProgress />
-    </Box>
-  ) : (
+  return (
   <>
     {/* Back to Dashboard */}
     {role?.user_type === 2 && (
-      <Link href="/organizer" sx={{ textDecoration: "none" }}>
+      <Link component={RouterLink} to="/organizer" sx={{ textDecoration: "none" }}>
         <Typography
           variant="body2"
           sx={{
@@ -230,7 +140,7 @@ export default function ManageContest() {
       </Link>
     )}
     {role?.user_type === 1 && (
-      <Link href="/admin" sx={{ textDecoration: "none" }}>
+      <Link component={RouterLink} to="/admin" sx={{ textDecoration: "none" }}>
         <Typography
           variant="body2"
           sx={{
@@ -301,7 +211,7 @@ export default function ManageContest() {
         color: theme.palette.success.main,
         "&:hover": {
           borderColor: theme.palette.success.dark,
-          backgroundColor: "rgba(46,125,50,0.06)", // success.main @ ~6%
+          backgroundColor: "rgba(46,125,50,0.06)", 
         },
       }}
     >
@@ -422,7 +332,6 @@ export default function ManageContest() {
           }}
         >
           <OrganizerJudgesTable
-          key={refreshTrigger}
             clusters={clusters}
             judgesByClusterId={judgesByClusterId}
             contestid={parsedContestId}
@@ -440,10 +349,12 @@ export default function ManageContest() {
             borderTop: "none",
           }}
         >
-          <OrganizerTeamsTable
-            clusters={clusters}
-            contestId={parsedContestId ?? 0}
-          />
+          {isTeamsTab && (
+            <OrganizerTeamsTable
+              clusters={clusters}
+              contestId={parsedContestId ?? 0}
+            />
+          )}
         </TabPanel>
       </TabContext>
     </Container>
@@ -507,8 +418,6 @@ export default function ManageContest() {
             await Promise.all(judgePromises);
           }
           
-          // Trigger a refresh of the UI components
-          setRefreshTrigger(prev => prev + 1);
           setOpenAssignJudgeModal(false);
         } catch (error) {
           console.error('Error refreshing data after judge assignment:', error);

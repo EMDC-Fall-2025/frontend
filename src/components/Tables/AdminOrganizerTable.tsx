@@ -11,10 +11,10 @@ import TableRow from "@mui/material/TableRow";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { OrganizerRow } from "../../types";
-import { Button, CircularProgress, Stack, Typography } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import { Button, Stack, Typography } from "@mui/material";
+import { alpha, Theme } from "@mui/material/styles";
 import useOrganizerStore from "../../store/primary_stores/organizerStore";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import OrganizerModal from "../Modals/OrganizerModal";
 import AreYouSureModal from "../Modals/AreYouSureModal";
 import useMapContestOrganizerStore from "../../store/map_stores/mapContestToOrganizerStore";
@@ -33,20 +33,13 @@ function createData(
   return { id, first_name, last_name, editButton, deleteButton, assignContest };
 }
 
-function Row(props: { row: ReturnType<typeof createData> }) {
-  const { row } = props;
+function Row(props: { row: ReturnType<typeof createData>; contestsByOrganizers: Record<number, any[] | null>; onUnassign: (organizerId: number, contestId: number) => Promise<void> }) {
+  const { row, contestsByOrganizers, onUnassign } = props;
   // Collapsible row state for showing assigned contests
   const [open, setOpen] = useState(false);
   const [organizerId, setOrganizerId] = useState(0);
   const [contestId, setContestId] = useState(0);
   const [openAreYouSureUnassign, setOpenAreYouSureUnassign] = useState(false);
-
-  // Contest-organizer mapping store for managing assignments
-  const {
-    contestsByOrganizers,
-    fetchContestsByOrganizers,
-    deleteContestOrganizerMapping,
-  } = useMapContestOrganizerStore();
 
   // Open confirmation modal for unassigning contest
   const handleOpenAreYouSureUnassign = (organizerId: number, contestId: number) => {
@@ -56,9 +49,8 @@ function Row(props: { row: ReturnType<typeof createData> }) {
   };
 
   // Remove contest assignment from organizer
-  const handleUnassign = async (organizerId: number, contestId: number) => {
-    await deleteContestOrganizerMapping(organizerId, contestId);
-    await fetchContestsByOrganizers();
+  const handleUnassign = async () => {
+    await onUnassign(organizerId, contestId);
   };
 
   return (
@@ -164,15 +156,21 @@ function Row(props: { row: ReturnType<typeof createData> }) {
               size: "small",
               sx: {
                 textTransform: "none",
-                borderRadius: 1,
-                bgcolor: "success.main",
-                "&:hover": { bgcolor: "success.dark" },
+                borderRadius: 2,
+                bgcolor: (t: Theme) => alpha(t.palette.success.main, 0.85),
+                color: "white",
+                boxShadow: "none",
+                "&:hover": { 
+                  bgcolor: (t: Theme) => alpha(t.palette.success.main, 0.95),
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                },
                 px: { xs: 0.75, sm: 2 },
                 py: { xs: 0.2, sm: 0.75 },
                 fontSize: { xs: "0.6rem", sm: "0.875rem" },
-                fontWeight: 550,
+                fontWeight: 500,
                 minWidth: { xs: "100%", sm: "80px" },
                 height: { xs: "24px", sm: "36px" },
+                transition: "all 0.2s ease",
                 ...(row.assignContest.props.sx || {}),
               },
             },
@@ -184,35 +182,45 @@ function Row(props: { row: ReturnType<typeof createData> }) {
               size: "small",
               sx: {
                 textTransform: "none",
-                borderRadius: 1,
-                borderColor: "grey.400",
+                borderRadius: 2,
+                borderColor: (t: Theme) => alpha(t.palette.grey[400], 0.5),
                 color: "text.primary",
-                "&:hover": { borderColor: "text.primary", bgcolor: "grey.100" },
-                px: { xs: 0.75, sm: 2 },
-                py: { xs: 0.2, sm: 0.75 },
-                fontSize: { xs: "0.6rem", sm: "0.875rem" },
-                fontWeight: 550,
-                minWidth: { xs: "100%", sm: "80px" },
-                height: { xs: "24px", sm: "36px" },
-                ...(row.editButton.props.sx || {}),
-              },
-              children: "Edit",
-            })}
-            {React.cloneElement(row.deleteButton, {
-              variant: "outlined",
-              color: "error",
-              size: "small",
-              sx: {
-                textTransform: "none",
-                borderRadius: 1,
-                borderColor: "error.light",
-                "&:hover": { borderColor: "error.main", bgcolor: "rgba(211,47,47,0.06)" },
+                bgcolor: "transparent",
+                "&:hover": { 
+                  borderColor: (t: Theme) => alpha(t.palette.grey[600], 0.6),
+                  bgcolor: (t: Theme) => alpha(t.palette.grey[100], 0.5),
+                },
                 px: { xs: 0.75, sm: 2 },
                 py: { xs: 0.2, sm: 0.75 },
                 fontSize: { xs: "0.6rem", sm: "0.875rem" },
                 fontWeight: 500,
                 minWidth: { xs: "100%", sm: "80px" },
                 height: { xs: "24px", sm: "36px" },
+                transition: "all 0.2s ease",
+                ...(row.editButton.props.sx || {}),
+              },
+              children: "Edit",
+            })}
+            {React.cloneElement(row.deleteButton, {
+              variant: "outlined",
+              size: "small",
+              sx: {
+                textTransform: "none",
+                borderRadius: 2,
+                borderColor: (t: Theme) => alpha(t.palette.error.light, 0.5),
+                color: (t: Theme) => alpha(t.palette.error.main, 0.8),
+                bgcolor: "transparent",
+                "&:hover": {
+                  borderColor: (t: Theme) => alpha(t.palette.error.main, 0.7),
+                  bgcolor: (t: Theme) => alpha(t.palette.error.main, 0.08),
+                },
+                px: { xs: 0.75, sm: 2 },
+                py: { xs: 0.2, sm: 0.75 },
+                fontSize: { xs: "0.6rem", sm: "0.875rem" },
+                fontWeight: 500,
+                minWidth: { xs: "100%", sm: "80px" },
+                height: { xs: "24px", sm: "36px" },
+                transition: "all 0.2s ease",
                 ...(row.deleteButton.props.sx || {}),
               },
               children: "Delete",
@@ -222,7 +230,7 @@ function Row(props: { row: ReturnType<typeof createData> }) {
       </TableRow>
 
       
-      <TableRow sx={{ display: open ? "table-row" : "none" }}>
+      <TableRow>
         <TableCell 
           style={{ paddingBottom: 0, paddingTop: 0 }} 
           colSpan={3} 
@@ -231,7 +239,7 @@ function Row(props: { row: ReturnType<typeof createData> }) {
             padding: { xs: "4px", sm: "8px" }
           }}
         >
-          <Collapse in={open} timeout="auto" unmountOnExit>
+          <Collapse in={open} timeout={300} unmountOnExit>
             <Box sx={{ 
               mt: { xs: 0.5, sm: 1 }, 
               mb: { xs: 0.5, sm: 1 }, 
@@ -343,7 +351,7 @@ function Row(props: { row: ReturnType<typeof createData> }) {
         open={openAreYouSureUnassign}
         handleClose={() => setOpenAreYouSureUnassign(false)}
         title="Are you sure you want to unassign this contest?"
-        handleSubmit={() => handleUnassign(organizerId, contestId)}
+        handleSubmit={handleUnassign}
 
       />
     </React.Fragment>
@@ -352,7 +360,7 @@ function Row(props: { row: ReturnType<typeof createData> }) {
 
 export default function AdminOrganizerTable() {
   // Organizer store for managing organizer data
-  const { allOrganizers, fetchAllOrganizers, deleteOrganizer, organizerError } = useOrganizerStore();
+  const { allOrganizers, fetchAllOrganizers, deleteOrganizer } = useOrganizerStore();
   
   // Modal state management
   const [openOrganizerModal, setOpenOrganizerModal] = useState(false);
@@ -362,20 +370,61 @@ export default function AdminOrganizerTable() {
   const [organizerId, setOrganizerId] = useState(0);
   
   // Contest-organizer mapping store
-  const { fetchContestsByOrganizers, isLoadingMapContestOrganizer } = useMapContestOrganizerStore();
+  const { fetchContestsByOrganizers, contestsByOrganizers } = useMapContestOrganizerStore();
 
-  // Fetch organizers on component mount
+  // Fetch organizers on component mount (only if not cached)
   useEffect(() => {
-    fetchAllOrganizers();
+    if (allOrganizers.length === 0) {
+      fetchAllOrganizers();
+    }
+   
   }, []);
 
-  // Fetch contest assignments when organizers are loaded
+  // Fetch contest assignments when organizers are loaded (only if not cached)
   useEffect(() => {
-    fetchContestsByOrganizers();
-  }, [allOrganizers]);
+    if (allOrganizers.length > 0 && Object.keys(contestsByOrganizers || {}).length === 0) {
+      fetchContestsByOrganizers();
+    }
+  }, [allOrganizers.length]);
 
-  // Transform organizer data for table display
-  const rows: OrganizerRow[] = allOrganizers.map((organizer: any) =>
+  // Open edit modal with organizer data
+  const handleOpenEditOrganizer = useCallback((organizer: any) => {
+    setOrganizerData({
+      id: organizer.id,
+      first_name: organizer.first_name,
+      last_name: organizer.last_name,
+      username: organizer.username,
+    });
+    setOpenOrganizerModal(true);
+  }, []);
+
+  // Delete organizer and refresh data
+  const handleDelete = useCallback(async (id: number) => {
+    await deleteOrganizer(id);
+    await fetchAllOrganizers();
+  }, [deleteOrganizer, fetchAllOrganizers]);
+
+  // Open confirmation modal for deletion
+  const handleOpenAreYouSure = useCallback((id: number) => {
+    setOrganizerId(id);
+    setOpenAreYouSure(true);
+  }, []);
+
+  // Open assign contest modal
+  const handleOpenAssignContest = useCallback((id: number) => {
+    setOrganizerId(id);
+    setOpenAssignContest(true);
+  }, []);
+
+  // Handle unassign contest
+  const handleUnassignContest = useCallback(async (organizerId: number, contestId: number) => {
+    const { deleteContestOrganizerMapping } = useMapContestOrganizerStore.getState();
+    await deleteContestOrganizerMapping(organizerId, contestId);
+    await fetchContestsByOrganizers();
+  }, [fetchContestsByOrganizers]);
+
+  // Transform organizer data for table display - memoized to prevent recreation on every render
+  const rows: OrganizerRow[] = useMemo(() => allOrganizers.map((organizer: any) =>
     createData(
       organizer.id,
       organizer.first_name,
@@ -384,40 +433,9 @@ export default function AdminOrganizerTable() {
       <Button onClick={() => handleOpenAreYouSure(organizer.id)} />,
       <Button onClick={() => handleOpenAssignContest(organizer.id)} />
     )
-  );
+  ), [allOrganizers, handleOpenEditOrganizer, handleOpenAreYouSure, handleOpenAssignContest]);
 
-  // Open edit modal with organizer data
-  const handleOpenEditOrganizer = (organizer: any) => {
-    setOrganizerData({
-      id: organizer.id,
-      first_name: organizer.first_name,
-      last_name: organizer.last_name,
-      username: organizer.username,
-    });
-    setOpenOrganizerModal(true);
-  };
-
-  // Delete organizer and refresh data
-  const handleDelete = async (id: number) => {
-    await deleteOrganizer(id);
-    await fetchAllOrganizers();
-  };
-
-  // Open confirmation modal for deletion
-  const handleOpenAreYouSure = (id: number) => {
-    setOrganizerId(id);
-    setOpenAreYouSure(true);
-  };
-
-  // Open assign contest modal
-  const handleOpenAssignContest = (id: number) => {
-    setOrganizerId(id);
-    setOpenAssignContest(true);
-  };
-
-  return isLoadingMapContestOrganizer ? (
-    <CircularProgress />
-  ) : (
+  return (
     <TableContainer 
       component={Box}
       sx={{
@@ -457,7 +475,12 @@ export default function AdminOrganizerTable() {
         </TableHead>
         <TableBody>
           {rows.map((row) => (
-            <Row key={row.id} row={row} />
+            <Row 
+              key={row.id} 
+              row={row} 
+              contestsByOrganizers={contestsByOrganizers}
+              onUnassign={handleUnassignContest}
+            />
           ))}
         </TableBody>
       </Table>

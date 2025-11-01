@@ -28,7 +28,7 @@ interface IOrganizerTeamsTableProps {
   contestId: number;
 }
 
-export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
+function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
   const { clusters, contestId } = props;
   const [openClusterModal, setOpenClusterModal] = useState(false);
   const [openTeamModal, setOpenTeamModal] = useState(false);
@@ -404,3 +404,5 @@ export default function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
     <CircularProgress />
   );
 }
+
+export default React.memo(OrganizerTeamsTable);

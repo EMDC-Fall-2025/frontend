@@ -390,7 +390,7 @@ function JudgesTable(props: IJudgesTableProps) {
   );
 }
 
-export default function OrganizerJudgesTable(
+function OrganizerJudgesTable(
   props: IOrganizerClustersTeamsTableProps
 ) {
   const { clusters, judgesByClusterId, contestid } = props;
@@ -529,3 +529,5 @@ export default function OrganizerJudgesTable(
     <CircularProgress />
   );
 }
+
+export default React.memo(OrganizerJudgesTable);

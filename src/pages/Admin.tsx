@@ -123,14 +123,15 @@ useEffect(() => {
             onClick={() => setContestModal(true)}
             variant="contained"
             startIcon={<AddIcon />}
+            size="small"
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: { xs: 2, sm: 2.5 },
-              py: { xs: 1, sm: 1.5 },
+              px: { xs: 2, sm: 2 },
+              py: { xs: 1, sm: 1 },
               bgcolor: theme.palette.success.main,
               "&:hover": { bgcolor: theme.palette.success.dark },
-              fontSize: { xs: "0.875rem", sm: "1rem" },
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
               width: { xs: "100%", sm: "auto" }
             }}
           >
@@ -141,18 +142,19 @@ useEffect(() => {
             onClick={() => setOrganizerModal(true)}
             variant="outlined"
             startIcon={<PersonAddAlt1Icon />}
+            size="small"
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: { xs: 2, sm: 2.5 },
-              py: { xs: 1, sm: 1.5 },
+              px: { xs: 2, sm: 2 },
+              py: { xs: 1, sm: 1 },
               borderColor: theme.palette.success.main,
               color: theme.palette.success.main,
               "&:hover": {
                 borderColor: theme.palette.success.dark,
                 backgroundColor: "rgba(46,125,50,0.06)",
               },
-              fontSize: { xs: "0.875rem", sm: "1rem" },
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
               width: { xs: "100%", sm: "auto" }
             }}
           >
@@ -163,18 +165,19 @@ useEffect(() => {
             onClick={() => navigate("/awards")}
             variant="outlined"
             startIcon={<EmojiEventsIcon />}
+            size="small"
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: { xs: 2, sm: 2.5 },
-              py: { xs: 1, sm: 1.5 },
+              px: { xs: 2, sm: 2 },
+              py: { xs: 1, sm: 1 },
               borderColor: theme.palette.success.main,
               color: theme.palette.success.main,
               "&:hover": {
                 borderColor: theme.palette.success.dark,
                 backgroundColor: "rgba(46,125,50,0.06)",
               },
-              fontSize: { xs: "0.875rem", sm: "1rem" },
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
               width: { xs: "100%", sm: "auto" }
             }}
           >
