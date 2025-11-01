@@ -117,7 +117,6 @@ export default function AdminContestTable() {
   // Delete contest and refresh data
   const handleDelete = async (id: number) => {
     await deleteContest(id);
-    await fetchAllContests();
   };
 
   // Open confirmation modal for deletion

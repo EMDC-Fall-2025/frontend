@@ -117,7 +117,7 @@ export const useContestStore = create<ContestState>()(
               },
             }
           );
-          const createdContest: Contest = response.data;
+          const createdContest: Contest = response.data.contest;
           set((state) => ({
             allContests: [...state.allContests, createdContest],
             contestError: null,
@@ -134,13 +134,19 @@ export const useContestStore = create<ContestState>()(
         set({ isLoadingContest: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.post(`/api/contest/edit/`, editedContest, {
+          const response = await axios.post(`/api/contest/edit/`, editedContest, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
             },
           });
-          set({ contestError: null });
+          const updatedContest: Contest = response.data.Contest;
+          set((state) => ({
+            allContests: state.allContests.map((c) =>
+              c.id === updatedContest.id ? updatedContest : c
+            ),
+            contestError: null,
+          }));
         } catch (contestError) {
           set({ contestError: "Error editing contest: " + contestError });
           throw Error("Error editing contest: " + contestError);
@@ -158,7 +164,10 @@ export const useContestStore = create<ContestState>()(
               Authorization: `Token ${token}`,
             },
           });
-          set({ contestError: null });
+          set((state) => ({
+            allContests: state.allContests.filter((c) => c.id !== contestId),
+            contestError: null,
+          }));
         } catch (contestError) {
           set({ contestError: "Error deleting contest: " + contestError });
           throw Error("Error deleting contest: " + contestError);

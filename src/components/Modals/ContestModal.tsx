@@ -60,7 +60,6 @@ export default function ContestModal(props: IContestModalProps) {
         is_open: false,
         is_tabulated: false,
       });
-      await fetchAllContests();
       await fetchOrganizerNamesByContests();
       toast.success("Contest created successfully!");
       handleClose();
@@ -81,7 +80,6 @@ export default function ContestModal(props: IContestModalProps) {
           is_open: false,
           is_tabulated: false,
         });
-        await fetchAllContests();
         toast.success("Contest updated successfully!");
         handleClose();
       } catch (error) {
