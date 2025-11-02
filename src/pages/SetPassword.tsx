@@ -27,7 +27,6 @@ export default function SetPassword() {
   const q = useQuery();
   const navigate = useNavigate();
 
-  // token + uid are expected as query params: /set-password/?uid=...&token=...
   const uid = q.get("uid") || "";
   const token = q.get("token") || "";
 
@@ -36,15 +35,24 @@ export default function SetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // your only rule: minimum length 8
   const minLenOk = password.length >= 8;
   const matchOk = password === confirm;
 
+  // Optional: validate token when page opens
   useEffect(() => {
     if (!uid || !token) {
       toast.error("Missing link information. Please request a new email.");
-      navigate("/forgot-password/");
+      navigate("/forgot-password");
+      return;
     }
+    (async () => {
+      try {
+        await axios.post("/api/auth/password-token/validate/", { uid, token });
+      } catch {
+        toast.error("Link invalid or expired. Please request a new email.");
+        navigate("/forgot-password");
+      }
+    })();
   }, [uid, token, navigate]);
 
   const handleClickShowPassword = () => setShowPassword((v) => !v);
@@ -63,18 +71,18 @@ export default function SetPassword() {
     }
     try {
       setSubmitting(true);
-      // Backend endpoint that completes the set/reset with uid+token
-      await axios.post(`/api/auth/confirm-password-set/`, {
+      await axios.post("/api/auth/password/complete/", {
         uid,
         token,
         password,
       });
       toast.success("Password set. You can log in now.");
-      navigate("/login/");
+      navigate("/login");
     } catch (err: any) {
       toast.error(
         err?.response?.data?.detail ??
-          "Link invalid or expired. Please request a new email."
+        err?.response?.data?.password?.[0] ??
+        "Link invalid or expired. Please request a new email."
       );
     } finally {
       setSubmitting(false);
@@ -157,7 +165,7 @@ export default function SetPassword() {
             type="submit"
             disabled={submitting || !minLenOk || !matchOk}
             sx={{
-              width: 160,
+              width: 140,
               height: 40,
               bgcolor: `${theme.palette.primary.main}`,
               color: `${theme.palette.secondary.main}`,

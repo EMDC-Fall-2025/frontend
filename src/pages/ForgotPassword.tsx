@@ -27,12 +27,11 @@ export default function ForgotPassword() {
     }
     try {
       setSubmitting(true);
-      // Backend endpoint that sends the set/reset link (console email in dev)
-      await axios.post(`/api/auth/request-password-set/`, { email });
-      toast.success("If that email exists, a link was sent. (Check terminal in dev)");
+      await axios.post("/api/auth/forgot-password/", { username: email });
+      toast.success("If that email exists, a reset link was sent.");
     } catch {
-      // avoid user enumeration: show generic success
-      toast.success("If that email exists, a link was sent. (Check terminal in dev)");
+      // same generic message to avoid user enumeration
+      toast.success("If that email exists, a reset link was sent.");
     } finally {
       setSubmitting(false);
     }
