@@ -45,7 +45,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
   const { handleClose, open, mode, judgeData, clusters, contestid, onSuccess } = props;
 
   const { addJudgeToContest, updateJudgeInContest } = useContestJudgeStore();
-  const { updateJudgeInCluster, addJudgeToCluster } = useMapClusterJudgeStore();
+  const { updateJudgeInAllClusters, addJudgeToCluster } = useMapClusterJudgeStore();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -296,9 +296,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
         const updatedJudge = await editJudge(updatedData);
         if (updatedJudge && contestid) {
           updateJudgeInContest(contestid, updatedJudge);
-          if (selectedClusterId !== -1) {
-            updateJudgeInCluster(selectedClusterId, updatedJudge);
-          }
+          updateJudgeInAllClusters(updatedJudge);
         }
 
         toast.success("Judge updated successfully!");

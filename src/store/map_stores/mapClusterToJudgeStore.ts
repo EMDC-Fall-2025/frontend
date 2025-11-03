@@ -126,7 +126,18 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
             const clusterId = parseInt(clusterIdStr, 10);
             updatedJudgesByClusterId[clusterId] = (
               state.judgesByClusterId[clusterId] || []
-            ).map((j) => (j.id === updatedJudge.id ? updatedJudge : j));
+            ).map((j) => {
+              if (j.id === updatedJudge.id) {
+                return {
+                  ...j,
+                  first_name: updatedJudge.first_name,
+                  last_name: updatedJudge.last_name,
+                  phone_number: updatedJudge.phone_number,
+                  role: updatedJudge.role,
+                };
+              }
+              return j;
+            });
           });
           return { judgesByClusterId: updatedJudgesByClusterId };
         });
