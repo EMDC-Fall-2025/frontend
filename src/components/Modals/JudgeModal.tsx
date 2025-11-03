@@ -303,7 +303,6 @@ export default function JudgeModal(props: IJudgeModalProps) {
         onSuccess?.();
         handleCloseModal();
       } catch (error: any) {
-        // Handle judge update errors with detailed error information
         console.error("Judge update error:", error);
 
         let errorMessage = "";
