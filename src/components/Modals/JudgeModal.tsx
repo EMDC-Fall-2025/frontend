@@ -323,7 +323,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
           errorMessage = error.message;
         }
 
-        // Show specific error message or generic fallback
+       
         if (errorMessage) {
           toast.error(`Failed to update judge: ${errorMessage}`);
         } else {
