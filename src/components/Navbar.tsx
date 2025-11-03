@@ -1,3 +1,4 @@
+// src/components/Nav.tsx
 import { useEffect, useState } from "react";
 import logo from "../assets/EMDC_Fullcolor.png";
 import AppBar from "@mui/material/AppBar";
@@ -5,14 +6,27 @@ import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/primary_stores/authStore";
-import { Button, Container, Paper } from "@mui/material";
+import {
+  Button,
+  Container,
+  Paper,
+  Tooltip,
+  Chip,
+  Snackbar,
+  Alert as MuiAlert,
+} from "@mui/material";
 
 import AreYouSureModal from "./Modals/AreYouSureModal";
+import SetSharedPasswordDialog from "./Modals/SetSharedPasswordDialog";
 import theme from "../theme";
+import KeyIcon from "@mui/icons-material/Key";
 
 export default function Nav() {
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
-  const { isAuthenticated, role, logout } = useAuthStore();
+  const [openSetShared, setOpenSetShared] = useState(false);
+  const [snackOpen, setSnackOpen] = useState(false);
+
+  const { isAuthenticated, role, token, logout } = useAuthStore();
   const [logoUrl, setLogoUrl] = useState("/");
   const navigate = useNavigate();
   const location = useLocation();
@@ -50,6 +64,31 @@ export default function Nav() {
   }, [isAuthenticated, role, navigate]);
 
   const isHomePage = location.pathname === "/";
+  const isAdmin = role?.user_type === 1;
+
+  const roleLabel = (t?: number) =>
+    t === 1
+      ? "Admin"
+      : t === 2
+      ? "Organizer"
+      : t === 3
+      ? "Judge"
+      : t === 4
+      ? "Coach"
+      : "User";
+
+  
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isMod = navigator.platform.includes("Mac") ? e.metaKey : e.ctrlKey;
+      if (isAdmin && isMod && e.shiftKey && e.key.toLowerCase() === "k") {
+        setOpenSetShared(true);
+        setSnackOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isAdmin]);
 
   return (
     <>
@@ -63,7 +102,11 @@ export default function Nav() {
             zIndex: (t) => t.zIndex.drawer + 2,
           }}
         >
-          <Container maxWidth={isHomePage ? false : "lg"} disableGutters={isHomePage} sx={{ py: 1, px: { xs: 1, sm: 2 } }}>
+          <Container
+            maxWidth={isHomePage ? false : "lg"}
+            disableGutters={isHomePage}
+            sx={{ py: 1, px: { xs: 1, sm: 2 } }}
+          >
             <Paper
               elevation={0}
               sx={{
@@ -78,12 +121,22 @@ export default function Nav() {
                   "0 2px 6px rgba(0,0,0,0.05), 0 10px 24px rgba(0,0,0,0.06)",
               }}
             >
-              <Toolbar disableGutters sx={{ minHeight: { xs: 56, sm: 64 }, flexWrap: { xs: "wrap", sm: "nowrap" } }}>
+              <Toolbar
+                disableGutters
+                sx={{
+                  minHeight: { xs: 56, sm: 64 },
+                  flexWrap: { xs: "wrap", sm: "nowrap" },
+                }}
+              >
                 {/* Logo (left) */}
                 <Box
                   component={Link}
                   to={logoUrl}
-                  sx={{ display: "inline-flex", alignItems: "center", flexShrink: 0 }}
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    flexShrink: 0,
+                  }}
                 >
                   <Box
                     component="img"
@@ -94,14 +147,16 @@ export default function Nav() {
                 </Box>
 
                 {/* Right actions */}
-                <Box sx={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  ml: "auto", 
-                  gap: { xs: 1, sm: 2 },
-                  flexWrap: { xs: "wrap", sm: "nowrap" },
-                  justifyContent: { xs: "flex-end", sm: "flex-start" }
-                }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    ml: "auto",
+                    gap: { xs: 1, sm: 2 },
+                    flexWrap: { xs: "wrap", sm: "nowrap" },
+                    justifyContent: { xs: "flex-end", sm: "flex-start" },
+                  }}
+                >
                   {isHomePage && (
                     <Button
                       variant="contained"
@@ -115,11 +170,46 @@ export default function Nav() {
                         whiteSpace: "nowrap",
                         bgcolor: theme.palette.success.main,
                         "&:hover": { bgcolor: theme.palette.success.dark },
-                        order: { xs: 2, sm: 0 }
+                        order: { xs: 2, sm: 0 },
                       }}
                     >
                       Contest Results
                     </Button>
+                  )}
+
+                  {/* Current user/role chip */}
+                  {isAuthenticated && (
+                    <Chip
+                      label={`${roleLabel(role?.user_type)} • ${
+                        role?.user?.first_name ?? ""
+                      }${
+                        role?.user?.last_name ? " " + role?.user?.last_name : ""
+                      }`}
+                      variant="outlined"
+                      sx={{ mr: { xs: 0, sm: 1 } }}
+                    />
+                  )}
+
+                  {/* Admin-only: Set Role Password */}
+                  {isAuthenticated && isAdmin && (
+                    <Tooltip title="Set shared password for Judges/Organizers">
+                      <Button
+                        variant="outlined"
+                        onClick={() => setOpenSetShared(true)}
+                        startIcon={<KeyIcon />}
+                        sx={{
+                          textTransform: "none",
+                          borderRadius: 2,
+                          px: { xs: 1.5, sm: 2.5 },
+                          minWidth: { xs: 80, sm: 160 },
+                          fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                          whiteSpace: "nowrap",
+                          order: { xs: 1, sm: 0 },
+                        }}
+                      >
+                        Set Role Password
+                      </Button>
+                    </Tooltip>
                   )}
 
                   {isAuthenticated ? (
@@ -135,7 +225,7 @@ export default function Nav() {
                         whiteSpace: "nowrap",
                         bgcolor: theme.palette.success.main,
                         "&:hover": { bgcolor: theme.palette.success.dark },
-                        order: { xs: 1, sm: 0 }
+                        order: { xs: 1, sm: 0 },
                       }}
                     >
                       Logout
@@ -153,7 +243,7 @@ export default function Nav() {
                         whiteSpace: "nowrap",
                         bgcolor: theme.palette.success.main,
                         "&:hover": { bgcolor: theme.palette.success.dark },
-                        order: { xs: 1, sm: 0 }
+                        order: { xs: 1, sm: 0 },
                       }}
                     >
                       Login
@@ -166,13 +256,37 @@ export default function Nav() {
         </AppBar>
       </Box>
 
-      {/* Logout confirmation*/}
+      {/* Logout confirmation */}
       <AreYouSureModal
         open={openAreYouSure}
         handleClose={() => setOpenAreYouSure(false)}
         title="Are you sure you want to logout?"
         handleSubmit={handleLogout}
       />
+
+      {/* Admin: Set shared password */}
+      <SetSharedPasswordDialog
+        open={openSetShared}
+        onClose={() => setOpenSetShared(false)}
+        token={token}
+      />
+
+      {/* Shortcut snackbar */}
+      <Snackbar
+        open={snackOpen}
+        autoHideDuration={2000}
+        onClose={() => setSnackOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <MuiAlert
+          elevation={6}
+          variant="filled"
+          severity="info"
+          onClose={() => setSnackOpen(false)}
+        >
+          
+        </MuiAlert>
+      </Snackbar>
     </>
   );
 }
