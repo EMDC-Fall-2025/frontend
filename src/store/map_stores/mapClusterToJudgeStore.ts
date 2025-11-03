@@ -10,7 +10,7 @@ interface MapClusterJudgeState {
   cluster: Cluster | null;
   mapClusterJudgeError: string | null;
 
-  fetchJudgesByClusterId: (clusterId: number) => Promise<void>;
+  fetchJudgesByClusterId: (clusterId: number, forceRefresh?: boolean) => Promise<void>;
   updateJudgeInCluster: (clusterId: number, updatedJudge: Judge) => void;
   updateJudgeInAllClusters: (updatedJudge: Judge) => void;
   addJudgeToCluster: (clusterId: number, judge: Judge) => void;
@@ -71,11 +71,13 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
         }
       },
 
-      fetchJudgesByClusterId: async (clusterId: number) => {
-        // Check cache first - if we already have judges for this cluster, return early
-        const cachedJudges = get().judgesByClusterId[clusterId];
-        if (cachedJudges && cachedJudges.length > 0) {
-          return; // Use cached data - no API call, no re-render
+      fetchJudgesByClusterId: async (clusterId: number, forceRefresh: boolean = false) => {
+        // Check cache first - if we already have judges for this cluster and not forcing refresh, return early
+        if (!forceRefresh) {
+          const cachedJudges = get().judgesByClusterId[clusterId];
+          if (cachedJudges && cachedJudges.length > 0) {
+            return; // Use cached data
+          }
         }
         
         set({ isLoadingMapClusterJudge: true });
@@ -290,13 +292,34 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
 
       removeJudgeFromCluster: async (judgeId: number, clusterId: number) => {
         set({ isLoadingMapClusterJudge: true });
+        
+        const originalState = get().judgesByClusterId[clusterId] || [];
+
+        set((state) => ({
+          judgesByClusterId: {
+            ...state.judgesByClusterId,
+            [clusterId]: (state.judgesByClusterId[clusterId] || []).filter(
+              (judge) => judge.id !== judgeId
+            ),
+          },
+          mapClusterJudgeError: null,
+        }));
+        
         try {
           const token = localStorage.getItem("token");
           await axios.delete(`/api/mapping/clusterToJudge/remove/${judgeId}/${clusterId}/`, {
             headers: { Authorization: `Token ${token}` },
           });
+      
           set({ mapClusterJudgeError: null });
         } catch (error) {
+          set((state) => ({
+            judgesByClusterId: {
+              ...state.judgesByClusterId,
+              [clusterId]: originalState,
+            },
+          }));
+          await get().fetchJudgesByClusterId(clusterId, true);
           const errorMessage = "Error removing judge from cluster";
           set({ mapClusterJudgeError: errorMessage });
           throw new Error(errorMessage);

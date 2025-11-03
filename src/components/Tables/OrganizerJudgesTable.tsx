@@ -192,7 +192,7 @@ function JudgesTable(props: IJudgesTableProps) {
         return;
       }
       await removeJudgeFromCluster(judgeId, judgeCluster.id);
-      await fetchJudgesByClusterId(judgeCluster.id);
+      // No need to fetch - optimistic update already removed it from UI
       toast.success(`Judge removed from ${judgeCluster.cluster_name} cluster successfully!`);
     } catch (error: any) {
       let errorMessage = "Failed to remove judge from cluster. Please try again.";

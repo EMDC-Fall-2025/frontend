@@ -5,13 +5,13 @@ import { Team, NewTeam, EditedTeam } from "../../types";
 
 interface TeamState {
   team: Team | null;
-  teams: Team[]; // Add teams array to store all teams
+  teams: Team[]; 
   isLoadingTeam: boolean;
   teamError: string | null;
   fetchTeamById: (teamId: number) => Promise<void>;
-  fetchAllTeams: () => Promise<void>; // Add fetchAllTeams function
-  createTeam: (newTeam: NewTeam) => Promise<void>;
-  editTeam: (editedTeam: EditedTeam) => Promise<void>;
+  fetchAllTeams: () => Promise<void>; 
+  createTeam: (newTeam: NewTeam) => Promise<Team>;
+  editTeam: (editedTeam: EditedTeam) => Promise<Team>;
   deleteTeam: (teamId: number) => Promise<void>;
   clearTeam: () => void;
 }
@@ -79,15 +79,17 @@ export const useTeamStore = create<TeamState>()(
         set({ isLoadingTeam: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.post(`/api/team/create/`, newTeam, {
+          const response = await axios.post(`/api/team/create/`, newTeam, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
             },
           });
+          const createdTeam = (response.data as any)?.team;
           set({ teamError: null });
+          return createdTeam;
         } catch (teamError: any) {
-          // Convert error to string to prevent React rendering issues
+          
           let errorMessage = "Error creating team";
           if (teamError?.response?.data) {
             const data = teamError.response.data;
@@ -104,7 +106,7 @@ export const useTeamStore = create<TeamState>()(
             }
           }
           set({ teamError: errorMessage });
-          throw teamError; // Re-throw the original error
+          throw teamError; 
         } finally {
           set({ isLoadingTeam: false });
         }
@@ -114,15 +116,17 @@ export const useTeamStore = create<TeamState>()(
         set({ isLoadingTeam: true });
         try {
           const token = localStorage.getItem("token");
-          await axios.post(`/api/team/edit/`, editedTeam, {
+          const response = await axios.post(`/api/team/edit/`, editedTeam, {
             headers: {
               Authorization: `Token ${token}`,
               "Content-Type": "application/json",
             },
           });
+          const updatedTeam = (response.data as any)?.Team;
           set({ teamError: null });
+          return updatedTeam;
         } catch (teamError: any) {
-          // Convert error to string to prevent React rendering issues
+         
           let errorMessage = "Error editing team";
           if (teamError?.response?.data) {
             const data = teamError.response.data;
@@ -139,7 +143,7 @@ export const useTeamStore = create<TeamState>()(
             }
           }
           set({ teamError: errorMessage });
-          throw teamError; // Re-throw the original error
+          throw teamError; 
         } finally {
           set({ isLoadingTeam: false });
         }

@@ -260,63 +260,21 @@ export default function JudgeModal(props: IJudgeModalProps) {
   const handleEditJudge = async () => {
     if (contestid && judgeData) {
       try {
-        // Get the current cluster to determine what scoresheets are appropriate
-        // Note: cluster cannot be changed when editing - use the original cluster from judgeData
-        const originalClusterId = judgeData.cluster?.id || clusterId;
-        const currentCluster = clusters?.find(cluster => cluster.id === originalClusterId);
+        // Get selected cluster - use current selection or fallback to original
+        const selectedClusterId = clusterId !== -1 ? clusterId : (judgeData.cluster?.id || -1);
+        const currentCluster = clusters?.find(cluster => cluster.id === selectedClusterId);
         const isChampionshipCluster = currentCluster?.cluster_type === 'championship' || 
                                    currentCluster?.cluster_name?.toLowerCase().includes('championship');
         const isRedesignCluster = currentCluster?.cluster_type === 'redesign' || 
                                 currentCluster?.cluster_name?.toLowerCase().includes('redesign');
         
-        // Get original scoresheet assignments from judgeData
-        const originalSheets = scoringSheetOptions
-          .filter((option) => judgeData[option.value as keyof typeof judgeData])
-          .map((option) => option.value);
-        
-        // Check if scoresheets have changed
-        const scoresheetsChanged = JSON.stringify(selectedSheets.sort()) !== JSON.stringify(originalSheets.sort());
-        
-        // Only apply validation and filtering if there are actual changes
+        // Validate scoresheets based on cluster type
         let allowedSheets = selectedSheets;
-        
-        if (scoresheetsChanged) {
-          // Changes were made - apply appropriate validation based on cluster type
-          if (isChampionshipCluster) {
-            // Championship clusters can only have championship scoresheets
-            allowedSheets = selectedSheets.filter(sheet => sheet === "championshipSS");
-            // If no championship sheet is selected, add it automatically
-            if (!allowedSheets.includes("championshipSS")) {
-              allowedSheets = ["championshipSS"];
-            }
-          } else if (isRedesignCluster) {
-            // Redesign clusters can only have redesign scoresheets
-            allowedSheets = selectedSheets.filter(sheet => sheet === "redesignSS");
-            // If no redesign sheet is selected, add it automatically
-            if (!allowedSheets.includes("redesignSS")) {
-              allowedSheets = ["redesignSS"];
-              }
-            }
-        } else {
-          // No changes made - preserve existing scoresheet assignments exactly as they were
-          allowedSheets = originalSheets;
+        if (isChampionshipCluster) {
+          allowedSheets = ["championshipSS"];
+        } else if (isRedesignCluster) {
+          allowedSheets = ["redesignSS"];
         }
-        
-
-        // Check if any actual changes were made to prevent unnecessary API calls
-        const hasActualChanges = scoresheetsChanged || 
-          firstName !== judgeData.firstName ||
-          lastName !== judgeData.lastName ||
-          phoneNumber !== judgeData.phoneNumber ||
-          email !== (user?.username || '') ||
-          selectedTitle !== Number(judgeData.role);
-
-        if (!hasActualChanges) {
-          toast.success("No changes to update");
-          handleCloseModal();
-          return;
-        }
-
 
         const updatedData = {
           id: judgeData.id,
@@ -331,15 +289,15 @@ export default function JudgeModal(props: IJudgeModalProps) {
           redesign: allowedSheets.includes("redesignSS"),
           championship: allowedSheets.includes("championshipSS"),
           username: email,
-          clusterid: originalClusterId,
+          clusterid: selectedClusterId,
           role: selectedTitle,
         };
 
         const updatedJudge = await editJudge(updatedData);
         if (updatedJudge && contestid) {
           updateJudgeInContest(contestid, updatedJudge);
-          if (originalClusterId !== -1) {
-            updateJudgeInCluster(originalClusterId, updatedJudge);
+          if (selectedClusterId !== -1) {
+            updateJudgeInCluster(selectedClusterId, updatedJudge);
           }
         }
 
@@ -505,7 +463,6 @@ export default function JudgeModal(props: IJudgeModalProps) {
             <Select
               value={clusterId}
               label="Cluster"
-              disabled={mode === "edit"}
               sx={{ 
                 textAlign: "left",
                 fontSize: { xs: "0.9rem", sm: "1rem" }

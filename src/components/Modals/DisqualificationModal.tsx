@@ -29,9 +29,9 @@ export default function DisqualificationModal(
   props: IDisqualificationModalProps
 ) {
   const { handleClose, open, teamName, teamId, clusterId } = props;
-  const { organizerDisqualifyTeam, organizerError } = useOrganizerStore();
-  const { judgeDisqualifyTeam, judgeError } = useJudgeStore();
-  const { getTeamsByClusterId, mapClusterToTeamError } =
+  const { organizerDisqualifyTeam } = useOrganizerStore();
+  const { judgeDisqualifyTeam } = useJudgeStore();
+  const { fetchTeamsByClusterId} =
     useMapClusterTeamStore();
 
   const [openAreYouSureConfirm, setOpenAreYouSureConfirm] = useState(false);
@@ -39,14 +39,14 @@ export default function DisqualificationModal(
 
   const handleConfirm = async () => {
     await organizerDisqualifyTeam(teamId, true);
-    await getTeamsByClusterId(clusterId);
+    await fetchTeamsByClusterId(clusterId);
     setOpenAreYouSureConfirm(false);
     handleClose();
   };
 
   const handleReverse = async () => {
     await judgeDisqualifyTeam(teamId, false);
-    await getTeamsByClusterId(clusterId);
+    await fetchTeamsByClusterId(clusterId);
     setOpenAreYouSureReverse(false);
     handleClose();
   };
