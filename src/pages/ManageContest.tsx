@@ -53,7 +53,7 @@ export default function ManageContest() {
 
   const { clusters, fetchClustersByContestId } = useMapClusterToContestStore();
 
-  const { getTeamsByClusterId, teamsByClusterId } = useMapClusterTeamStore();
+  const { fetchTeamsByClusterId, teamsByClusterId } = useMapClusterTeamStore();
   // Judge-cluster mapping for organizing judges by clusters
   const { fetchJudgesByClusterId, judgesByClusterId } = useMapClusterJudgeStore();
   // Coach data management for teams
@@ -83,7 +83,7 @@ export default function ManageContest() {
     Promise.all([
       ...clusters
         .filter(c => !(teamsByClusterId[c.id]?.length > 0))
-        .map(c => getTeamsByClusterId(c.id)),
+        .map(c => fetchTeamsByClusterId(c.id)),
       ...clusters
         .filter(c => !(judgesByClusterId[c.id]?.length > 0))
         .map(c => fetchJudgesByClusterId(c.id))
@@ -396,6 +396,17 @@ export default function ManageContest() {
         setOpenAssignJudgeModal(false);
       }}
       onSuccess={async () => {
+        // Refresh judges after assigning to contest
+        if (parsedContestId) {
+          // Refresh all contest judges
+          await getAllJudgesByContestId(parsedContestId, true);
+          // Refresh judges for all clusters in the contest
+          if (clusters.length > 0) {
+            await Promise.all(
+              clusters.map(cluster => fetchJudgesByClusterId(cluster.id, true))
+            );
+          }
+        }
         setOpenAssignJudgeModal(false);
       }}
     />

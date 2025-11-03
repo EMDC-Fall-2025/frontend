@@ -12,7 +12,7 @@ interface MapContestJudgeState {
   mapContestJudgeError: string | null;
 
   createContestJudgeMapping: (mapData: MapContestToJudge) => Promise<void>;
-  getAllJudgesByContestId: (contestId: number) => Promise<void>;
+  getAllJudgesByContestId: (contestId: number, forceRefresh?: boolean) => Promise<void>;
   addJudgeToContest: (contestId: number, judge: Judge) => void;
   updateJudgeInContest: (contestId: number, updatedJudge: Judge) => void;
   removeJudgeFromContest: (judgeId: number, contestId: number) => Promise<void>;
@@ -95,12 +95,14 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
         }
       },
 
-      getAllJudgesByContestId: async (contestId: number) => {
-        // Check cache first - if we already have judges for this contest, return early
-        const cachedJudges = get().contestJudges[contestId];
-        if (cachedJudges && cachedJudges.length > 0) {
-          set({ judges: cachedJudges });
-          return; // Use cached data
+      getAllJudgesByContestId: async (contestId: number, forceRefresh: boolean = false) => {
+        // Check cache first - if we already have judges for this contest and not forcing refresh, return early
+        if (!forceRefresh) {
+          const cachedJudges = get().contestJudges[contestId];
+          if (cachedJudges && cachedJudges.length > 0) {
+            set({ judges: cachedJudges });
+            return; // Use cached data
+          }
         }
         
         set({ isLoadingMapContestJudge: true });
@@ -221,13 +223,40 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
 
       removeJudgeFromContest: async (judgeId: number, contestId: number) => {
         set({ isLoadingMapContestJudge: true });
+        
+        // Store original state for rollback on error
+        const originalState = get().contestJudges[contestId] || [];
+        const originalJudges = get().judges;
+        
+        // Optimistic update: remove from local state immediately
+        set((state) => ({
+          judges: state.judges.filter((j) => j.id !== judgeId),
+          contestJudges: {
+            ...state.contestJudges,
+            [contestId]: (state.contestJudges[contestId] || []).filter(
+              (j) => j.id !== judgeId
+            ),
+          },
+          mapContestJudgeError: null,
+        }));
+        
         try {
           const token = localStorage.getItem("token");
           await axios.delete(`/api/mapping/contestToJudge/remove/${judgeId}/${contestId}/`, {
             headers: { Authorization: `Token ${token}` },
           });
+          // Success: keep optimistic update, no refresh needed
           set({ mapContestJudgeError: null });
         } catch (error) {
+          // On error: rollback optimistic update and refresh
+          set((state) => ({
+            judges: originalJudges,
+            contestJudges: {
+              ...state.contestJudges,
+              [contestId]: originalState,
+            },
+          }));
+          await get().getAllJudgesByContestId(contestId, true);
           const errorMessage = "Error removing judge from contest";
           set({ mapContestJudgeError: errorMessage });
           throw new Error(errorMessage);

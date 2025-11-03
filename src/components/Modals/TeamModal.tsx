@@ -41,7 +41,7 @@ export default function TeamModal(props: ITeamModalProps) {
   const [coachLastName, setCoachLastName] = useState("");
   const [coachEmail, setCoachEmail] = useState("");
   const { createTeam, editTeam } = useTeamStore();
-  const { getTeamsByClusterId } = useMapClusterTeamStore();
+  const { addTeamToCluster, updateTeamInCluster } = useMapClusterTeamStore();
 
   const title = mode === "new" ? "New Team" : "Edit Team";
 
@@ -51,7 +51,7 @@ export default function TeamModal(props: ITeamModalProps) {
     if (contestId) {
       try {
         // Create team with initial scores and coach information
-        await createTeam({
+        const createdTeam = await createTeam({
           team_name: teamName,
           school_name: schoolName || "NA",
           journal_score: 0,
@@ -69,19 +69,17 @@ export default function TeamModal(props: ITeamModalProps) {
           contestid: contestId,
         });
         
-        // Refresh team lists for all clusters in the contest
-        if (clusters) {
-          for (const cluster of clusters) {
-            await getTeamsByClusterId(cluster.id);
-          }
+        if (createdTeam && cluster !== -1) {
+          addTeamToCluster(cluster, createdTeam);
         }
+        
         toast.success("Team created successfully!");
         handleCloseModal();
       } catch (error: any) {
-        // Handle team creation errors with user-friendly messages
+     
         let errorMessage = "";
         
-        // Extract error message from various possible response structures
+        // Extract error message 
         if (error?.response?.data) {
           const data = error.response.data;
           if (typeof data === 'string') {
@@ -93,7 +91,7 @@ export default function TeamModal(props: ITeamModalProps) {
           } else if (data.message && typeof data.message === 'string') {
             errorMessage = data.message;
           } else if (data.errors && typeof data.errors === 'object') {
-            // Handle Django-style error objects
+        
             errorMessage = JSON.stringify(data.errors);
           }
         } else if (error?.message && typeof error.message === 'string') {
@@ -112,11 +110,10 @@ export default function TeamModal(props: ITeamModalProps) {
   };
 
   // Update existing team information and coach details
-  // Preserves team ID while updating name, cluster, and coach information
   const handleEditTeam = async () => {
     try {
       // Update team with current form values
-      await editTeam({
+      const updatedTeam = await editTeam({
         id: teamData?.id ?? 0,
         team_name: teamName,
         school_name: schoolName || "NA",
@@ -127,17 +124,17 @@ export default function TeamModal(props: ITeamModalProps) {
         contestid: contestId ?? 0,
       });
 
-      // Refresh team lists for all clusters to reflect changes
-      if (clusters) {
-        for (const cluster of clusters) {
-          await getTeamsByClusterId(cluster.id);
+    
+      if (updatedTeam && cluster !== -1) {
+        updateTeamInCluster(cluster, updatedTeam);
+        if (teamData && teamData.clusterid !== cluster && teamData.clusterid !== -1) {
+          updateTeamInCluster(teamData.clusterid, updatedTeam);
         }
       }
 
       toast.success("Team updated successfully!");
       handleCloseModal();
     } catch (error: any) {
-      // Handle team update errors
       toast.error("Failed to update team. Please try again.");
     }
   };

@@ -40,7 +40,7 @@ const bgBronze = () => alpha(BRONZE, 0.18);
 
 export default function InternalResultsTable({ contestId, resultType='preliminary' }: { contestId?: number; resultType?: 'preliminary' | 'championship' | 'redesign'; }) {
   const { teamsByContest } = useMapContestToTeamStore();
-  const { clusters, teamsByClusterId, fetchClustersByContestId, getTeamsByClusterId } = useMapClusterTeamStore();
+  const { clusters, teamsByClusterId, fetchClustersByContestId, fetchTeamsByClusterId } = useMapClusterTeamStore();
   const navigate = useNavigate();
   
 
@@ -59,11 +59,11 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
       clusters.forEach((cluster: any) => {
         // Only fetch if we don't already have teams for this cluster
         if (!teamsByClusterId[cluster.id]) {
-          getTeamsByClusterId(cluster.id);
+          fetchTeamsByClusterId(cluster.id);
         }
       });
     }
-  }, [clusters, contestId, getTeamsByClusterId, teamsByClusterId]);
+  }, [clusters, contestId, fetchTeamsByClusterId, teamsByClusterId]);
 
   // Create a mapping from team ID to cluster name (only for preliminary clusters)
   const clusterNameByTeamId = useMemo(() => {
@@ -99,7 +99,7 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
       const sorted = rows.sort((a, b) => (b.preliminary_total_score || 0) - (a.preliminary_total_score || 0));
       return sorted;
     } else if (resultType === 'championship') {
-      // Championship: Only teams advanced to championship, sorted by total_score descending
+      
       return rows
         .filter(team => team.advanced_to_championship)
         .sort((a, b) => (b.total_score || 0) - (a.total_score || 0));
