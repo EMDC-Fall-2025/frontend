@@ -12,7 +12,7 @@ interface MapClusterJudgeState {
 
   fetchJudgesByClusterId: (clusterId: number, forceRefresh?: boolean) => Promise<void>;
   updateJudgeInCluster: (clusterId: number, updatedJudge: Judge) => void;
-  updateJudgeInAllClusters: (updatedJudge: Judge) => void;
+  updateJudgeInAllClusters: (updatedJudge: Judge, newClusterId?: number) => void;
   addJudgeToCluster: (clusterId: number, judge: Judge) => void;
   fetchClusterByJudgeId: (judgeId: number) => Promise<void>;
   fetchClustersForJudges: (judges: Judge[]) => Promise<void>;
@@ -119,30 +119,58 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
         }));
       },
 
-      updateJudgeInAllClusters: (updatedJudge: Judge) => {
+      updateJudgeInAllClusters: (updatedJudge: Judge, newClusterId?: number) => {
         set((state) => {
           const updatedJudgesByClusterId: { [key: number]: Judge[] } = {};
+          
+          // Process all existing clusters
           Object.keys(state.judgesByClusterId).forEach((clusterIdStr) => {
             const clusterId = parseInt(clusterIdStr, 10);
-            updatedJudgesByClusterId[clusterId] = (
-              state.judgesByClusterId[clusterId] || []
-            ).map((j) => {
-              if (j.id === updatedJudge.id) {
-                return {
-                  ...j,
-                  first_name: updatedJudge.first_name,
-                  last_name: updatedJudge.last_name,
-                  phone_number: updatedJudge.phone_number,
-                  role: updatedJudge.role,
-                };
-              }
-              return j;
-            });
+            const judgesInCluster = state.judgesByClusterId[clusterId] || [];
+            
+            // If moving to a new cluster, remove from all other clusters
+            if (newClusterId !== undefined && clusterId !== newClusterId) {
+              updatedJudgesByClusterId[clusterId] = judgesInCluster.filter(
+                (j) => j.id !== updatedJudge.id
+              );
+              return;
+            }
+            
+            // Update or add judge in this cluster
+            const judgeIndex = judgesInCluster.findIndex((j) => j.id === updatedJudge.id);
+            
+            if (judgeIndex !== -1) {
+              // Judge exists - update all fields if cluster specified, otherwise just name fields
+              updatedJudgesByClusterId[clusterId] = judgesInCluster.map((j) => {
+                if (j.id === updatedJudge.id) {
+                  return newClusterId !== undefined ? updatedJudge : {
+                    ...j,
+                    first_name: updatedJudge.first_name,
+                    last_name: updatedJudge.last_name,
+                    phone_number: updatedJudge.phone_number,
+                    role: updatedJudge.role,
+                  };
+                }
+                return j;
+              });
+            } else if (newClusterId !== undefined && clusterId === newClusterId) {
+              // Judge doesn't exist but this is the new cluster - add it
+              updatedJudgesByClusterId[clusterId] = [...judgesInCluster, updatedJudge];
+            } else {
+              // Judge doesn't exist and not the new cluster - keep as is
+              updatedJudgesByClusterId[clusterId] = judgesInCluster;
+            }
           });
+          
+          // If new cluster doesn't exist yet, create it
+          if (newClusterId !== undefined && !(newClusterId in updatedJudgesByClusterId)) {
+            updatedJudgesByClusterId[newClusterId] = [updatedJudge];
+          }
+          
           return { judgesByClusterId: updatedJudgesByClusterId };
         });
       },
-
+      
       addJudgeToCluster: (clusterId: number, judge: Judge) => {
         set((state) => ({
           judgesByClusterId: {

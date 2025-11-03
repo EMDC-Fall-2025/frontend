@@ -88,7 +88,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
                             currentCluster?.cluster_name?.toLowerCase().includes('redesign');
   const isPreliminaryCluster = !isChampionshipCluster && !isRedesignCluster;
 
-  // Helper function to determine if a scoresheet option should be disabled
+  
   const isScoresheetDisabled = (option: typeof scoringSheetOptions[0]) => {
     if (isChampionshipCluster) {
       return option.value !== "championshipSS";
@@ -296,10 +296,11 @@ export default function JudgeModal(props: IJudgeModalProps) {
         const updatedJudge = await editJudge(updatedData);
         if (updatedJudge && contestid) {
           updateJudgeInContest(contestid, updatedJudge);
-          updateJudgeInAllClusters(updatedJudge);
+          updateJudgeInAllClusters(updatedJudge, selectedClusterId !== -1 ? selectedClusterId : undefined);
         }
 
         toast.success("Judge updated successfully!");
+        onSuccess?.();
         handleCloseModal();
       } catch (error: any) {
         // Handle judge update errors with detailed error information
