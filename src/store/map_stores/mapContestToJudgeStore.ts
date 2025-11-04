@@ -16,7 +16,7 @@ interface MapContestJudgeState {
   addJudgeToContest: (contestId: number, judge: Judge) => void;
   updateJudgeInContest: (contestId: number, updatedJudge: Judge) => void;
   removeJudgeFromContest: (judgeId: number, contestId: number) => Promise<void>;
-  getContestByJudgeId: (judgeId: number) => Promise<void>;
+  getContestByJudgeId: (judgeId: number, forceRefresh?: boolean) => Promise<void>;
   deleteContestJudgeMappingById: (mapId: number) => Promise<void>;
   clearJudges: () => void;
   clearContest: () => void;
@@ -137,11 +137,13 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
         }
       },
 
-      getContestByJudgeId: async (judgeId: number) => {
-        // Check cache first - if we already have this contest, return early
-        const cachedContest = get().contest;
-        if (cachedContest) {
-          return; // Use cached data
+      getContestByJudgeId: async (judgeId: number, forceRefresh: boolean = false) => {
+        // Check cache first - if we already have this contest and not forcing refresh, return early
+        if (!forceRefresh) {
+          const cachedContest = get().contest;
+          if (cachedContest) {
+            return; // Use cached data
+          }
         }
         
         set({ isLoadingMapContestJudge: true });
