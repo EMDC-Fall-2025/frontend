@@ -162,6 +162,10 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
             }
           });
           
+          // If new cluster doesn't exist yet, create it
+          if (newClusterId !== undefined && !(newClusterId in updatedJudgesByClusterId)) {
+            updatedJudgesByClusterId[newClusterId] = [updatedJudge];
+          }
           
           return { judgesByClusterId: updatedJudgesByClusterId };
         });
