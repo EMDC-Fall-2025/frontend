@@ -64,7 +64,6 @@ export default function ManageContest() {
     [clusters]
   );
 
-  // Load initial contest data in parallel on mount
   useEffect(() => {
     if (!parsedContestId) return;
 
@@ -73,23 +72,20 @@ export default function ManageContest() {
       getAllJudgesByContestId(parsedContestId),
       fetchClustersByContestId(parsedContestId)
     ]).catch(console.error);
-    
-   
   }, [parsedContestId]);
 
   useEffect(() => {
     if (!clusters.length) return;
 
+    const clustersToFetchTeams = clusters.filter(c => !(teamsByClusterId[c.id]?.length > 0));
+    const clustersToFetchJudges = clusters.filter(c => !(judgesByClusterId[c.id]?.length > 0));
+
+    if (clustersToFetchTeams.length === 0 && clustersToFetchJudges.length === 0) return;
+
     Promise.all([
-      ...clusters
-        .filter(c => !(teamsByClusterId[c.id]?.length > 0))
-        .map(c => fetchTeamsByClusterId(c.id)),
-      ...clusters
-        .filter(c => !(judgesByClusterId[c.id]?.length > 0))
-        .map(c => fetchJudgesByClusterId(c.id))
+      ...clustersToFetchTeams.map(c => fetchTeamsByClusterId(c.id)),
+      ...clustersToFetchJudges.map(c => fetchJudgesByClusterId(c.id))
     ]).catch(console.error);
-    
-  
   }, [clusterIds]);
 
   // Load coaches when teams become available 
@@ -102,7 +98,6 @@ export default function ManageContest() {
   useEffect(() => {
     if (!isTeamsTab || allTeams.length === 0) return;
     fetchCoachesByTeams(allTeams).catch(console.error);
-    
   }, [isTeamsTab, allTeams.length]);
 
 
@@ -392,6 +387,12 @@ export default function ManageContest() {
       handleClose={() => setOpenClusterModal(false)}
       mode="new"
       contestid={parsedContestId}
+      onSuccess={() => {
+        if (parsedContestId) {
+          fetchClustersByContestId(parsedContestId).catch(console.error);
+        }
+        setOpenClusterModal(false);
+      }}
     />
     <TeamModal
       open={openTeamModal}
@@ -399,6 +400,14 @@ export default function ManageContest() {
       mode="new"
       clusters={clusters}
       contestId={parsedContestId}
+      onSuccess={() => {
+        if (clusters.length > 0) {
+          Promise.all(
+            clusters.map(cluster => fetchTeamsByClusterId(cluster.id))
+          ).catch(console.error);
+        }
+        setOpenTeamModal(false);
+      }}
     />
     <AssignJudgeToContestModal
       open={openAssignJudgeModal}

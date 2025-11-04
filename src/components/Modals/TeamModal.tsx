@@ -20,6 +20,7 @@ export interface ITeamModalProps {
   mode: "new" | "edit";
   clusters?: any[];
   contestId?: number;
+  onSuccess?: () => void;
   teamData?: {
     id: number;
     team_name: string;
@@ -33,7 +34,7 @@ export interface ITeamModalProps {
 }
 
 export default function TeamModal(props: ITeamModalProps) {
-  const { handleClose, open, mode, clusters, contestId, teamData } = props;
+  const { handleClose, open, mode, clusters, contestId, teamData, onSuccess } = props;
   const [teamName, setTeamName] = useState("");
   const [schoolName, setSchoolName] = useState("");
   const [cluster, setCluster] = useState(-1);
@@ -74,6 +75,7 @@ export default function TeamModal(props: ITeamModalProps) {
         }
         
         toast.success("Team created successfully!");
+        onSuccess?.();
         handleCloseModal();
       } catch (error: any) {
      
@@ -133,6 +135,7 @@ export default function TeamModal(props: ITeamModalProps) {
       }
 
       toast.success("Team updated successfully!");
+      onSuccess?.();
       handleCloseModal();
     } catch (error: any) {
       toast.error("Failed to update team. Please try again.");
