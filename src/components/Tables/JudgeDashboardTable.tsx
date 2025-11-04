@@ -35,7 +35,7 @@ import { useScoreSheetStore } from "../../store/primary_stores/scoreSheetStore";
 import theme from "../../theme";
 import useMapContestJudgeStore from "../../store/map_stores/mapContestToJudgeStore";
 import { useAuthStore } from "../../store/primary_stores/authStore";
-import { Team } from "../../types";
+import { Team, Contest } from "../../types";
 
 interface IJudgeDashboardProps {
   teams: Team[];
@@ -201,8 +201,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
     return role?.user_type === 1 || role?.user_type === 2;
   };
 
-  // State to store contest names for each team
-  const [teamContestMap, setTeamContestMap] = React.useState<{[teamId: number]: string}>({});
+  const [teamContestMap, setTeamContestMap] = React.useState<{[teamId: number]: Contest | null}>({});
   
 
   const [openRows, setOpenRows] = React.useState<{ [key: number]: boolean }>(
@@ -235,24 +234,19 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
     setOpenRows(allExpanded);
   };
 
-  // Initial load effect - only fetch when judge first loads
   useEffect(() => {
     if (judge && judge.id) {
       try {
         fetchScoreSheetsByJudge(judge.id);
-        // Try to get contest info, but don't fail if it's not available
-        getContestByJudgeId(judge.id).catch(error => {
+        getContestByJudgeId(judge.id, true).catch(error => {
           console.warn('Contest info not available for judge:', error);
-          // Continue without contest info - the judge dashboard can still work
         });
       } catch (error) {
         console.error('Error fetching judge data:', error);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [judge]);
 
-  // Refresh scoresheets when teams change (after championship advancement)
   useEffect(() => {
     if (judge && judge.id && teams && teams.length > 0) {
       try {
@@ -261,14 +255,11 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
         console.error('Error refreshing scoresheets:', error);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [teams]);
 
-  // Memoize team contest fetching to avoid unnecessary API calls
   const fetchContestForTeams = useCallback(async (teamsToFetch: Team[]) => {
-    const contestMap: {[teamId: number]: string} = {};
-    
-    // Only fetch for teams we don't already have contest info for
+    const contestMap: {[teamId: number]: Contest | null} = {};
     const teamsToFetchInfo = teamsToFetch.filter(team => !teamContestMap[team.id]);
     
     if (teamsToFetchInfo.length === 0) return;
@@ -285,13 +276,15 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
         if (response.ok) {
           const data = await response.json();
           if (data.Contest) {
-            contestMap[team.id] = data.Contest.name;
+            contestMap[team.id] = data.Contest;
           }
         } else {
           console.error(`Failed to fetch contest for team ${team.id}:`, response.status);
+          contestMap[team.id] = null;
         }
       } catch (error) {
         console.error(`Error fetching contest for team ${team.id}:`, error);
+        contestMap[team.id] = null;
       }
     }
     
@@ -300,7 +293,6 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
     }
   }, [teamContestMap]);
 
-  // Fetch contest information for each team (only when teams change)
   useEffect(() => {
     if (teams && teams.length > 0) {
       fetchContestForTeams(teams);
@@ -345,7 +337,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   const handleConfirmMulti = () => {
     if (!judge || !contest?.id) return;
 
-    // keep slugs consistent with your routes
+    
     const typePath = multiType === "machine-design" ? "machinedesign" : multiType;
     const route = `/multi-team-${typePath}-score/${judge.id}/${contest.id}/`;
     
@@ -385,7 +377,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
           break;
       }
     } catch {
-      // Handle error silently
+    
     }
   };
 
@@ -487,7 +479,6 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
     );
   }
 
-  // Remove loading state - show dashboard immediately
 
   return (
     <>
@@ -536,7 +527,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
             Expand All Teams
           </Button>
 
-          {/* NEW: Score Multiple Teams – styled to match your success button theme */}
+          {/*  Score Multiple Teams */}
           <Button
             variant="contained"
             onClick={handleMultiTeamScore}
@@ -553,7 +544,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
               fontSize: { xs: "0.9rem", sm: "1rem" },
               fontWeight: 600,
             }}
-            disabled={!contest?.id} // prevent bad route if contest not loaded
+            disabled={!contest?.id} 
           >
             Score Multiple Teams
           </Button>
@@ -696,9 +687,9 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                                 flex: 1,
                                 textAlign: "left"
                               }}
-                              title={teamContestMap[team.id]} // Show full name on hover
+                              title={teamContestMap[team.id]?.name} // Show full name on hover
                             >
-                              {teamContestMap[team.id]}
+                              {teamContestMap[team.id]?.name}
                             </Typography>
                           </Box>
                         )}
@@ -741,75 +732,72 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                             justifyContent: { xs: "center", sm: "flex-start" },
                             alignItems: { xs: "center", sm: "flex-start" }
                           }}>
-                            {contest && contest.is_open === false && (
-                              <Box sx={{ width: "100%", mb: 1 }}>
-                                <Alert severity="info">Contest has not started yet.</Alert>
-                              </Box>
-                            )}
-                            {/* Journal -  tied to contest.is_open */}
-                            {contest?.is_open && (
-                            <ScoreSheetButton
-                              team={team}
-                              type={2}
-                              url="journal-score"
-                              buttonText="Journal"
-                            />)}
+                            {(() => {
+                              const teamContest = teamContestMap[team.id];
 
-                            {/* Presentation */}
-                            {contest?.is_open && (
-                            <ScoreSheetButton
-                              team={team}
-                              type={1}
-                              url="presentation-score"
-                              buttonText="Presentation"
-                            />)}
+                              if (!teamContest) {
+                                return (
+                                  <Box sx={{ width: "100%", mb: 1 }}>
+                                    <Alert severity="info">Loading contest information...</Alert>
+                                  </Box>
+                                );
+                              }
 
-                            {/* Machine Design */}
-                            {contest?.is_open && (
-                            <ScoreSheetButton
-                              team={team}
-                              type={3}
-                              url="machine-score"
-                              buttonText="Machine Design and Operation"
-                            />)}
+                              if (teamContest.is_open !== true) {
+                                return (
+                                  <Box sx={{ width: "100%", mb: 1 }}>
+                                    <Alert severity="info">Contest has not started yet.</Alert>
+                                  </Box>
+                                );
+                              }
 
-                            {/* Redesign - tied to contest.is_open */}
-                            {contest?.is_open && (
-                              <ScoreSheetButton
-                                team={team}
-                                type={6}
-                                url="redesign-score"
-                                buttonText="Redesign"
-                              />
-                            )}
-
-                            {/* Championship - tied to contest.is_open */}
-                            {contest?.is_open && (
-                              <ScoreSheetButton
-                                team={team}
-                                type={7}
-                                url="championship-score"
-                                buttonText="Championship"
-                              />
-                            )}
-
-                            {/* Run Penalties - tied to contest.is_open */}
-                            {contest?.is_open && (
-                            <ScoreSheetButton
-                              team={team}
-                              type={4}
-                              url="run-penalties"
-                              buttonText="Run Penalties"
-                            />)}
-
-                            {/* General Penalties - not tied to contest.is_open */}
-                            {contest?.is_open && (
-                            <ScoreSheetButton
-                              team={team}
-                              type={5}
-                              url="general-penalties"
-                              buttonText="General Penalties"
-                            />)}
+                              return (
+                                <>
+                                  <ScoreSheetButton
+                                    team={team}
+                                    type={2}
+                                    url="journal-score"
+                                    buttonText="Journal"
+                                  />
+                                  <ScoreSheetButton
+                                    team={team}
+                                    type={1}
+                                    url="presentation-score"
+                                    buttonText="Presentation"
+                                  />
+                                  <ScoreSheetButton
+                                    team={team}
+                                    type={3}
+                                    url="machine-score"
+                                    buttonText="Machine Design and Operation"
+                                  />
+                                  <ScoreSheetButton
+                                    team={team}
+                                    type={6}
+                                    url="redesign-score"
+                                    buttonText="Redesign"
+                                  />
+                                  <ScoreSheetButton
+                                    team={team}
+                                    type={7}
+                                    url="championship-score"
+                                    buttonText="Championship"
+                                  />
+                                  <ScoreSheetButton
+                                    team={team}
+                                    type={4}
+                                    url="run-penalties"
+                                    buttonText="Run Penalties"
+                                  />
+                                  <ScoreSheetButton
+                                    team={team}
+                                    type={5}
+                                    url="general-penalties"
+                                    buttonText="General Penalties"
+                                  />
+                                </>
+                              );
+                            })()}
                           </Box>
                         </Box>
                       </Collapse>
@@ -922,4 +910,4 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   );
 });
 
-export default JudgeDashboardTable;
+export default JudgeDashboardTable
