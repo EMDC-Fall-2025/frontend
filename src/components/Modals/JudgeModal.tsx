@@ -1,8 +1,3 @@
-/**
- * JudgeModal Component
- * 
- * Modal for creating and editing judges
- */
 import {
   Button,
   Container,
@@ -45,7 +40,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
   const { handleClose, open, mode, judgeData, clusters, contestid, onSuccess } = props;
 
   const { addJudgeToContest, updateJudgeInContest } = useContestJudgeStore();
-  const { updateJudgeInAllClusters, addJudgeToCluster } = useMapClusterJudgeStore();
+  const { updateJudgeInAllClusters, addJudgeToCluster, judgesByClusterId } = useMapClusterJudgeStore();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -79,16 +74,29 @@ export default function JudgeModal(props: IJudgeModalProps) {
     scoreSheets: false,
     titles: false,
   });
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Get current cluster info for scoresheet filtering
   const currentCluster = clusters?.find(cluster => cluster.id === clusterId);
-  const isChampionshipCluster = currentCluster?.cluster_type === 'championship' || 
-                               currentCluster?.cluster_name?.toLowerCase().includes('championship');
-  const isRedesignCluster = currentCluster?.cluster_type === 'redesign' || 
-                            currentCluster?.cluster_name?.toLowerCase().includes('redesign');
-  const isPreliminaryCluster = !isChampionshipCluster && !isRedesignCluster;
+  const originalCluster = judgeData?.cluster;
+  
+  const getClusterType = (cluster: typeof currentCluster) => {
+    if (!cluster) return 'preliminary';
+    if (cluster.cluster_type === 'championship' || cluster.cluster_name?.toLowerCase().includes('championship')) return 'championship';
+    if (cluster.cluster_type === 'redesign' || cluster.cluster_name?.toLowerCase().includes('redesign')) return 'redesign';
+    return 'preliminary';
+  };
+  
+  const currentClusterType = getClusterType(currentCluster);
+  const originalClusterType = getClusterType(originalCluster);
+  
+  const isChampionshipCluster = currentClusterType === 'championship';
+  const isRedesignCluster = currentClusterType === 'redesign';
+  const isPreliminaryCluster = currentClusterType === 'preliminary';
+  
+  const isChampionshipOrRedesignJudge = mode === "edit" && (
+    originalClusterType === 'championship' || originalClusterType === 'redesign'
+  );
 
-  // Helper function to determine if a scoresheet option should be disabled
   const isScoresheetDisabled = (option: typeof scoringSheetOptions[0]) => {
     if (isChampionshipCluster) {
       return option.value !== "championshipSS";
@@ -133,13 +141,13 @@ export default function JudgeModal(props: IJudgeModalProps) {
     setSelectedSheets([]);
     setSelectedTitle(0);
     setErrors({ cluster: false, scoreSheets: false, titles: false });
+    setErrorMessage(null);
   };
 
   const validateForm = () => {
     const isClusterInvalid = clusterId === -1;
     const areTitlesInvalid = selectedTitle === 0;
     
-    // Validate scoresheet combinations
     const hasPreliminarySheets = selectedSheets.some(sheet => 
       scoringSheetOptions.find(opt => opt.value === sheet)?.isPreliminary
     );
@@ -179,14 +187,9 @@ export default function JudgeModal(props: IJudgeModalProps) {
     }
   };
 
-  /**
-   * Create a new judge account and assign to contest/cluster
-   * Handles form validation, data preparation, and error management
-   */
   const handleCreateJudge = async () => {
     if (contestid) {
       try {
-        // Prepare judge data with form inputs and score sheet assignments
         const judgeData = {
           first_name: firstName || "n/a",
           last_name: lastName || "",
@@ -213,13 +216,11 @@ export default function JudgeModal(props: IJudgeModalProps) {
           }
         }
 
-        // Call parent component's success callback
         onSuccess?.();
 
         toast.success("Judge created successfully!");
         handleCloseModal();
       } catch (error: any) {
-        // Handle judge creation errors with user-friendly messages
         let errorMessage = "";
 
   
@@ -252,27 +253,17 @@ export default function JudgeModal(props: IJudgeModalProps) {
     }
   };
 
-  /**
-   * Update existing judge information and score sheet assignments
-   * Preserves judge ID while updating all other fields
-   * For championship/redesign clusters, only update scoresheets that are appropriate
-   */
   const handleEditJudge = async () => {
     if (contestid && judgeData) {
       try {
-        // Get selected cluster - use current selection or fallback to original
         const selectedClusterId = clusterId !== -1 ? clusterId : (judgeData.cluster?.id || -1);
-        const currentCluster = clusters?.find(cluster => cluster.id === selectedClusterId);
-        const isChampionshipCluster = currentCluster?.cluster_type === 'championship' || 
-                                   currentCluster?.cluster_name?.toLowerCase().includes('championship');
-        const isRedesignCluster = currentCluster?.cluster_type === 'redesign' || 
-                                currentCluster?.cluster_name?.toLowerCase().includes('redesign');
+        const selectedCluster = clusters?.find(cluster => cluster.id === selectedClusterId);
+        const selectedClusterType = getClusterType(selectedCluster);
         
-        // Validate scoresheets based on cluster type
         let allowedSheets = selectedSheets;
-        if (isChampionshipCluster) {
+        if (selectedClusterType === 'championship') {
           allowedSheets = ["championshipSS"];
-        } else if (isRedesignCluster) {
+        } else if (selectedClusterType === 'redesign') {
           allowedSheets = ["redesignSS"];
         }
 
@@ -290,6 +281,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
           championship: allowedSheets.includes("championshipSS"),
           username: email,
           clusterid: selectedClusterId,
+          original_cluster_id: judgeData.cluster?.id || selectedClusterId,
           role: selectedTitle,
         };
 
@@ -297,12 +289,30 @@ export default function JudgeModal(props: IJudgeModalProps) {
         if (updatedJudge && contestid) {
           updateJudgeInContest(contestid, updatedJudge);
           updateJudgeInAllClusters(updatedJudge);
+          
+          const originalClusterId = judgeData.cluster?.id;
+          if (originalClusterId && originalClusterId !== selectedClusterId) {
+            const oldClusterJudges = judgesByClusterId[originalClusterId] || [];
+            const newClusterJudges = judgesByClusterId[selectedClusterId] || [];
+            useMapClusterJudgeStore.setState({
+              judgesByClusterId: {
+                ...judgesByClusterId,
+                [originalClusterId]: oldClusterJudges.filter(j => j.id !== judgeData.id),
+                [selectedClusterId]: [
+                  ...newClusterJudges.filter(j => j.id !== judgeData.id),
+                  updatedJudge
+                ]
+              }
+            });
+          } else {
+            addJudgeToCluster(selectedClusterId, updatedJudge);
+          }
         }
 
         toast.success("Judge updated successfully!");
+        onSuccess?.();
         handleCloseModal();
       } catch (error: any) {
-        // Handle judge update errors with detailed error information
         console.error("Judge update error:", error);
 
         let errorMessage = "";
@@ -323,10 +333,13 @@ export default function JudgeModal(props: IJudgeModalProps) {
           errorMessage = error.message;
         }
 
-        // Show specific error message or generic fallback
-        if (errorMessage) {
-          toast.error(`Failed to update judge: ${errorMessage}`);
-        } else {
+        setErrorMessage(errorMessage || null);
+        setErrors({
+          ...errors,
+          cluster: errorMessage ? true : false,
+        });
+        
+        if (!errorMessage) {
           toast.error("Failed to update judge. Please try again.");
         }
       }
@@ -336,21 +349,18 @@ export default function JudgeModal(props: IJudgeModalProps) {
   const handleScoringSheetsChange = (event: any) => {
     const value = event.target.value as string[];
     
-    // Validate scoresheet combinations to prevent mixing types
     const hasPreliminarySheets = value.some(sheet => 
       scoringSheetOptions.find(opt => opt.value === sheet)?.isPreliminary
     );
     const hasRedesignSheets = value.includes("redesignSS");
     const hasChampionshipSheets = value.includes("championshipSS");
     
-    // If adding redesign or championship, clear all preliminary sheets
     if (hasRedesignSheets || hasChampionshipSheets) {
       const nonPreliminarySheets = value.filter(sheet => 
         !scoringSheetOptions.find(opt => opt.value === sheet)?.isPreliminary
       );
       setSelectedSheets(nonPreliminarySheets);
     } else if (hasPreliminarySheets) {
-      // If adding preliminary sheets, clear redesign and championship
       const preliminarySheets = value.filter(sheet => 
         scoringSheetOptions.find(opt => opt.value === sheet)?.isPreliminary
       );
@@ -360,7 +370,6 @@ export default function JudgeModal(props: IJudgeModalProps) {
     }
   };
 
-  // Auto-select appropriate scoresheet when cluster changes
   useEffect(() => {
     if (clusterId !== -1) {
       if (isChampionshipCluster) {
@@ -461,23 +470,44 @@ export default function JudgeModal(props: IJudgeModalProps) {
             <Select
               value={clusterId}
               label="Cluster"
+              disabled={isChampionshipOrRedesignJudge}
               sx={{ 
                 textAlign: "left",
                 fontSize: { xs: "0.9rem", sm: "1rem" }
               }}
               onChange={(e) => setClusterId(Number(e.target.value))}
             >
-              {clusters?.map((clusterItem) => (
-                <MenuItem key={clusterItem.id} value={clusterItem.id} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
-                  {clusterItem.cluster_name}
-                </MenuItem>
-              ))}
+              {clusters
+                ?.filter(cluster => {
+                  if (mode === "edit" && isPreliminaryCluster && originalCluster) {
+                    return getClusterType(cluster) === 'preliminary';
+                  }
+                  return true;
+                })
+                ?.map((clusterItem) => (
+                  <MenuItem key={clusterItem.id} value={clusterItem.id} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
+                    {clusterItem.cluster_name}
+                  </MenuItem>
+                ))}
             </Select>
-            {errors.cluster && (
-              <FormHelperText sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>Please select a cluster.</FormHelperText>
+            {errors.cluster && !errorMessage && (
+              <FormHelperText error sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                {isChampionshipOrRedesignJudge 
+                  ? "Cannot change cluster type for championship/redesign judges."
+                  : "Please select a cluster."}
+              </FormHelperText>
+            )}
+            {errorMessage && (
+              <FormHelperText error sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                {errorMessage}
+              </FormHelperText>
+            )}
+            {isChampionshipOrRedesignJudge && (
+              <FormHelperText sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" }, color: "text.secondary" }}>
+                Cluster type cannot be changed for championship/redesign judges.
+              </FormHelperText>
             )}
           </FormControl>
-          {/* Show cluster type info - positioned outside FormControl to prevent overlap */}
           {(isChampionshipCluster || isRedesignCluster) && (
             <Box sx={{ 
               mt: { xs: 2, sm: 3 },
@@ -647,7 +677,6 @@ export default function JudgeModal(props: IJudgeModalProps) {
             )}
           </FormControl>
 
-          {/* Submit button */}
           <Button
             type="submit"
             sx={{

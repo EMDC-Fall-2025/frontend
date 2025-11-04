@@ -309,7 +309,6 @@ export default function AssignJudgeToContestModal(
         toast.error("Cannot assign judge: The selected cluster has no teams. Please add teams to the cluster first.");
       } else {
         setError(errorMessage);
-        toast.error("Failed to assign judge to contest. Please try again.");
       }
     } finally {
       setIsSubmitting(false);

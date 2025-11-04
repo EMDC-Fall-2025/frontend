@@ -374,7 +374,17 @@ export default function ManageContest() {
       clusters={clusters}
       contestid={parsedContestId}
       onSuccess={async () => {
-       
+        // Refresh judges after creating/editing
+        if (parsedContestId) {
+          await getAllJudgesByContestId(parsedContestId, true);
+          // Refresh judges for all clusters
+          if (clusters.length > 0) {
+            await Promise.all(
+              clusters.map(cluster => fetchJudgesByClusterId(cluster.id, true))
+            );
+          }
+        }
+        setOpenJudgeModal(false);
       }}
     />
     <ClusterModal

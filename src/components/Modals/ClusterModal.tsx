@@ -1,8 +1,3 @@
-/**
- * ClusterModal Component
- * 
- * Modal for creating and editing clusters. 
- */
 import { Button, TextField, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import Modal from "./Modal";
 import { useParams } from "react-router-dom";
@@ -31,13 +26,11 @@ export default function ClusterModal(props: IClusterModalProps) {
   const { handleClose, open, mode, contestid, clusterData, onSuccess } = props;
   const { contestId } = useParams();
   const effectiveContestId = contestid ?? (contestId ? parseInt(contestId, 10) : undefined);
-  const originalType = (clusterData?.cluster_type || "preliminary").toLowerCase();
   const [clusterName, setClusterName] = useState("");
   const [clusterType, setClusterType] = useState<ClusterType>("preliminary");
   const { addClusterToContest, updateClusterInContest } = useMapClusterToContestStore();
   const { createCluster, editCluster, fetchClusterById, cluster } = useClusterStore();
 
-  //  read from provided data on open; reset in new mode
   useEffect(() => {
     if (!open) return;
     if (mode === "edit" && clusterData) {
@@ -53,7 +46,6 @@ export default function ClusterModal(props: IClusterModalProps) {
     }
   }, [open, mode, clusterData]);
 
-  // If we fetched the cluster because type was missing, sync it in
   useEffect(() => {
     if (mode === "edit" && cluster && clusterData && cluster.id === clusterData.id) {
       const fetchedType = (cluster as any).cluster_type as string | undefined;
@@ -94,7 +86,7 @@ export default function ClusterModal(props: IClusterModalProps) {
     event.preventDefault();
     if (clusterData?.id && effectiveContestId) {
       try {
-        const updatedCluster = await editCluster({ id: clusterData.id, cluster_name: clusterName, cluster_type: clusterType });
+        const updatedCluster = await editCluster({ id: clusterData.id, cluster_name: clusterName });
         if (updatedCluster) {
           updateClusterInContest(effectiveContestId, updatedCluster);
         }
@@ -103,7 +95,6 @@ export default function ClusterModal(props: IClusterModalProps) {
         onSuccess && onSuccess();
       } catch (error: any) {
         console.error("Failed to edit cluster", error);
-        // Show backend error message if available, otherwise show generic message
         const errorMessage = error?.response?.data?.error || error?.message || "Failed to update cluster";
         toast.error(errorMessage);
       }
@@ -152,14 +143,14 @@ export default function ClusterModal(props: IClusterModalProps) {
             value={clusterType}
             label="Cluster Type"
             sx={{ textAlign: "left" }}
+            disabled={mode === "edit"}
             onChange={(e) => setClusterType(e.target.value as ClusterType)}
           >
             <MenuItem value="preliminary">Preliminary</MenuItem>
-            <MenuItem value="championship" disabled={mode === "edit" && originalType === "preliminary"}>Championship</MenuItem>
-            <MenuItem value="redesign" disabled={mode === "edit" && originalType === "preliminary"}>Redesign</MenuItem>
+            <MenuItem value="championship">Championship</MenuItem>
+            <MenuItem value="redesign">Redesign</MenuItem>
           </Select>
         </FormControl>
-        {/* Submit button */}
         <Button
           type="submit"
           sx={{
