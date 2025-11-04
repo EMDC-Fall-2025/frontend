@@ -41,7 +41,7 @@ export default function ContestScores() {
   const [teamAwards, setTeamAwards] = useState<{ [key: number]: string }>({});
   const [activeTab, setActiveTab] = useState("prelim");
   // Check if championship advancement has occurred
-            
+
   const hasChampionshipAdvance = teamsByContest.some((team) => team.advanced_to_championship === true);
 
   useEffect(() => {
@@ -111,7 +111,7 @@ export default function ContestScores() {
 
   // Championship teams - teams that advanced to championship
   const championshipTeams = teamsByContest.filter((team) => team.advanced_to_championship);
-  
+
   const championshipRows = championshipTeams
     .map((team) => {
       const championshipScore = (team as any).championship_total_score || (team as any).championship_score || team.total_score || 0;
@@ -130,7 +130,7 @@ export default function ContestScores() {
 
   // Redesign teams - teams that did not advance to championship
   const redesignTeams = teamsByContest.filter((team) => !team.advanced_to_championship);
-  
+
   const redesignRows = redesignTeams
     .map((team) => ({
       id: team.id,
@@ -144,7 +144,7 @@ export default function ContestScores() {
     .sort((a, b) => b.total_score - a.total_score)
     .slice(0, 3);
 
-    if (isCoach && contest && contest.is_open === true) {
+  if (isCoach && contest && contest.is_open === true) {
     return (
       <Container sx={{ mt: 3 }}>
         <Alert severity="info">Results will be visible after the contest ends.</Alert>
@@ -163,17 +163,6 @@ export default function ContestScores() {
           mb: 2,
         }}
       >
-        <Stack spacing={1} sx={{ mb: 1 }}>
-          <Typography
-            variant="h1"
-            sx={{
-              fontSize: "2rem",
-              fontWeight: 800,
-            }}
-          >
-            Contest Results
-          </Typography>
-        </Stack>
 
         {/* Back link */}
         <Link
@@ -194,6 +183,19 @@ export default function ContestScores() {
             {"<"} Back to Contests{" "}
           </Typography>
         </Link>
+
+        <Stack spacing={1} sx={{ mb: 1 }}>
+          <Typography
+            variant="h1"
+            sx={{
+              fontSize: "2rem",
+              fontWeight: 800,
+            }}
+          >
+            Contest Results
+          </Typography>
+        </Stack>
+
 
         {/* Tabs Section */}
         <Box sx={{ width: "100%", mt: 2 }}>
@@ -220,19 +222,19 @@ export default function ContestScores() {
             />
 
             {hasChampionshipAdvance && (
-            <Tab
-              value="championship"
-              iconPosition="start"
-              icon={<WorkspacePremiumIcon sx={{ fontSize: 26 }} />}
-              label={
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>
-                    Championship & Redesign
-                  </span>
-                </Stack>
-              }
-            />
-          )}
+              <Tab
+                value="championship"
+                iconPosition="start"
+                icon={<WorkspacePremiumIcon sx={{ fontSize: 26 }} />}
+                label={
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>
+                      Championship & Redesign
+                    </span>
+                  </Stack>
+                }
+              />
+            )}
             <Tab
               value="winners"
               iconPosition="start"
@@ -262,9 +264,9 @@ export default function ContestScores() {
         <Container
           maxWidth="lg"
           sx={{
-            border: `1px solid ${theme.palette.grey[300]}`,
-            borderRadius: 4,
-            backgroundColor: "#fff",
+            backgroundColor: "transparent",
+            boxShadow: "none",
+            border: "none",
             p: 4,
             mb: 5,
           }}
@@ -288,9 +290,9 @@ export default function ContestScores() {
         <Container
           maxWidth="lg"
           sx={{
-            border: `1px solid ${theme.palette.grey[300]}`,
-            borderRadius: 4,
-            backgroundColor: "#fff",
+            backgroundColor: "transparent",
+            boxShadow: "none",
+            border: "none",
             p: 4,
             mb: 5,
           }}
@@ -330,9 +332,9 @@ export default function ContestScores() {
         <Container
           maxWidth="lg"
           sx={{
-            border: `1px solid ${theme.palette.grey[300]}`,
-            borderRadius: 4,
-            backgroundColor: "#fff",
+            backgroundColor: "transparent",
+            boxShadow: "none",
+            border: "none",
             p: 4,
             mb: 5,
           }}
@@ -360,9 +362,9 @@ export default function ContestScores() {
         <Container
           maxWidth="lg"
           sx={{
-            border: `1px solid ${theme.palette.grey[300]}`,
-            borderRadius: 4,
-            backgroundColor: "#fff",
+            backgroundColor: "transparent",
+            boxShadow: "none",
+            border: "none",
             p: 4,
             mb: 5,
           }}

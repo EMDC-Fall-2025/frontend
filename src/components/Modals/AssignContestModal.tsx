@@ -31,16 +31,16 @@ export interface IAssignContestModalProps {
 
 export default function OrganizerModal(props: IAssignContestModalProps) {
   const { handleClose, open, organizerId } = props;
-  
+
   // Contest store for available contests
   const { allContests } = useContestStore();
-  
+
   // Contest-organizer mapping store for assignments
   const {
     contestsByOrganizers,
     createContestOrganizerMapping,
   } = useMapContestOrganizerStore();
-  
+
   const title = "Assign Contest To Organizer";
   const [contestId, setContestId] = useState(0);
   const [assignedContests, setAssignedContests] = useState<Contest[]>([]);
@@ -61,6 +61,12 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
   // Assign contest to organizer
   const handleAssignContest = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    if (!contestId) {
+      toast.error("Please select a contest before assigning.");
+      return;
+    }
+
     if (organizerId) {
       try {
         await createContestOrganizerMapping(organizerId, contestId);
@@ -131,13 +137,13 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
             ))}
           </Select>
         </FormControl>
-        {/* Submit button - updated to use modern green success theme */}
+
         <Button
           type="submit"
           sx={{
             width: { xs: "100%", sm: 170 },
             height: { xs: 40, sm: 44 },
-            bgcolor: theme.palette.success.main,          
+            bgcolor: theme.palette.success.main,
             "&:hover": { bgcolor: theme.palette.success.dark },
             color: "#fff",
             mt: { xs: 3, sm: 4 },
@@ -146,6 +152,7 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
             fontSize: { xs: "0.9rem", sm: "1rem" },
             px: { xs: 3, sm: 4.5 },
             py: { xs: 1, sm: 1.25 },
+            whiteSpace: "nowrap",
           }}
         >
           Assign Contest

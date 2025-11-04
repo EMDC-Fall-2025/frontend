@@ -63,8 +63,15 @@ export default function ContestTable({
               <TableRow
                 key={row.id}
                 hover
-                sx={{ cursor: "pointer" }}
                 onClick={() => onRowClick(row.id)}
+                sx={{
+                  cursor: "pointer",
+                  transition: "background-color 0.2s ease, transform 0.1s ease",
+                  "&:hover": {
+                    backgroundColor: theme.palette.primary.light,
+                    transform: "scale(1.01)",
+                  },
+                }}
               >
                 <TableCell>{row.name}</TableCell>
                 <TableCell>{row.date}</TableCell>

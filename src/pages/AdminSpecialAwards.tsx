@@ -13,6 +13,8 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
+import { Link } from "react-router-dom";
+import theme from "../theme";
 import useSpecialAwardStore, { SpecialAward } from "../store/map_stores/mapAwardToTeamStore";
 
 export default function AdminSpecialAwardsPage() {
@@ -83,7 +85,7 @@ export default function AdminSpecialAwardsPage() {
       const updatedAward = {
         ...editingAward,
         award_name: awardName,
-        isJudge: isJudge, 
+        isJudge: isJudge,
       };
       await updateAward(editingAward.teamid, editingAward.award_name, updatedAward);
       setEditingAward(null);
@@ -105,8 +107,45 @@ export default function AdminSpecialAwardsPage() {
   };
 
   return (
-    <Container>
-      <Typography variant="h1" sx={{ m: 5 }}>
+    <Container
+      maxWidth="lg"
+      sx={{
+        px: { xs: 3, sm: 5 },
+        mt: 5,
+        mb: 2,
+      }}
+    >
+      {/* Back to Admin  */}
+      <Link
+        to="/admin/"
+        style={{
+          textDecoration: "none",
+          color: "inherit",
+          display: "inline-block",
+        }}
+      >
+        <Typography
+          variant="body2"
+          sx={{
+            mb: 3,
+            fontSize: "1.05rem",
+            "&:hover": { color: theme.palette.primary.main },
+          }}
+        >
+          {"<"} Back to Admin Dashboard{" "}
+        </Typography>
+      </Link>
+
+      {/* Aligned Title */}
+      <Typography
+        variant="h1"
+        sx={{
+          fontSize: "2rem",
+          fontWeight: 800,
+          color: theme.palette.primary.main,
+          mb: 3,
+        }}
+      >
         Special Awards Management
       </Typography>
 

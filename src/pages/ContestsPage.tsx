@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // 
 import Typography from "@mui/material/Typography";
 import { Container, Stack } from "@mui/material";
 import theme from "../theme";
@@ -42,10 +42,9 @@ export default function Contests() {
   // Navigate to specific contest results
   const handleRowClick = (contestId: number) => {
     const contest = allContests.find((c: any) => c.id === contestId);
-    if (contest && contest.is_open == false && contest.is_tabulated == true){
-    navigate(`/contestresults/${contestId}`);
-    }
-    else{
+    if (contest && contest.is_open == false && contest.is_tabulated == true) {
+      navigate(`/contestresults/${contestId}`);
+    } else {
       toast.success(
         "🎉 Stay tuned! Results will be available once the contest ends and scores are finalized!",
         {
@@ -81,25 +80,57 @@ export default function Contests() {
   return (
     <>
       {/* Title Section */}
-      <Stack spacing={1} sx={{ mt: 5, mb: 3, ml: { xs: 3, sm: 6, md: 10 } }}>
-        <Typography
-          variant="h4"
-          sx={{
-            fontWeight: 800,
-            color: theme.palette.primary.main,
+      <Container
+        maxWidth="lg"
+        sx={{
+          px: { xs: 3, sm: 5 },
+          mt: 5,
+          mb: 2,
+        }}
+      >
+        {/* Back to Homepage */}
+        <Link
+          to="/"
+          style={{
+            textDecoration: "none",
+            color: "inherit",
+            display: "inline-block",
           }}
         >
-          Contests
-        </Typography>
-      </Stack>
+          <Typography
+            variant="body2"
+            sx={{
+              mb: 3,
+              fontSize: "1.05rem",
+              "&:hover": { color: theme.palette.primary.main },
+            }}
+          >
+            {"<"} Back to Homepage{" "}
+          </Typography>
+        </Link>
+
+        <Stack spacing={1} sx={{ mb: 1 }}>
+          <Typography
+            variant="h1"
+            sx={{
+              fontSize: "2rem",
+              fontWeight: 800,
+              color: theme.palette.primary.main,
+            }}
+          >
+            Contests
+          </Typography>
+        </Stack>
+
+      </Container>
 
       {/* Table Container */}
       <Container
         maxWidth="lg"
         sx={{
-          border: `1px solid ${theme.palette.grey[300]}`,
-          borderRadius: 3,
-          backgroundColor: "#fff",
+          backgroundColor: "transparent",
+          boxShadow: "none",
+          border: "none",
           p: 3,
         }}
       >

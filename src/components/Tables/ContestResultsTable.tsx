@@ -1,6 +1,5 @@
 import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
 import theme from "../../theme";
-
 // FILE OVERVIEW: table component for results page
 
 interface ContestResultsRow {
@@ -39,17 +38,32 @@ export default function ContestResultsTable({ rows }: ContestResultsTableProps) 
         </TableHead>
 
         <TableBody>
-          {rows.map((row) => (
-            <TableRow key={row.id} sx={{ "&:nth-of-type(odd)": { bgcolor: theme.palette.action.hover } }}>
-              <TableCell>{row.team_name}</TableCell>
-              <TableCell>{row.school_name || "N/A"}</TableCell>
-              <TableCell>{row.coachName || "N/A"}</TableCell>
-              <TableCell>{row.team_rank || 0}</TableCell>
-              <TableCell>{row.total_score}</TableCell>
-              <TableCell>{row.awards || "N/A"}</TableCell>
-            </TableRow>
-          ))}
+          {rows.map((row, index) => {
+            let rowClass = "";
+            if (index === 0) rowClass = "sparkle-gold"; // 🥇 gold shimmer
+            else if (index === 1) rowClass = "sparkle-silver"; // 🥈 silver shimmer
+            else if (index === 2) rowClass = "sparkle-bronze"; // 🥉 bronze shimmer
+
+            return (
+              <TableRow
+                key={row.id}
+                className={rowClass}
+                sx={{
+                  transition: "opacity 0.3s ease",
+                  "&:hover": { opacity: 0.9 },
+                }}
+              >
+                <TableCell>{row.team_name}</TableCell>
+                <TableCell>{row.school_name || "N/A"}</TableCell>
+                <TableCell>{row.coachName || "N/A"}</TableCell>
+                <TableCell>{row.team_rank || 0}</TableCell>
+                <TableCell>{row.total_score}</TableCell>
+                <TableCell>{row.awards || "N/A"}</TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
+
       </Table>
     </TableContainer>
   );
