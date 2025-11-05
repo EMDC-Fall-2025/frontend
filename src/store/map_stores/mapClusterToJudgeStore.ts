@@ -79,7 +79,7 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
             return; // Use cached data
           }
         }
-        
+
         set({ isLoadingMapClusterJudge: true });
         try {
           const token = localStorage.getItem("token");
@@ -303,7 +303,7 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
 
       removeJudgeFromCluster: async (judgeId: number, clusterId: number) => {
         set({ isLoadingMapClusterJudge: true });
-        
+
         const originalState = get().judgesByClusterId[clusterId] || [];
 
         set((state) => ({
@@ -315,13 +315,13 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
           },
           mapClusterJudgeError: null,
         }));
-        
+
         try {
           const token = localStorage.getItem("token");
           await axios.delete(`/api/mapping/clusterToJudge/remove/${judgeId}/${clusterId}/`, {
             headers: { Authorization: `Token ${token}` },
           });
-      
+
           set({ mapClusterJudgeError: null });
         } catch (error) {
           set((state) => ({

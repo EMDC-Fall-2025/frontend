@@ -40,13 +40,7 @@ const theme = createTheme({
     },
   },
   components: {
-    MuiCssBaseline: {
-      styleOverrides: {
-        html: {
-          zoom: 1.1, // 110% app-wide
-        },
-      },
-    },
+
 
     MuiContainer: {
       styleOverrides: {
