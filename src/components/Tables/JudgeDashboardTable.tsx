@@ -617,7 +617,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                         mr: 1,
                         fontWeight: 600,
                         fontFamily: t.typography.h1.fontFamily,
-                        width: { xs: "60%", sm: "50%", md: "45%" }, // Use more of the available width
+                        width: { xs: "60%", sm: "50%", md: "45%" }, 
                         minWidth: { xs: 200, sm: 250, md: 300 },
                         verticalAlign: "top",
                         alignItems: "flex-start"

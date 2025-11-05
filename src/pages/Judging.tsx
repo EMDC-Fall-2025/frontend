@@ -76,10 +76,10 @@ export default function Judging() {
   }, [judgeIdNumber]);
 
 
-  // New function to fetch all clusters for a judge using stores
+  // to fetch all clusters for a judge using stores
   const fetchAllClustersForJudge = async (judgeId: number) => {
     try {
-      // Use store function to fetch all clusters for the judge
+      //  fetch all clusters for the judge
       const allClusters = await fetchAllClustersByJudgeId(judgeId);
       
       if (allClusters && allClusters.length > 0) {
@@ -202,7 +202,7 @@ export default function Judging() {
     </Card>
   );
 
-  // Add error boundary
+ 
   try {
     return (
       <Box sx={{ pb: 8, backgroundColor: "#fafafa", minHeight: "100vh" }}>
