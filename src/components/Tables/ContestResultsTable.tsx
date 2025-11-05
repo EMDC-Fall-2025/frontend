@@ -40,10 +40,9 @@ export default function ContestResultsTable({ rows }: ContestResultsTableProps) 
         <TableBody>
           {rows.map((row, index) => {
             let rowClass = "";
-            if (index === 0) rowClass = "sparkle-gold"; // 🥇 gold shimmer
-            else if (index === 1) rowClass = "sparkle-silver"; // 🥈 silver shimmer
-            else if (index === 2) rowClass = "sparkle-bronze"; // 🥉 bronze shimmer
-
+            if (index === 0) rowClass = "sparkle-gold";
+            else if (index === 1) rowClass = "sparkle-silver";
+            else if (index === 2) rowClass = "sparkle-bronze";
             return (
               <TableRow
                 key={row.id}

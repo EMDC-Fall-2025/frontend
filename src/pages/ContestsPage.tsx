@@ -22,22 +22,22 @@ export default function Contests() {
     id: number,
     name: string,
     date: string,
-    is_open: boolean
+    is_open: boolean,
+    is_tabulated?: boolean
   ) {
-    const today = new Date();
-    const contestDate = new Date(date);
     let status = "";
 
-    if (!is_open && contestDate < today) {
-      status = "Finalized";
-    } else if (is_open) {
+    if (is_open) {
       status = "In Progress";
+    } else if (is_tabulated) {
+      status = "Finalized";
     } else {
       status = "Not Started";
     }
 
     return { id, name, date, status };
   }
+
 
   // Navigate to specific contest results
   const handleRowClick = (contestId: number) => {
@@ -69,9 +69,10 @@ export default function Contests() {
 
   // transforms array into rows
   const rows = allContests
-    .map((contest: { id: number; name: string; date: string; is_open: boolean }) =>
-      createData(contest.id, contest.name, contest.date, contest.is_open)
+    .map((contest: { id: number; name: string; date: string; is_open: boolean; is_tabulated: boolean }) =>
+      createData(contest.id, contest.name, contest.date, contest.is_open, contest.is_tabulated)
     )
+
     .sort((a: { status: string }, b: { status: string }) => {
       const order = { Finalized: 1, "In Progress": 2, "Not Started": 3 };
       return order[a.status as keyof typeof order] - order[b.status as keyof typeof order];
