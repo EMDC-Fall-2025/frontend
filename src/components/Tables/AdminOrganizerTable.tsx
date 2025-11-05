@@ -282,11 +282,7 @@ export default function AdminOrganizerTable() {
   const [organizerId, setOrganizerId] = useState(0);
   
   useEffect(() => {
-<<<<<<< HEAD
     fetchAllOrganizers();
-=======
-      fetchAllOrganizers();
->>>>>>> 62dba9427b4cff56df4860d87c1dc0941d126d01
     const { contestsByOrganizers, fetchContestsByOrganizers } = useMapContestOrganizerStore.getState();
     if (!contestsByOrganizers || Object.keys(contestsByOrganizers).length === 0) {
       fetchContestsByOrganizers();
@@ -392,7 +388,7 @@ export default function AdminOrganizerTable() {
         open={openOrganizerModal}
         handleClose={() => {
           setOpenOrganizerModal(false);
-          setOrganizerData(null); // Reset organizer data when closing
+          setOrganizerData(null); 
         }}
         mode={organizerData ? "edit" : "new"}
         organizerData={organizerData}
