@@ -55,7 +55,7 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
 
       fetchTeamsByContest: async (contestId: number) => {
         // Check cache first - if we already have teams for this contest, return early
-        // Note: teamsByContest is a single array, so we check if it's already populated
+        // teamsByContest is a single array, so we check if it's already populated
         const cachedTeams = get().teamsByContest;
         if (cachedTeams && cachedTeams.length > 0) {
           // Check if any team belongs to this contest

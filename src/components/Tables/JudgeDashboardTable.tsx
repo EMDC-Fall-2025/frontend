@@ -441,7 +441,14 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
               opacity: isPreliminary ? 0.6 : 1,
             }}
           >
-            {isPreliminary ? `${buttonText} (Preliminary)` : buttonText}
+            {(() => {
+              const label = isPreliminary ? `${buttonText} (Preliminary)` : buttonText;
+              if (type === 7) {
+                const cs = (team as any)?.championship_score;
+                return `${label} ${cs != null ? Number(cs).toFixed(1) : ''}`;
+              }
+              return label;
+            })()}
           </Button>
         ) : (
           <Button
@@ -472,7 +479,15 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
               )
             }
           >
-            {isPreliminary ? `${buttonText} (Preliminary)` : buttonText} {getTotal(judge?.id, team.id, type)}
+            {(() => {
+              const label = isPreliminary ? `${buttonText} (Preliminary)` : buttonText;
+              if (type === 7) {
+                const cs = (team as any)?.championship_score;
+                return `${label} ${cs != null ? Number(cs).toFixed(1) : ''}`;
+              }
+              const t = getTotal(judge?.id, team.id, type);
+              return `${label} ${t ?? ''}`;
+            })()}
           </Button>
         )}
       </>
@@ -617,7 +632,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                         mr: 1,
                         fontWeight: 600,
                         fontFamily: t.typography.h1.fontFamily,
-                        width: { xs: "60%", sm: "50%", md: "45%" }, // Use more of the available width
+                        width: { xs: "60%", sm: "50%", md: "45%" }, 
                         minWidth: { xs: 200, sm: 250, md: 300 },
                         verticalAlign: "top",
                         alignItems: "flex-start"

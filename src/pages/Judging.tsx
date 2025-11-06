@@ -76,10 +76,10 @@ export default function Judging() {
   }, [judgeIdNumber]);
 
 
-  // New function to fetch all clusters for a judge using stores
+  // to fetch all clusters for a judge using stores
   const fetchAllClustersForJudge = async (judgeId: number) => {
     try {
-      // Use store function to fetch all clusters for the judge
+      //  fetch all clusters for the judge
       const allClusters = await fetchAllClustersByJudgeId(judgeId);
       
       if (allClusters && allClusters.length > 0) {
@@ -155,6 +155,38 @@ export default function Judging() {
         }
         
         setCurrentCluster(currentClusterToSet);
+
+        // If we are in championship or redesign phase, trigger tabulation to ensure
+        // team championship totals are up to date, then refetch teams.
+        try {
+          const contestId = currentClusterToSet?.contest_id || (allTeams[0] as any)?.contest_id || (allTeams[0] as any)?.contestid;
+          if (contestId && championshipClusters.length > 0) {
+            const token = localStorage.getItem("token");
+            await fetch('/api/tabulation/tabulateScores/', {
+              method: 'PUT',
+              headers: {
+                'Authorization': `Token ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ contestid: contestId })
+            });
+
+            // Refetch teams after tabulation completes
+            const refreshedTeams: Team[] = [];
+            for (const cluster of filteredClusters) {
+              try {
+                const t = await fetchTeamsByClusterId(cluster.id, true);
+                if (t && t.length > 0) {
+                  const mapped = t.map((x: any) => ({ ...x, advanced_to_championship: x.advanced_to_championship ?? false }));
+                  refreshedTeams.push(...mapped);
+                }
+              } catch {}
+            }
+            if (refreshedTeams.length > 0) {
+              setTeams(refreshedTeams);
+            }
+          }
+        } catch {}
       } else {
         setTeams([]);
         setHasLoaded(true);
@@ -202,7 +234,7 @@ export default function Judging() {
     </Card>
   );
 
-  // Add error boundary
+ 
   try {
     return (
       <Box sx={{ pb: 8, backgroundColor: "#fafafa", minHeight: "100vh" }}>

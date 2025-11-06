@@ -9,12 +9,14 @@ import {
   TableHead,
   TableRow,
   Typography,
+  Pagination,
+  Box,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
 import { useMapContestToTeamStore } from "../../store/map_stores/mapContestToTeamStore";
 import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const COLS = [
   { key: "rank", label: "Rank", width: "6%", align: "center" as const },
@@ -39,12 +41,54 @@ const bgSilver = () => alpha(SILVER, 0.18);
 const bgBronze = () => alpha(BRONZE, 0.18);
 
 export default function InternalResultsTable({ contestId, resultType='preliminary' }: { contestId?: number; resultType?: 'preliminary' | 'championship' | 'redesign'; }) {
-  const { teamsByContest } = useMapContestToTeamStore();
+  const { teamsByContest, fetchTeamsByContest } = useMapContestToTeamStore() as any;
   const { clusters, teamsByClusterId, fetchClustersByContestId, fetchTeamsByClusterId } = useMapClusterTeamStore();
   const navigate = useNavigate();
-  
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 50;
 
   const rows = (teamsByContest ?? []) as any[];
+
+  // 1) Try cache first for instant display
+  useEffect(() => {
+    if (!contestId) return;
+    try {
+      const key = `internalResults:contest:${contestId}`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const cached = JSON.parse(raw);
+        if (cached && Array.isArray(cached.teams) && Date.now() - (cached.timestamp || 0) < 300000) { // 5min cache
+          // Show cached data immediately
+          if (cached.teams.length > 0) {
+            // Update store with cached data
+            const store = useMapContestToTeamStore.getState();
+            if (store.teamsByContest.length === 0) {
+              store.teamsByContest = cached.teams;
+            }
+          }
+        }
+      }
+    } catch {}
+  }, [contestId]);
+
+  // 2) Fetch fresh data in background (non-blocking)
+  useEffect(() => {
+    if (contestId) {
+      fetchTeamsByContest(contestId).then(() => {
+        // Update cache with fresh data
+        try {
+          const key = `internalResults:contest:${contestId}`;
+          const store = useMapContestToTeamStore.getState();
+          if (store.teamsByContest.length > 0) {
+            localStorage.setItem(key, JSON.stringify({ 
+              timestamp: Date.now(), 
+              teams: store.teamsByContest 
+            }));
+          }
+        } catch {}
+      }).catch(() => {});
+    }
+  }, [contestId, fetchTeamsByContest]);
 
   // Fetch clusters when contestId is available
   useEffect(() => {
@@ -53,17 +97,16 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
     }
   }, [contestId, fetchClustersByContestId]);
 
-  // Fetch teams for each cluster when clusters are available
+  // Fetch teams for each cluster when clusters are available (only needed for preliminary mapping)
   useEffect(() => {
-    if (clusters && clusters.length > 0 && contestId) {
-      clusters.forEach((cluster: any) => {
-        // Only fetch if we don't already have teams for this cluster
-        if (!teamsByClusterId[cluster.id]) {
-          fetchTeamsByClusterId(cluster.id);
-        }
-      });
+    if (!contestId) return;
+    if (resultType !== 'preliminary') return;
+    if (clusters && clusters.length > 0) {
+      const missing = clusters.filter((cluster: any) => !teamsByClusterId[cluster.id]);
+      if (missing.length === 0) return;
+      Promise.all(missing.map((cluster: any) => fetchTeamsByClusterId(cluster.id))).catch(() => {});
     }
-  }, [clusters, contestId, fetchTeamsByClusterId, teamsByClusterId]);
+  }, [clusters, contestId, fetchTeamsByClusterId, teamsByClusterId, resultType]);
 
   // Create a mapping from team ID to cluster name (only for preliminary clusters)
   const clusterNameByTeamId = useMemo(() => {
@@ -92,25 +135,29 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
   }, [resultType]);
   
   
-  // Filter and sort rows based on result type
-  const filteredRows = (() => {
+  // Filter and sort rows based on result type (memoized)
+  const filteredRows = useMemo(() => {
     if (resultType === 'preliminary') {
-      // Preliminary: ALL teams in the contest, sorted by preliminary_total_score descending
-      const sorted = rows.sort((a, b) => (b.preliminary_total_score || 0) - (a.preliminary_total_score || 0));
-      return sorted;
+      return [...rows].sort((a, b) => (b.preliminary_total_score || 0) - (a.preliminary_total_score || 0));
     } else if (resultType === 'championship') {
-      
-      return rows
+      return [...rows]
         .filter(team => team.advanced_to_championship)
         .sort((a, b) => (b.total_score || 0) - (a.total_score || 0));
     } else if (resultType === 'redesign') {
-      // Redesign: Teams NOT advanced to championship, sorted by total_score descending
-      return rows
+      return [...rows]
         .filter(team => !team.advanced_to_championship)
         .sort((a, b) => (b.total_score || 0) - (a.total_score || 0));
     }
     return rows;
-  })();
+  }, [rows, resultType]);
+
+  // Pagination
+  const paginatedRows = useMemo(() => {
+    const start = (page - 1) * rowsPerPage;
+    return filteredRows.slice(start, start + rowsPerPage);
+  }, [filteredRows, page]);
+
+  const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
  
 
 
@@ -132,9 +179,9 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
         <Table
           size="small"
           sx={{
-            // Force a wide natural width so mobile uses horizontal scroll instead of squeezing
-            width: "1200px",
-            minWidth: "1200px",
+            // Fill container on larger screens; allow horizontal scroll only when needed
+            width: "100%",
+            minWidth: 1000,
             tableLayout: "fixed",
           }}
           aria-label="contest results"
@@ -185,9 +232,11 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
           </TableHead>
 
           <TableBody>
-            {filteredRows.map((team: any, idx: number) => {
-              // Rank is based on position in the sorted array (1-based)
-              const rank = idx + 1;
+            {paginatedRows.map((team: any, idx: number) => {
+              // Calculate actual rank in full filtered list
+              const actualRank = filteredRows.findIndex(t => t.id === team.id) + 1;
+              // Rank is based on position in full filtered list
+              const rank = actualRank;
               
               const is1 = rank === 1;
               const is2 = rank === 2;
@@ -322,6 +371,23 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
           </TableBody>
         </Table>
       </TableContainer>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 2 }}>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={(_, value) => {
+              setPage(value);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            color="primary"
+            size="large"
+            showFirstButton
+            showLastButton
+          />
+        </Box>
+      )}
     </Container>
   );
 }

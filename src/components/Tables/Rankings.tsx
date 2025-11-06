@@ -1,5 +1,5 @@
 import { Button, Box, Checkbox, Collapse, IconButton, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, Chip } from "@mui/material";
-import  { useEffect, useState } from "react";
+import  { useEffect, useState, useCallback } from "react";
 import theme from "../../theme";
 import { TriangleIcon, Trophy} from "lucide-react";
 import { useAuthStore } from "../../store/primary_stores/authStore";
@@ -48,62 +48,129 @@ const Ranking = () => {
       if (isAuthenticated) fetchContests()
     }, [isAuthenticated, role, token])
 
+    // Extract fetch function so it can be called after advancement
+    const fetchClusters = useCallback(async (forceRefresh = false) => {
+      if (!selectedContest || !token) return
+      try {
+        // 1) Try cache first (only if not forcing refresh)
+        if (!forceRefresh) {
+          try {
+            const cacheKey = `rankings:contest:${selectedContest.id}`
+            const raw = localStorage.getItem(cacheKey)
+            if (raw) {
+              const cached = JSON.parse(raw)
+              // basic TTL of 60s - if cache is fresh, use it and skip API call
+              if (cached && typeof cached === 'object' && Date.now() - (cached.timestamp || 0) < 60_000) {
+                if (Array.isArray(cached.clusters)) {
+                  setClusters(cached.clusters)
+                  return // Skip API call if cache is fresh
+                }
+              }
+            }
+          } catch {}
+        }
+
+        // 2) Fetch fresh data from API 
+        const { data: clusterResp } = await axios.get(`/api/mapping/clusterToContest/getAllClustersByContest/${selectedContest.id}/`, {
+          headers: { Authorization: `Token ${token}` }
+        })
+        const clusterData = (clusterResp?.Clusters ?? []).map((c: any) => ({ id: c.id, cluster_name: c.cluster_name ?? c.name, cluster_type: c.cluster_type, teams: [], _statusFetched: false }))
+        const withTeams = await Promise.all(
+          clusterData.map(async (cluster: any) => {
+            try {
+              const { data: teamResp } = await axios.get(`/api/mapping/clusterToTeam/getAllTeamsByCluster/${cluster.id}/`, {
+                headers: { Authorization: `Token ${token}` }
+              })
+              const teams = (teamResp?.Teams ?? []).map((t: any) => ({ 
+                id: t.id, 
+                team_name: t.team_name ?? t.name, 
+                school_name: t.school_name ?? 'N/A', 
+                total_score: cluster.cluster_type === 'preliminary' ? (t.preliminary_total_score ?? 0) : (t.total_score ?? 0),
+                advanced_to_championship: t.advanced_to_championship ?? false
+              }))
+              const ranked = teams
+                .sort((a: any, b: any) => (b.total_score ?? 0) - (a.total_score ?? 0))
+                .map((t: any, i: number) => ({ ...t, cluster_rank: i + 1 }))
+              // defer status fetching until cluster expand to avoid N API calls upfront
+              const teamsWithInitialStatus = ranked.map((t: any) => ({
+                ...t,
+                status: (t.total_score ?? 0) > 0 ? 'in_progress' : 'not_started'
+              }))
+
+              return { ...cluster, teams: teamsWithInitialStatus }
+            } catch {
+              return { ...cluster, teams: [] }
+            }
+          })
+        )
+        setClusters(withTeams)
+
+        // 2) Save fresh data to cache
+        try {
+          const cacheKey = `rankings:contest:${selectedContest.id}`
+          localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), clusters: withTeams }))
+        } catch {}
+      } catch (e) {
+        console.error('Failed to load contest data:', e)
+      }
+    }, [selectedContest, token])
+
     // Load clusters and teams for selected contest
     useEffect(() => {
-      const fetchClusters = async () => {
-        if (!selectedContest || !token) return
+      fetchClusters()
+    }, [fetchClusters])
+
+    // Fetch per-team submission status lazily when a cluster is opened (only once per cluster)
+    useEffect(() => {
+      const fetchStatusForCluster = async (clusterId: number) => {
+        const idx = clusters.findIndex((c: any) => c.id === clusterId)
+        if (idx === -1) return
+        const cluster = clusters[idx]
+        if (cluster._statusFetched) return
         try {
-          const { data: clusterResp } = await axios.get(`/api/mapping/clusterToContest/getAllClustersByContest/${selectedContest.id}/`, {
-            headers: { Authorization: `Token ${token}` }
-          })
-          const clusterData = (clusterResp?.Clusters ?? []).map((c: any) => ({ id: c.id, cluster_name: c.cluster_name ?? c.name, cluster_type: c.cluster_type, teams: [] }))
-          const withTeams = await Promise.all(
-            clusterData.map(async (cluster: any) => {
+          const updatedTeams = await Promise.all(
+            (cluster.teams ?? []).map(async (t: any) => {
               try {
-                const { data: teamResp } = await axios.get(`/api/mapping/clusterToTeam/getAllTeamsByCluster/${cluster.id}/`, {
+                const { data: s } = await axios.get(`/api/mapping/scoreSheet/allSubmittedForTeam/${t.id}/`, {
                   headers: { Authorization: `Token ${token}` }
                 })
-                const teams = (teamResp?.Teams ?? []).map((t: any) => ({ 
-                  id: t.id, 
-                  team_name: t.team_name ?? t.name, 
-                  school_name: t.school_name ?? 'N/A', 
-                  total_score: cluster.cluster_type === 'preliminary' ? (t.preliminary_total_score ?? 0) : (t.total_score ?? 0)
-                }))
-                const ranked = teams
-                  .sort((a: any, b: any) => (b.total_score ?? 0) - (a.total_score ?? 0))
-                  .map((t: any, i: number) => ({ ...t, cluster_rank: i + 1 }))
-
-                // derive per-team status without changing ranking logic
-                const teamsWithStatus = await Promise.all(
-                  ranked.map(async (t: any) => {
-                    try {
-                      const { data: s } = await axios.get(`/api/mapping/scoreSheet/allSubmittedForTeam/${t.id}/`, {
-                        headers: { Authorization: `Token ${token}` }
-                      })
-                      const total = t.total_score ?? 0
-                      const status = (s?.allSubmitted && total > 0)
-                        ? 'completed'
-                        : ((s?.submittedCount > 0 || total > 0) ? 'in_progress' : 'not_started')
-                      return { ...t, status }
-                    } catch {
-                      return { ...t, status: 'not_started' as const }
-                    }
-                  })
-                )
-
-                return { ...cluster, teams: teamsWithStatus }
+                const total = t.total_score ?? 0
+                const status = (s?.allSubmitted && total > 0)
+                  ? 'completed'
+                  : ((s?.submittedCount > 0 || total > 0) ? 'in_progress' : 'not_started')
+                return { ...t, status }
               } catch {
-                return { ...cluster, teams: [] }
+                return { ...t, status: 'not_started' as const }
               }
             })
           )
-          setClusters(withTeams)
-        } catch (e) {
-          console.error('Failed to load contest data:', e)
+          const next = clusters.slice()
+          next[idx] = { ...cluster, teams: updatedTeams, _statusFetched: true }
+          setClusters(next)
+          // Update cache with enriched status data
+          try {
+            if (selectedContest?.id) {
+              const cacheKey = `rankings:contest:${selectedContest.id}`
+              const raw = localStorage.getItem(cacheKey)
+              const cached = raw ? JSON.parse(raw) : { timestamp: Date.now(), clusters: [] }
+              const cachedClusters = Array.isArray(cached.clusters) ? cached.clusters : []
+              const cidx = cachedClusters.findIndex((c: any) => c.id === clusterId)
+              if (cidx >= 0) {
+                cachedClusters[cidx] = { ...cachedClusters[cidx], teams: updatedTeams, _statusFetched: true }
+              }
+              localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), clusters: cachedClusters }))
+            }
+          } catch {}
+        } catch {
+          // ignore status fetch errors
         }
       }
-      fetchClusters()
-    }, [selectedContest, token])
+
+     
+      openCluster.forEach((clusterId) => {
+        fetchStatusForCluster(clusterId)
+      })
+    }, [openCluster, clusters, token])
 
     // autoselect
     useEffect(() => {
@@ -132,12 +199,19 @@ const Ranking = () => {
       }
 
       try {
+        
+        const tId = toast.loading('Advancing teams to championship...')
+
         // Call the championship advancement API
         await advanceToChampionship(selectedContest.id, selectedTeams)
-        
-        toast(`Successfully advanced ${selectedTeams.length} teams to championship!`)
+
+        toast.success(`Successfully advanced ${selectedTeams.length} teams!`, { id: tId })
         setSelectedTeams([]) // Clear selection
+        
+        // Force refresh clusters to show new championship/redesign clusters
+        await fetchClusters(true)
       } catch (error) {
+        toast.error('Failed to advance to championship')
         console.error('Error advancing to championship:', error)
         alert('Error advancing to championship. Please try again.')
       }
@@ -150,12 +224,15 @@ const Ranking = () => {
       }
 
       try {
-        
+        const tId = toast.loading('Undoing championship advancement...')
         // Call the undo championship advancement API
         await undoChampionshipAdvancement(selectedContest.id)
+        toast.success('Successfully undone championship advancement!', { id: tId })
         
-        toast('Successfully undone championship advancement!')
+        // Force refresh clusters to reflect undone advancement
+        await fetchClusters(true)
       } catch (error) {
+        toast.error('Failed to undo championship advancement')
         console.error('Error undoing championship advancement:', error)
         alert('Error undoing championship advancement. Please try again.')
       }

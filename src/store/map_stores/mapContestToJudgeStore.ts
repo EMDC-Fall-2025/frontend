@@ -23,6 +23,10 @@ interface MapContestJudgeState {
   clearMappings: () => void;
   clearContestJudges: () => Promise<void>;
   fetchJudgesForMultipleContests: (contestIds: number[]) => Promise<void>;
+  removeJudgeFromContestStoreIfNoOtherClusters: (
+    judgeId: number, 
+    contestId: number
+  ) => void;
 }
 
 export const useMapContestJudgeStore = create<MapContestJudgeState>()(
@@ -230,7 +234,7 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
         const originalState = get().contestJudges[contestId] || [];
         const originalJudges = get().judges;
         
-        // Optimistic update: remove from local state immediately
+        //  remove from local state immediately
         set((state) => ({
           judges: state.judges.filter((j) => j.id !== judgeId),
           contestJudges: {
@@ -247,7 +251,7 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
           await axios.delete(`/api/mapping/contestToJudge/remove/${judgeId}/${contestId}/`, {
             headers: { Authorization: `Token ${token}` },
           });
-          // Success: keep optimistic update, no refresh needed
+          // Success:  no refresh needed
           set({ mapContestJudgeError: null });
         } catch (error) {
           // On error: rollback optimistic update and refresh
@@ -267,6 +271,22 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
         }
       },
 
+      removeJudgeFromContestStoreIfNoOtherClusters: (
+        judgeId: number, 
+        contestId: number
+      ) => {
+        // Remove judge from contest's judge list
+        set((state) => ({
+          judges: state.judges.filter((j) => j.id !== judgeId),
+          contestJudges: {
+            ...state.contestJudges,
+            [contestId]: (state.contestJudges[contestId] || []).filter(
+              (j) => j.id !== judgeId
+            ),
+          },
+        }));
+      },
+
       clearContestJudges: async () => {
         try {
           set({ contestJudges: {} });
@@ -282,7 +302,7 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
         // Check cache first - only fetch for contests we don't have data for
         const cachedContestJudges = get().contestJudges;
         const contestJudgesMap: {[contestId: number]: Judge[]} = { ...cachedContestJudges };
-        const contestsToFetch = contestIds.filter(id => !cachedContestJudges[id] || cachedContestJudges[id].length === 0);
+        const contestsToFetch = contestIds.filter(id => !(id in cachedContestJudges));
         
         // If all contests are cached, return early
         if (contestsToFetch.length === 0) {
