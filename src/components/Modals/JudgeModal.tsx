@@ -262,10 +262,10 @@ export default function JudgeModal(props: IJudgeModalProps) {
         
         let allowedSheets = selectedSheets;
         if (selectedClusterType === 'championship') {
-          allowedSheets = ["championshipSS"];
+              allowedSheets = ["championshipSS"];
         } else if (selectedClusterType === 'redesign') {
-          allowedSheets = ["redesignSS"];
-        }
+              allowedSheets = ["redesignSS"];
+              }
 
         const updatedData = {
           id: judgeData.id,
@@ -485,10 +485,10 @@ export default function JudgeModal(props: IJudgeModalProps) {
                   return true;
                 })
                 ?.map((clusterItem) => (
-                  <MenuItem key={clusterItem.id} value={clusterItem.id} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
-                    {clusterItem.cluster_name}
-                  </MenuItem>
-                ))}
+                <MenuItem key={clusterItem.id} value={clusterItem.id} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
+                  {clusterItem.cluster_name}
+                </MenuItem>
+              ))}
             </Select>
             {errors.cluster && !errorMessage && (
               <FormHelperText error sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>

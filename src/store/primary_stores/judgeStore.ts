@@ -7,12 +7,13 @@ interface JudgeState {
   judge: Judge | null;
   isLoadingJudge: boolean;
   judgeError: string | null;
-  submissionStatus: { [key: number]: boolean } | null;
+  // Store submission status per judge per cluster using composite keys: "judgeId-clusterId"
+  submissionStatus: { [key: string]: boolean } | null;
   fetchJudgeById: (judgeId: number) => Promise<void>;
   createJudge: (newJudge: NewJudge) => Promise<Judge>;
   editJudge: (editedJudge: EditedJudge) => Promise<Judge>;
   deleteJudge: (judgeId: number) => Promise<void>;
-  checkAllScoreSheetsSubmitted: (judges: Judge[]) => Promise<void>;
+  checkAllScoreSheetsSubmitted: (judges: Judge[], clusterId?: number) => Promise<void>;
   judgeDisqualifyTeam: (
     teamId: number,
     isDisqualified: boolean
@@ -166,12 +167,13 @@ export const useJudgeStore = create<JudgeState>()(
         }
       },
 
-      checkAllScoreSheetsSubmitted: async (judges: Judge[]) => {
+      checkAllScoreSheetsSubmitted: async (judges: Judge[], clusterId?: number) => {
         set({ isLoadingJudge: true });
         try {
           const token = localStorage.getItem("token");
+          const url = clusterId ? `/api/judge/allScoreSheetsSubmitted/?cluster_id=${clusterId}` : `/api/judge/allScoreSheetsSubmitted/`;
           const response = await axios.post(
-            `/api/judge/allScoreSheetsSubmitted/`,
+            url,
             judges,
             {
               headers: {
@@ -180,8 +182,21 @@ export const useJudgeStore = create<JudgeState>()(
               },
             }
           );
-          set({ submissionStatus: response.data });
-          set({ judgeError: null });
+          
+          // Merge new cluster status instead of overwriting
+          // Use composite keys: "judgeId-clusterId" to track status per cluster
+          set((state) => {
+            const newStatus: { [key: string]: boolean } = { ...(state.submissionStatus || {}) };
+            
+            // Convert response data to composite keys
+            const responseData = response.data as { [key: number]: boolean };
+            for (const judgeId in responseData) {
+              const key = clusterId ? `${judgeId}-${clusterId}` : `${judgeId}-all`;
+              newStatus[key] = responseData[judgeId];
+            }
+            
+            return { submissionStatus: newStatus, judgeError: null };
+          });
         } catch (judgeError: any) {
           const errorMessage =
             "Error checking score sheets submission:" + judgeError;

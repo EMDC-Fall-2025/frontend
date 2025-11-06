@@ -16,6 +16,7 @@ import JudgeModal from "../Modals/JudgeModal";
 import { useNavigate } from "react-router-dom";
 import { useMapClusterJudgeStore } from "../../store/map_stores/mapClusterToJudgeStore";
 import { useJudgeStore } from "../../store/primary_stores/judgeStore";
+import useContestJudgeStore from "../../store/map_stores/mapContestToJudgeStore";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckIcon from "@mui/icons-material/Check";
 import toast from "react-hot-toast";
@@ -153,9 +154,17 @@ function JudgesTable(props: IJudgesTableProps) {
   const [openJudgeModal, setOpenJudgeModal] = useState(false);
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
   const [judgeData, setJudgeData] = useState<JudgeData | undefined>(undefined);
-  const { submissionStatus } = useJudgeStore();
+  const { submissionStatus, checkAllScoreSheetsSubmitted } = useJudgeStore();
+  
+  // Check submission status for this specific cluster
+  React.useEffect(() => {
+    if (currentCluster && judges && judges.length > 0) {
+      checkAllScoreSheetsSubmitted(judges as any, currentCluster.id);
+    }
+  }, [currentCluster?.id, judges, checkAllScoreSheetsSubmitted]);
   const [judgeId, setJudgeId] = useState(0);
-  const { fetchJudgesByClusterId, removeJudgeFromCluster, fetchClustersForJudges } = useMapClusterJudgeStore();
+  const { fetchJudgesByClusterId, removeJudgeFromCluster, fetchClustersForJudges, judgesByClusterId } = useMapClusterJudgeStore();
+  const { removeJudgeFromContestStoreIfNoOtherClusters } = useContestJudgeStore();
 
   const { judgeClusters } = useMapClusterJudgeStore();
 
@@ -185,7 +194,24 @@ function JudgesTable(props: IJudgesTableProps) {
         toast.error("Cluster information not available. Please refresh the page and try again.");
         return;
       }
+      
+      // Remove judge from cluster
       await removeJudgeFromCluster(judgeId, currentCluster.id);
+      
+      // After removal, check if judge is still in any other clusters in this contest
+      if (contestid) {
+        const otherClusters = clusters.filter(c => c.id !== currentCluster.id);
+        const isInOtherClusters = otherClusters.some(cluster => {
+          const judgesInCluster = judgesByClusterId[cluster.id] || [];
+          return judgesInCluster.some(j => j.id === judgeId);
+        });
+        
+        // Only remove from contest if judge is not in any other clusters
+        if (!isInOtherClusters) {
+          removeJudgeFromContestStoreIfNoOtherClusters(judgeId, contestid);
+        }
+      }
+      
       toast.success(`Judge removed from ${currentCluster.cluster_name} cluster successfully!`);
     } catch (error: any) {
       let errorMessage = "Failed to remove judge from cluster. Please try again.";
@@ -237,7 +263,9 @@ function JudgesTable(props: IJudgesTableProps) {
   );
 
   const rows = judges.map((judge) => {
-    const isSubmitted = submissionStatus ? submissionStatus[judge.id] : false;
+    // Use composite key to get status for this judge in this specific cluster
+    const statusKey = currentCluster ? `${judge.id}-${currentCluster.id}` : `${judge.id}-all`;
+    const isSubmitted = submissionStatus ? (submissionStatus[statusKey] ?? false) : false;
     return createDataJudge(
       `${judge.first_name} ${judge.last_name}`,
       `${titles[judge.role - 1]}`,
@@ -415,19 +443,6 @@ function OrganizerJudgesTable(
   const [clusterData, setClusterData] = useState<Cluster | undefined>(
     undefined
   );
-  const { checkAllScoreSheetsSubmitted } = useJudgeStore();
-
-  // Compute submission status for ALL judges across clusters to avoid per-section overwrites
-  React.useEffect(() => {
-    try {
-      const allJudges: any[] = Object.values(judgesByClusterId || {}).flat();
-      if (allJudges.length > 0) {
-        checkAllScoreSheetsSubmitted(allJudges as any);
-      }
-    } catch (e) {
-      // noop: defensive guard
-    }
-  }, [judgesByClusterId, checkAllScoreSheetsSubmitted]);
 
   const handleToggleRow = (clusterId: number) => {
     setOpenClusterIds((prevIds) =>
