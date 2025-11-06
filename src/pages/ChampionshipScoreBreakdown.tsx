@@ -1,5 +1,5 @@
 import { CircularProgress, Link, Typography } from "@mui/material";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useScoreSheetStore } from "../store/primary_stores/scoreSheetStore";
 import { useParams } from "react-router-dom";
 import { useAuthStore } from "../store/primary_stores/authStore";
@@ -19,7 +19,10 @@ export default function ChampionshipScoreBreakdown() {
   const { role } = useAuthStore();
   const navigate = useNavigate();
 
+  const fetchedRef = useRef(false);
   useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true; // guard against React 18 StrictMode double-invoke
     if (parsedTeamId) {
       getScoreSheetBreakdown(parsedTeamId);
     }

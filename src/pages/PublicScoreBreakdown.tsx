@@ -3,7 +3,7 @@ import ScoreBreakdownTableStandard from "../components/Tables/ScoreBreakdownTabl
 import { journalQuestions } from "../data/journalQuestions";
 import { presentationQuestions } from "../data/presentationQuestions";
 import { machineDesignQuestions } from "../data/machineDesignQuestions";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useScoreSheetStore } from "../store/primary_stores/scoreSheetStore";
 import { useParams, useNavigate } from "react-router-dom";
 import ScoreBreakdownTableGeneralPenalties from "../components/Tables/ScoreBreakdownTableGeneralPenalties";
@@ -16,7 +16,10 @@ export default function PulicScoreBreakdown() {
     useScoreSheetStore();
   const navigate = useNavigate();
 
+  const fetchedRef = useRef(false);
   useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true; // guard against React 18 StrictMode double-invoke
     if (parsedTeamId) {
       getScoreSheetBreakdown(parsedTeamId);
     }

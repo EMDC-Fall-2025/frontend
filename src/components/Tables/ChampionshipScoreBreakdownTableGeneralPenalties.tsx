@@ -6,7 +6,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import { Box, CircularProgress, Typography, Paper } from "@mui/material";
 import { useScoreSheetStore } from "../../store/primary_stores/scoreSheetStore";
-import { ChampionshipScoreSheetFields, ScoreSheetType } from "../../types";
+import { ScoreSheetType } from "../../types";
 import { generalPenaltiesQuestions } from "../../data/generalPenaltiesQuestions";
 import theme from "../../theme";
 
@@ -19,11 +19,12 @@ export default function ChampionshipScoreBreakdownTableGeneralPenalties() {
   const { scoreSheetBreakdown } = useScoreSheetStore();
 
   const PenaltiesRow: React.FC<{
+    id: number;
     text: string;
     field: string;
     pointValue: number;
     penaltyType: string;
-  }> = ({ text, field, pointValue, penaltyType }) => {
+  }> = ({ id, text, pointValue, penaltyType }) => {
     return (
       <TableRow
         sx={{
@@ -72,7 +73,7 @@ export default function ChampionshipScoreBreakdownTableGeneralPenalties() {
           </Typography>
         </TableCell>
 
-        {/* Points deducted (list from store) */}
+        {/* Points deducted (calculated from stored values) */}
         <TableCell sx={{ 
           py: { xs: 0.75, sm: 1.25 },
           minWidth: { xs: "120px", sm: "140px", md: "160px" },
@@ -86,18 +87,34 @@ export default function ChampionshipScoreBreakdownTableGeneralPenalties() {
             overflow: "hidden",
             textOverflow: "ellipsis"
           }}>
-            {scoreSheetBreakdown &&
-            scoreSheetBreakdown[ScoreSheetType.Championship] &&
-            scoreSheetBreakdown[ScoreSheetType.Championship][
-              ChampionshipScoreSheetFields[`field${19 + generalPenaltiesQuestions.findIndex(q => q.field === field)}` as keyof typeof ChampionshipScoreSheetFields]
-            ] &&
-            scoreSheetBreakdown[ScoreSheetType.Championship][
-              ChampionshipScoreSheetFields[`field${19 + generalPenaltiesQuestions.findIndex(q => q.field === field)}` as keyof typeof ChampionshipScoreSheetFields]
-            ].length > 0
-              ? scoreSheetBreakdown[ScoreSheetType.Championship][
-                  ChampionshipScoreSheetFields[`field${19 + generalPenaltiesQuestions.findIndex(q => q.field === field)}` as keyof typeof ChampionshipScoreSheetFields]
-                ].join(", ")
-              : "0"}
+            {(() => {
+              if (!scoreSheetBreakdown || !scoreSheetBreakdown[ScoreSheetType.Championship]) return "0";
+              // Championship general penalties are stored in fields 19-25; map by item id (1..7)
+              const fieldNumber = 18 + Number(id || 0);
+              // Access by string key (backend uses string keys like "field19")
+              const key = `field${fieldNumber}`;
+              const values = (scoreSheetBreakdown[ScoreSheetType.Championship] as any)[key] as any[] | undefined;
+              if (!values || values.length === 0) return "0";
+              // Determine calculation mode: yes/no vs increment
+              const question = generalPenaltiesQuestions.find(p => p.id === id);
+              const isIncrement = question?.isIncrement === true;
+              let count = 0;
+              if (isIncrement) {
+                // Simple normalization: treat each entry as either a count or a raw point value
+                const pv = Number(pointValue) || 0;
+                const normalizedCounts = values.map((v) => {
+                  const n = Number(v) || 0;
+                  if (pv > 0 && n >= pv) return Math.round(n / pv);
+                  return n; 
+                });
+                count = normalizedCounts.reduce((sum, n) => sum + n, 0);
+              } else {
+                // Count truthy/positive entries as occurrences
+                count = values.reduce((sum, v) => sum + ((Number(v) || 0) > 0 ? 1 : 0), 0);
+              }
+              const deducted = count * Number(pointValue || 0);
+              return `${deducted}`;
+            })()}
           </Typography>
         </TableCell>
       </TableRow>
@@ -187,6 +204,7 @@ export default function ChampionshipScoreBreakdownTableGeneralPenalties() {
           {generalPenaltiesQuestions.map((penalty) => (
             <PenaltiesRow
               key={penalty.field}
+              id={penalty.id}
               text={penalty.questionText}
               field={penalty.field}
               pointValue={penalty.pointValue}

@@ -155,6 +155,38 @@ export default function Judging() {
         }
         
         setCurrentCluster(currentClusterToSet);
+
+        // If we are in championship or redesign phase, trigger tabulation to ensure
+        // team championship totals are up to date, then refetch teams.
+        try {
+          const contestId = currentClusterToSet?.contest_id || (allTeams[0] as any)?.contest_id || (allTeams[0] as any)?.contestid;
+          if (contestId && championshipClusters.length > 0) {
+            const token = localStorage.getItem("token");
+            await fetch('/api/tabulation/tabulateScores/', {
+              method: 'PUT',
+              headers: {
+                'Authorization': `Token ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ contestid: contestId })
+            });
+
+            // Refetch teams after tabulation completes
+            const refreshedTeams: Team[] = [];
+            for (const cluster of filteredClusters) {
+              try {
+                const t = await fetchTeamsByClusterId(cluster.id, true);
+                if (t && t.length > 0) {
+                  const mapped = t.map((x: any) => ({ ...x, advanced_to_championship: x.advanced_to_championship ?? false }));
+                  refreshedTeams.push(...mapped);
+                }
+              } catch {}
+            }
+            if (refreshedTeams.length > 0) {
+              setTeams(refreshedTeams);
+            }
+          }
+        } catch {}
       } else {
         setTeams([]);
         setHasLoaded(true);
