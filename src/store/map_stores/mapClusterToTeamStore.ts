@@ -101,6 +101,7 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
         set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
         try {
           const token = localStorage.getItem("token");
+
           await axios.delete(`/api/mapping/clusterToTeam/delete/${mapId}/`, {
             headers: { Authorization: `Token ${token}`, "Content-Type": "application/json" },
           });
@@ -110,7 +111,10 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
             isLoadingMapClusterToTeam: false,
           }));
 
-          if (clusterId) await get().fetchTeamsByClusterId(clusterId, true);
+          if (clusterId) {
+            await get().fetchTeamsByClusterId(clusterId, true);
+          }
+
         } catch (e) {
           handleError(e, set, "Error deleting cluster-team mapping");
         }
@@ -172,6 +176,37 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
           await fetchTeamsByClusterId(clusterId, true);
         }
       },
+
+      deleteTeamCompletely: async (teamId: number) => {
+        try {
+          const token = localStorage.getItem("token");
+
+          // Delete from backend
+          await axios.delete(`/api/team/delete/${teamId}/`, {
+            headers: {
+              Authorization: `Token ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+
+          // Instantly update local state so team disappears right away
+          set((s) => {
+            const updated = { ...s.teamsByClusterId };
+            for (const [clusterId, teams] of Object.entries(updated)) {
+              updated[Number(clusterId)] = teams.filter((t) => t.id !== teamId);
+            }
+            return { teamsByClusterId: updated };
+          });
+
+          // Trigger immediate UI refresh for Ranking pages
+          window.dispatchEvent(new Event("refreshRankings"));
+        } catch (error) {
+          console.error("Error deleting team:", error);
+          set({ mapClusterToTeamError: "Error deleting team" });
+        }
+      },
+
+
     }),
     {
       name: "map-cluster-team-storage",

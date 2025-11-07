@@ -22,6 +22,8 @@ import { useMapClusterToContestStore } from "../../store/map_stores/mapClusterTo
 import { Cluster, TeamData } from "../../types";
 import DisqualificationModal from "../Modals/DisqualificationModal";
 import toast from "react-hot-toast";
+import DeleteTeamDialog from "../Modals/DeleteTeamDialog";
+
 
 interface IOrganizerTeamsTableProps {
   clusters: any[];
@@ -42,7 +44,7 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
   const { coachesByTeams } = useMapCoachToTeamStore();
   const { teamsByClusterId } = useMapClusterTeamStore();
   const { deleteCluster } = useClusterStore();
-  const { removeClusterFromContest} = useMapClusterToContestStore();
+  const { removeClusterFromContest } = useMapClusterToContestStore();
   const [openDisqualificationModal, setOpenDisqualificationModal] =
     useState(false);
   const [openDeleteConfirmModal, setOpenDeleteConfirmModal] = useState(false);
@@ -50,6 +52,7 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
   const [currentTeamName, setCurrentTeamName] = useState("");
   const [currentTeamId, setCurrentTeamId] = useState(0);
   const [currentTeamClusterId, setCurrentTeamClusterId] = useState(0);
+
 
   const handleCloseModal = (type: string) => {
     if (type === "cluster") {
@@ -63,6 +66,16 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
     setClusterToDelete(clusterId);
     setOpenDeleteConfirmModal(true);
   };
+
+  // For Delete Team Popup
+  const [openDeleteTeamDialog, setOpenDeleteTeamDialog] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<{
+    id: number;
+    name: string;
+    mapId?: number;
+    clusterId?: number;
+  } | null>(null);
+
 
   const handleConfirmDelete = async () => {
     if (clusterToDelete) {
@@ -89,7 +102,7 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
     setOpenClusterModal(true);
   };
 
-  
+
 
   const handleOpenTeamModal = (teamData: TeamData) => {
     setTeamData(teamData);
@@ -125,8 +138,8 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
     return (
       <Table
         sx={{
-          "& .MuiTableCell-root": { 
-            fontSize: { xs: "0.7rem", sm: "0.85rem", md: "0.95rem" }, 
+          "& .MuiTableCell-root": {
+            fontSize: { xs: "0.7rem", sm: "0.85rem", md: "0.95rem" },
             py: { xs: 0.5, sm: 0.75, md: 1.25 },
             px: { xs: 0.5, sm: 0.75, md: 1 }
           },
@@ -138,9 +151,9 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
               <TableCell component="th" scope="row" sx={{ fontWeight: 500 }}>
                 {team.team_name}
                 {team.school_name && (
-                  <Typography variant="body2" sx={{ 
-                    color: theme.palette.grey[600], 
-                    fontSize: { xs: "0.6rem", sm: "0.75rem", md: "0.875rem" } 
+                  <Typography variant="body2" sx={{
+                    color: theme.palette.grey[600],
+                    fontSize: { xs: "0.6rem", sm: "0.75rem", md: "0.875rem" }
                   }}>
                     ({team.school_name})
                   </Typography>
@@ -182,46 +195,78 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
                 <TableCell sx={{ color: "red" }}>Disqualified</TableCell>
               )}
               <TableCell align="center">
-                <Button
-                  variant="outlined"
-                  onClick={() =>
-                    handleOpenTeamModal({
-                      id: team.id,
-                      team_name: team.team_name,
-                      school_name: team.school_name || "NA",
-                      clusterid: cluster,
-                      username: coachesByTeams[team.id]?.username || "N/A",
-                      first_name: coachesByTeams[team.id]?.first_name || "N/A",
-                      last_name: coachesByTeams[team.id]?.last_name || "N/A",
-                      contestid: contestId,
-                    })
-                  }
+                <Box
                   sx={{
-                    textTransform: "none",
-                    fontWeight: 600,
-                    px: { xs: 1.5, sm: 2, md: 2.25 },
-                    py: { xs: 0.4, sm: 0.6, md: 0.75 },
-                    borderRadius: 2,
-                    fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
-                    minWidth: { xs: "80px", sm: "100px", md: "120px" },
-                    height: { xs: "28px", sm: "32px", md: "36px" },
                     display: "flex",
-                    alignItems: "center",
                     justifyContent: "center",
-                    borderColor: "#4caf50",
-                    color: "#4caf50",
-                    "&:hover": {
-                      backgroundColor: "#4caf50",
-                      color: "white",
-                      transform: "translateY(-1px)",
-                      boxShadow: "0 4px 8px rgba(76,175,80,0.25)",
-                    },
-                    transition: "all 0.2s ease-in-out",
+                    alignItems: "center",
+                    gap: 1.5,
                   }}
                 >
-                  Edit Team
-                </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={() =>
+                      handleOpenTeamModal({
+                        id: team.id,
+                        team_name: team.team_name,
+                        school_name: team.school_name || "NA",
+                        clusterid: cluster,
+                        username: coachesByTeams[team.id]?.username || "N/A",
+                        first_name: coachesByTeams[team.id]?.first_name || "N/A",
+                        last_name: coachesByTeams[team.id]?.last_name || "N/A",
+                        contestid: contestId,
+                      })
+                    }
+                    sx={{
+                      textTransform: "none",
+                      fontWeight: 600,
+                      px: { xs: 1.5, sm: 2, md: 2.25 },
+                      py: { xs: 0.4, sm: 0.6, md: 0.75 },
+                      borderRadius: 2,
+                      fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
+                      borderColor: "#4caf50",
+                      color: "#4caf50",
+                      "&:hover": {
+                        backgroundColor: "#4caf50",
+                        color: "white",
+                      },
+                    }}
+                  >
+                    Edit Team
+                  </Button>
+
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => {
+                      setSelectedTeam({
+                        id: team.id,
+                        name: team.team_name,
+                        mapId: team.map_id,
+                        clusterId: cluster,
+                      });
+                      setOpenDeleteTeamDialog(true);
+                    }}
+                    sx={{
+                      textTransform: "none",
+                      fontWeight: 600,
+                      px: { xs: 1.5, sm: 2, md: 2.25 },
+                      py: { xs: 0.4, sm: 0.6, md: 0.75 },
+                      borderRadius: 2,
+                      fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
+                      borderColor: theme.palette.error.main,
+                      color: theme.palette.error.main,
+                      "&:hover": {
+                        backgroundColor: theme.palette.error.light,
+                        borderColor: theme.palette.error.dark,
+                      },
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </Box>
               </TableCell>
+
             </TableRow>
           ))}
         </TableBody>
@@ -230,7 +275,7 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
   }
 
   return teamsByClusterId ? (
-    <TableContainer 
+    <TableContainer
       component={Box}
       sx={{
         overflowAnchor: "none",
@@ -239,8 +284,8 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
     >
       <Table
         sx={{
-          "& .MuiTableCell-root": { 
-            fontSize: { xs: "0.7rem", sm: "0.85rem", md: "0.95rem" }, 
+          "& .MuiTableCell-root": {
+            fontSize: { xs: "0.7rem", sm: "0.85rem", md: "0.95rem" },
             py: { xs: 0.5, sm: 0.75, md: 1.25 },
             px: { xs: 0.5, sm: 0.75, md: 1 }
           },
@@ -339,8 +384,8 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
                       contain: "layout style",
                     }}
                   >
-                    <Box 
-                      sx={{ 
+                    <Box
+                      sx={{
                         py: 1,
                         isolation: "isolate",
                       }}
@@ -365,7 +410,7 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
         mode="edit"
         clusterData={clusterData}
         contestid={contestId}
-        onSuccess={() => {}}
+        onSuccess={() => { }}
       />
       <TeamModal
         open={openTeamModal}
@@ -382,7 +427,21 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
         teamId={currentTeamId}
         clusterId={currentTeamClusterId}
       />
-      
+      {selectedTeam && (
+        <DeleteTeamDialog
+          open={openDeleteTeamDialog}
+          onClose={() => setOpenDeleteTeamDialog(false)}
+          teamId={selectedTeam.id}
+          teamName={selectedTeam.name}
+          mapId={selectedTeam.mapId}
+          clusterId={selectedTeam.clusterId}
+          showRemoveFromCluster={
+            clusters.find((c) => c.id === selectedTeam.clusterId)?.cluster_name !== "All Teams"
+          }
+        />
+      )}
+
+
       {/* Delete Confirmation Modal */}
       <Modal
         open={openDeleteConfirmModal}

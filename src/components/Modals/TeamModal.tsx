@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { useTeamStore } from "../../store/primary_stores/teamStore";
 import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
 
+
 export interface ITeamModalProps {
   open: boolean;
   handleClose: () => void;
@@ -43,6 +44,8 @@ export default function TeamModal(props: ITeamModalProps) {
   const [coachEmail, setCoachEmail] = useState("");
   const { createTeam, editTeam } = useTeamStore();
   const { addTeamToCluster, updateTeamInCluster } = useMapClusterTeamStore();
+  const { fetchClustersByContestId } = useMapClusterTeamStore();
+
 
   const title = mode === "new" ? "New Team" : "Edit Team";
 
@@ -69,18 +72,18 @@ export default function TeamModal(props: ITeamModalProps) {
           last_name: coachLastName || "",
           contestid: contestId,
         });
-        
+
         if (createdTeam && cluster !== -1) {
           addTeamToCluster(cluster, createdTeam);
         }
-        
+
         toast.success("Team created successfully!");
         onSuccess?.();
         handleCloseModal();
       } catch (error: any) {
-     
+
         let errorMessage = "";
-        
+
         // Extract error message 
         if (error?.response?.data) {
           const data = error.response.data;
@@ -93,16 +96,16 @@ export default function TeamModal(props: ITeamModalProps) {
           } else if (data.message && typeof data.message === 'string') {
             errorMessage = data.message;
           } else if (data.errors && typeof data.errors === 'object') {
-        
+
             errorMessage = JSON.stringify(data.errors);
           }
         } else if (error?.message && typeof error.message === 'string') {
           errorMessage = error.message;
         }
-        
-        if (errorMessage.toLowerCase().includes("already exists") || 
-            errorMessage.toLowerCase().includes("duplicate") ||
-            errorMessage.toLowerCase().includes("username") && errorMessage.toLowerCase().includes("taken")) {
+
+        if (errorMessage.toLowerCase().includes("already exists") ||
+          errorMessage.toLowerCase().includes("duplicate") ||
+          errorMessage.toLowerCase().includes("username") && errorMessage.toLowerCase().includes("taken")) {
           toast.error("Account already exists in the system");
         } else {
           toast.error("Failed to create team. Please try again.");
@@ -126,7 +129,7 @@ export default function TeamModal(props: ITeamModalProps) {
         contestid: contestId ?? 0,
       });
 
-    
+
       if (updatedTeam && cluster !== -1) {
         updateTeamInCluster(cluster, updatedTeam);
         if (teamData && teamData.clusterid !== cluster && teamData.clusterid !== -1) {
@@ -249,7 +252,7 @@ export default function TeamModal(props: ITeamModalProps) {
           onChange={(e: any) => setCoachEmail(e.target.value)}
           sx={{ mt: 3, width: 300 }}
         />
-        
+
         <Button
           type="submit"
           sx={{
