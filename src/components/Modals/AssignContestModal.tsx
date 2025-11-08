@@ -35,24 +35,16 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
   // Contest store for available contests
   const { allContests } = useContestStore();
 
-  // Contest-organizer mapping store for assignments
-  const {
-    contestsByOrganizers,
-    createContestOrganizerMapping,
-  } = useMapContestOrganizerStore();
+  // Contest-organizer mapping store for assignments - use selector for reactive updates
+  const contestsByOrganizers = useMapContestOrganizerStore((state) => state.contestsByOrganizers);
+  const createContestOrganizerMapping = useMapContestOrganizerStore((state) => state.createContestOrganizerMapping);
+  const fetchContestsByOrganizerId = useMapContestOrganizerStore((state) => state.fetchContestsByOrganizerId);
 
   const title = "Assign Contest To Organizer";
   const [contestId, setContestId] = useState(0);
-  const [assignedContests, setAssignedContests] = useState<Contest[]>([]);
-
-  // Load assigned contests when organizer changes
-  useEffect(() => {
-    if (contestsByOrganizers[organizerId]) {
-      setAssignedContests(contestsByOrganizers[organizerId] || []);
-    } else {
-      setAssignedContests([]);
-    }
-  }, [organizerId, contestsByOrganizers]);
+  
+  // Use selector to reactively get assigned contests for this organizer
+  const assignedContests = contestsByOrganizers[organizerId] || [];
 
   // Close modal and reset form
   const handleCloseModal = () => {
@@ -72,6 +64,8 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
     if (organizerId) {
       try {
         await createContestOrganizerMapping(organizerId, contestId);
+        // Refresh the contests for this organizer to ensure UI updates
+        await fetchContestsByOrganizerId(organizerId);
         toast.success("Contest assigned to organizer successfully!");
         handleClose();
       } catch (error) {
