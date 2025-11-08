@@ -2,10 +2,10 @@ import {
   Box,
   Button,
   Container,
-  Link,
   Tab,
   Typography,
 } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link as RouterLink } from "react-router-dom";
 import theme from "../theme";
@@ -118,34 +118,54 @@ export default function ManageContest() {
   return (
   <>
     {/* Back to Dashboard */}
-    {role?.user_type === 2 && (
-      <Link component={RouterLink} to="/organizer" sx={{ textDecoration: "none" }}>
-        <Typography
-          variant="body2"
+    <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 }, ml: { xs: 2, sm: 3 } }}>
+      {role?.user_type === 2 && (
+        <Button
+          component={RouterLink}
+          to="/organizer"
+          startIcon={<ArrowBackIcon />}
           sx={{
-            m: 2,
-            color: theme.palette.primary.main,
-            "&:hover": { textDecoration: "underline" },
+            textTransform: "none",
+            color: theme.palette.success.dark,
+            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+            fontWeight: 500,
+            px: { xs: 1.5, sm: 2 },
+            py: { xs: 0.75, sm: 1 },
+            borderRadius: "8px",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              backgroundColor: "rgba(76, 175, 80, 0.08)",
+              transform: "translateX(-2px)",
+            },
           }}
         >
-          {"<"} Back to Dashboard
-        </Typography>
-      </Link>
-    )}
-    {role?.user_type === 1 && (
-      <Link component={RouterLink} to="/admin" sx={{ textDecoration: "none" }}>
-        <Typography
-          variant="body2"
+          Back to Dashboard
+        </Button>
+      )}
+      {role?.user_type === 1 && (
+        <Button
+          component={RouterLink}
+          to="/admin"
+          startIcon={<ArrowBackIcon />}
           sx={{
-            m: 2,
-            color: theme.palette.primary.main,
-            "&:hover": { textDecoration: "underline" },
+            textTransform: "none",
+            color: theme.palette.success.dark,
+            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+            fontWeight: 500,
+            px: { xs: 1.5, sm: 2 },
+            py: { xs: 0.75, sm: 1 },
+            borderRadius: "8px",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              backgroundColor: "rgba(76, 175, 80, 0.08)",
+              transform: "translateX(-2px)",
+            },
           }}
         >
-          {"<"} Back to Dashboard
-        </Typography>
-      </Link>
-    )}
+          Back to Dashboard
+        </Button>
+      )}
+    </Box>
 
     {/* Page Title */}
     <Typography 

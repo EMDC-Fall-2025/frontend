@@ -725,21 +725,40 @@ export default function AssignJudgeToContestModal(
             disabled={isSubmitting}
             sx={{
               textTransform: "none",
-              borderRadius: 2,
+              borderRadius: "12px",
               px: { xs: 3, sm: 4.5 },
               py: { xs: 1.25, sm: 1.5 },
               fontWeight: 600,
               fontSize: { xs: "0.9rem", sm: "1rem" },
               bgcolor: theme.palette.success.main,
               color: "#fff",
-              boxShadow: "none",
+              boxShadow: `
+                0 4px 12px rgba(76, 175, 80, 0.3),
+                0 2px 4px rgba(76, 175, 80, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2)
+              `,
+              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
               "&:hover": {
                 bgcolor: theme.palette.success.dark,
-                boxShadow: `0 2px 8px ${theme.palette.success.main}40`,
+                transform: "translateY(-2px)",
+                boxShadow: `
+                  0 6px 16px rgba(76, 175, 80, 0.4),
+                  0 4px 8px rgba(76, 175, 80, 0.3),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.2)
+                `,
+              },
+              "&:active": {
+                transform: "translateY(0px)",
+                boxShadow: `
+                  0 2px 8px rgba(76, 175, 80, 0.3),
+                  inset 0 2px 4px rgba(0, 0, 0, 0.1)
+                `,
               },
               "&:disabled": {
                 bgcolor: theme.palette.grey[300],
                 color: theme.palette.grey[500],
+                transform: "none",
+                boxShadow: "none",
               }
             }}
           >

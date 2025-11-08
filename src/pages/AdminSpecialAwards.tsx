@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { Link } from "react-router-dom";
 import theme from "../theme";
 import useSpecialAwardStore, { SpecialAward } from "../store/map_stores/mapAwardToTeamStore";
@@ -116,25 +117,29 @@ export default function AdminSpecialAwardsPage() {
       }}
     >
       {/* Back to Admin  */}
-      <Link
-        to="/admin/"
-        style={{
-          textDecoration: "none",
-          color: "inherit",
-          display: "inline-block",
-        }}
-      >
-        <Typography
-          variant="body2"
+      <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 }, ml: { xs: 2, sm: 3 } }}>
+        <Button
+          component={Link}
+          to="/admin/"
+          startIcon={<ArrowBackIcon />}
           sx={{
-            mb: 3,
-            fontSize: "1.05rem",
-            "&:hover": { color: theme.palette.primary.main },
+            textTransform: "none",
+            color: theme.palette.success.dark,
+            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+            fontWeight: 500,
+            px: { xs: 1.5, sm: 2 },
+            py: { xs: 0.75, sm: 1 },
+            borderRadius: "8px",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              backgroundColor: "rgba(76, 175, 80, 0.08)",
+              transform: "translateX(-2px)",
+            },
           }}
         >
-          {"<"} Back to Admin Dashboard{" "}
-        </Typography>
-      </Link>
+          Back to Admin Dashboard
+        </Button>
+      </Box>
 
       {/* Aligned Title */}
       <Typography

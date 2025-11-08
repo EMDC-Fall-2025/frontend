@@ -1,4 +1,6 @@
-import { CircularProgress, Link, Typography } from "@mui/material";
+import { CircularProgress, Link, Typography, Button, Box } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import theme from "../theme";
 import { useEffect, useRef } from "react";
 import { useScoreSheetStore } from "../store/primary_stores/scoreSheetStore";
 import { useParams } from "react-router-dom";
@@ -47,37 +49,53 @@ export default function ChampionshipScoreBreakdown() {
     <CircularProgress />
   ) : (
     <>
-      {role?.user_type == 4 && (
-        <Link href="/coach/" sx={{ textDecoration: "none" }}>
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              ml: { xs: 1, sm: 2 }, 
-              mt: { xs: 1, sm: 2 },
-              fontSize: { xs: "0.9rem", sm: "1rem" }
+      <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 }, ml: { xs: 2, sm: 3 } }}>
+        {role?.user_type == 4 && (
+          <Button
+            component={Link}
+            href="/coach/"
+            startIcon={<ArrowBackIcon />}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.success.dark,
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              fontWeight: 500,
+              px: { xs: 1.5, sm: 2 },
+              py: { xs: 0.75, sm: 1 },
+              borderRadius: "8px",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                backgroundColor: "rgba(76, 175, 80, 0.08)",
+                transform: "translateX(-2px)",
+              },
             }}
           >
-            {"<"} Back to Dashboard{" "}
-          </Typography>
-        </Link>
-      )}
-      {role?.user_type != 4 && (
-        <Link
-          onClick={() => navigate(-1)}
-          sx={{ textDecoration: "none", cursor: "pointer" }}
-        >
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              ml: { xs: 1, sm: 2 }, 
-              mt: { xs: 1, sm: 2 },
-              fontSize: { xs: "0.9rem", sm: "1rem" }
+            Back to Dashboard
+          </Button>
+        )}
+        {role?.user_type != 4 && (
+          <Button
+            onClick={() => navigate(-1)}
+            startIcon={<ArrowBackIcon />}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.success.dark,
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              fontWeight: 500,
+              px: { xs: 1.5, sm: 2 },
+              py: { xs: 0.75, sm: 1 },
+              borderRadius: "8px",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                backgroundColor: "rgba(76, 175, 80, 0.08)",
+                transform: "translateX(-2px)",
+              },
             }}
           >
-            {"<"} Back to Results{" "}
-          </Typography>
-        </Link>
-      )}
+            Back to Results
+          </Button>
+        )}
+      </Box>
       <Typography 
         variant="h1" 
         sx={{ 

@@ -1,7 +1,8 @@
 // ContestScores.tsx
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Typography, Container, Tabs, Tab, Box, Stack, Alert } from "@mui/material";
+import { Typography, Container, Tabs, Tab, Box, Stack, Alert, Button } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../theme";
 import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
 import useSpecialAwardStore from "../store/map_stores/mapAwardToTeamStore";
@@ -165,24 +166,29 @@ export default function ContestScores() {
       >
 
         {/* Back link */}
-        <Link
-          to="/contestPage/"
-          style={{
-            textDecoration: "none",
-            color: "inherit",
-            display: "inline-block",
-          }}
-        >
-          <Typography
-            variant="body2"
+        <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 } }}>
+          <Button
+            component={Link}
+            to="/contestPage/"
+            startIcon={<ArrowBackIcon />}
             sx={{
-              mb: 3,
-              fontSize: "1.05rem",
+              textTransform: "none",
+              color: theme.palette.success.dark,
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              fontWeight: 500,
+              px: { xs: 1.5, sm: 2 },
+              py: { xs: 0.75, sm: 1 },
+              borderRadius: "8px",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                backgroundColor: "rgba(76, 175, 80, 0.08)",
+                transform: "translateX(-2px)",
+              },
             }}
           >
-            {"<"} Back to Contests{" "}
-          </Typography>
-        </Link>
+            Back to Contests
+          </Button>
+        </Box>
 
         <Stack spacing={1} sx={{ mb: 1 }}>
           <Typography

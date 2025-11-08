@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom"; // 
 import Typography from "@mui/material/Typography";
-import { Container, Stack } from "@mui/material";
+import { Container, Stack, Button, Box } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../theme";
 import { useContestStore } from "../store/primary_stores/contestStore";
 import ContestTable from "../components/Tables/ContestTable";
@@ -90,25 +91,29 @@ export default function Contests() {
         }}
       >
         {/* Back to Homepage */}
-        <Link
-          to="/"
-          style={{
-            textDecoration: "none",
-            color: "inherit",
-            display: "inline-block",
-          }}
-        >
-          <Typography
-            variant="body2"
+        <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 } }}>
+          <Button
+            component={Link}
+            to="/"
+            startIcon={<ArrowBackIcon />}
             sx={{
-              mb: 3,
-              fontSize: "1.05rem",
-              "&:hover": { color: theme.palette.primary.main },
+              textTransform: "none",
+              color: theme.palette.success.dark,
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              fontWeight: 500,
+              px: { xs: 1.5, sm: 2 },
+              py: { xs: 0.75, sm: 1 },
+              borderRadius: "8px",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                backgroundColor: "rgba(76, 175, 80, 0.08)",
+                transform: "translateX(-2px)",
+              },
             }}
           >
-            {"<"} Back to Homepage{" "}
-          </Typography>
-        </Link>
+            Back to Homepage
+          </Button>
+        </Box>
 
         <Stack spacing={1} sx={{ mb: 1 }}>
           <Typography

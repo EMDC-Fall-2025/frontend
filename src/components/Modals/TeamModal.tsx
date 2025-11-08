@@ -10,6 +10,7 @@ import {
 import Modal from "./Modal";
 import theme from "../../theme";
 import toast from "react-hot-toast";
+import { handleAccountError } from "../../utils/errorHandler";
 import { useEffect, useState } from "react";
 import { useTeamStore } from "../../store/primary_stores/teamStore";
 import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
@@ -87,33 +88,7 @@ export default function TeamModal(props: ITeamModalProps) {
         onSuccess?.();
         handleCloseModal();
       } catch (error: any) {
-        let errorMessage = "";
-        
-        // Extract error message 
-        if (error?.response?.data) {
-          const data = error.response.data;
-          if (typeof data === 'string') {
-            errorMessage = data;
-          } else if (data.error && typeof data.error === 'string') {
-            errorMessage = data.error;
-          } else if (data.detail && typeof data.detail === 'string') {
-            errorMessage = data.detail;
-          } else if (data.message && typeof data.message === 'string') {
-            errorMessage = data.message;
-          } else if (data.errors && typeof data.errors === 'object') {
-            errorMessage = JSON.stringify(data.errors);
-          }
-        } else if (error?.message && typeof error.message === 'string') {
-          errorMessage = error.message;
-        }
-        
-        if (errorMessage.toLowerCase().includes("already exists") || 
-            errorMessage.toLowerCase().includes("duplicate") ||
-            errorMessage.toLowerCase().includes("username") && errorMessage.toLowerCase().includes("taken")) {
-          toast.error("Account already exists in the system");
-        } else {
-          toast.error("Failed to create team. Please try again.");
-        }
+        handleAccountError(error, "create");
       }
     }
   };
@@ -123,7 +98,7 @@ export default function TeamModal(props: ITeamModalProps) {
     try {
       // Update team with current form values
       // Note: username is disabled in edit mode, so we use the original teamData username
-      const updatedTeam = await editTeam({
+      await editTeam({
         id: teamData?.id ?? 0,
         team_name: teamName,
         school_name: schoolName || "NA",
@@ -258,11 +233,32 @@ export default function TeamModal(props: ITeamModalProps) {
             width: 150,
             height: 44,
             bgcolor: theme.palette.success.main,
-            "&:hover": { bgcolor: theme.palette.success.dark },
             color: "#fff",
             mt: 3,
             textTransform: "none",
-            borderRadius: 2,
+            borderRadius: "12px",
+            boxShadow: `
+              0 4px 12px rgba(76, 175, 80, 0.3),
+              0 2px 4px rgba(76, 175, 80, 0.2),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2)
+            `,
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            "&:hover": { 
+              bgcolor: theme.palette.success.dark,
+              transform: "translateY(-2px)",
+              boxShadow: `
+                0 6px 16px rgba(76, 175, 80, 0.4),
+                0 4px 8px rgba(76, 175, 80, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2)
+              `,
+            },
+            "&:active": {
+              transform: "translateY(0px)",
+              boxShadow: `
+                0 2px 8px rgba(76, 175, 80, 0.3),
+                inset 0 2px 4px rgba(0, 0, 0, 0.1)
+              `,
+            },
           }}
         >
           {buttonText}

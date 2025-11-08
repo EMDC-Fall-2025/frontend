@@ -144,9 +144,9 @@ export default function Judging() {
         let currentClusterToSet = null;
         for (const cluster of filteredClusters) {
           const teams = teamsByClusterId[cluster.id];
-          if (teams && teams.length > 0) {
-            currentClusterToSet = cluster;
-            break;
+            if (teams && teams.length > 0) {
+              currentClusterToSet = cluster;
+              break;
           }
         }
         
@@ -177,7 +177,7 @@ export default function Judging() {
                 return [];
               } catch {
                 return [];
-              }
+            }
             });
             
             const refreshedTeams = (await Promise.all(refreshPromises)).flat();

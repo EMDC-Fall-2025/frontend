@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { Box, Chip, Container, Paper, Typography, Link, Tab, Tabs } from "@mui/material";
+import { Box, Chip, Container, Paper, Typography, Link, Tab, Tabs, Button } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import theme from "../theme";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
@@ -30,8 +32,11 @@ const InternalResults: React.FC = () => {
     }
   }, [parsedContestId, fetchContestById]);
 
-  const { fetchTeamsByContest, clearTeamsByContest, isLoading, teamsByContest } =
-    (useMapContestToTeamStore() as any) || {};
+  // selectors to subscribe only to needed state
+  const fetchTeamsByContest = useMapContestToTeamStore((state) => state.fetchTeamsByContest);
+  const clearTeamsByContest = useMapContestToTeamStore((state) => state.clearTeamsByContest);
+  const isLoading = useMapContestToTeamStore((state) => state.isLoadingMapContestToTeam);
+  const teamsByContest = useMapContestToTeamStore((state) => state.teamsByContest)
 
   useEffect(() => {
     if (!parsedContestId) return;
@@ -60,12 +65,12 @@ const InternalResults: React.FC = () => {
     };
   
     load(); // initial
-  
+
     // Auto-refresh every 20 seconds
     const interval = setInterval(() => {
       load();
     }, 20000); // 20 seconds
-  
+
     const onFocus = () => load();
     window.addEventListener("focus", onFocus);
   
@@ -78,7 +83,7 @@ const InternalResults: React.FC = () => {
 
   // Trigger tabulation when switching to championship or redesign tabs
   useEffect(() => {
-    if (activeTab === 1 || activeTab === 2) { // Championship or Redesign tab
+    if ((activeTab === 1 || activeTab === 2) && parsedContestId) { // Championship or Redesign tab
       const runTabulation = async () => {
         try {
           const token = localStorage.getItem("token");
@@ -124,19 +129,50 @@ const InternalResults: React.FC = () => {
   return (
     <Box sx={{ bgcolor: "#fff", minHeight: "100vh" }}>
       <Container maxWidth={false} sx={{ px: { xs: 1.5, md: 3 }, py: { xs: 1.5, md: 3 } }}>
-        <Box sx={{ mb: 1 }}>
+        <Box sx={{ mb: 2, mt: { xs: 1, sm: 2 } }}>
           {role?.user_type === 4 ? (
-            <Link href="/coach/" sx={{ textDecoration: "none" }}>
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                {"<"} Back to Dashboard{" "}
-              </Typography>
-            </Link>
+            <Button
+              component={Link}
+              href="/coach/"
+              startIcon={<ArrowBackIcon />}
+              sx={{
+                textTransform: "none",
+                color: theme.palette.success.dark,
+                fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+                fontWeight: 500,
+                px: { xs: 1.5, sm: 2 },
+                py: { xs: 0.75, sm: 1 },
+                borderRadius: "8px",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  backgroundColor: "rgba(76, 175, 80, 0.08)",
+                  transform: "translateX(-2px)",
+                },
+              }}
+            >
+              Back to Dashboard
+            </Button>
           ) : (
-            <Link onClick={() => navigate(-1)} sx={{ textDecoration: "none", cursor: "pointer" }}>
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                {"<"} Back to Results{" "}
-              </Typography>
-            </Link>
+            <Button
+              onClick={() => navigate(-1)}
+              startIcon={<ArrowBackIcon />}
+              sx={{
+                textTransform: "none",
+                color: theme.palette.success.dark,
+                fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+                fontWeight: 500,
+                px: { xs: 1.5, sm: 2 },
+                py: { xs: 0.75, sm: 1 },
+                borderRadius: "8px",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  backgroundColor: "rgba(76, 175, 80, 0.08)",
+                  transform: "translateX(-2px)",
+                },
+              }}
+            >
+              Back to Results
+            </Button>
           )}
         </Box>
 

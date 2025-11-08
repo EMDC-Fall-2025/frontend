@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import axios from "axios";
 import { EditedJudge, Judge, NewJudge } from "../../types";
+import { extractErrorMessage } from "../../utils/errorHandler";
 
 interface JudgeState {
   judge: Judge | null;
@@ -85,21 +86,7 @@ export const useJudgeStore = create<JudgeState>()(
           return createdJudge;
         } catch (judgeError: any) {
           // Convert error to string to prevent React rendering issues
-          let errorMessage = "Error creating judge";
-          if (judgeError?.response?.data) {
-            const data = judgeError.response.data;
-            if (typeof data === 'string') {
-              errorMessage = data;
-            } else if (data.error && typeof data.error === 'string') {
-              errorMessage = data.error;
-            } else if (data.detail && typeof data.detail === 'string') {
-              errorMessage = data.detail;
-            } else if (data.message && typeof data.message === 'string') {
-              errorMessage = data.message;
-            } else {
-              errorMessage = JSON.stringify(data);
-            }
-          }
+          const errorMessage = extractErrorMessage(judgeError) || "Error creating judge";
           set({ judgeError: errorMessage });
           throw judgeError; // Re-throw the original error
         } finally {
@@ -125,21 +112,7 @@ export const useJudgeStore = create<JudgeState>()(
           return updatedJudge;
         } catch (judgeError: any) {
           // Convert error to string to prevent React rendering issues
-          let errorMessage = "Error editing judge";
-          if (judgeError?.response?.data) {
-            const data = judgeError.response.data;
-            if (typeof data === 'string') {
-              errorMessage = data;
-            } else if (data.error && typeof data.error === 'string') {
-              errorMessage = data.error;
-            } else if (data.detail && typeof data.detail === 'string') {
-              errorMessage = data.detail;
-            } else if (data.message && typeof data.message === 'string') {
-              errorMessage = data.message;
-            } else {
-              errorMessage = JSON.stringify(data);
-            }
-          }
+          const errorMessage = extractErrorMessage(judgeError) || "Error editing judge";
           set({ judgeError: errorMessage });
           throw judgeError; // Re-throw the original error
         } finally {
