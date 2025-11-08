@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -29,79 +29,113 @@ interface ContestOverviewTableProps {
 }
 
 export default function ContestOverviewTable({ contests: propContests }: ContestOverviewTableProps = {}) {
-  const { allContests, fetchAllContests } = useContestStore();
-  const { contests: organizerContests, fetchContestsByOrganizerId } = useMapContestOrganizerStore();
-  const { contest: judgeContest, getContestByJudgeId, contestJudges, fetchJudgesForMultipleContests } = useMapContestJudgeStore();
-  const { contestClusters, fetchClustersForMultipleContests } = useMapClusterToContestStore();
-  const { role } = useAuthStore();
+  // Use stable selectors for store functions and state
+  const allContests = useContestStore((s) => s.allContests);
+  const fetchAllContests = useContestStore((s) => s.fetchAllContests);
+
+  const organizerContests = useMapContestOrganizerStore((s) => s.contests);
+  const fetchContestsByOrganizerId = useMapContestOrganizerStore((s) => s.fetchContestsByOrganizerId);
+
+  const judgeContest = useMapContestJudgeStore((s) => s.contest);
+  const getContestByJudgeId = useMapContestJudgeStore((s) => s.getContestByJudgeId);
+  const fetchJudgesForMultipleContests = useMapContestJudgeStore((s) => s.fetchJudgesForMultipleContests);
+  const contestJudges = useMapContestJudgeStore((s) => s.contestJudges);
+
+  const contestClusters = useMapClusterToContestStore((s) => s.contestClusters);
+  const fetchClustersForMultipleContests = useMapClusterToContestStore((s) => s.fetchClustersForMultipleContests);
+
+  const role = useAuthStore((s) => s.role);
 
   const [isLoading, setIsLoading] = useState(false);
   const [openJudgeDialog, setOpenJudgeDialog] = useState<number | null>(null);
 
+  // Safe date formatting helper
+  const safeFormatDate = (d?: string | Date) => {
+    const dt = d ? new Date(d) : null;
+    return dt && !isNaN(dt.getTime()) ? dt.toLocaleDateString() : String(d || "—");
+  };
+
   // Determine which contests to display based on user role
   // Organizers see only their assigned contests, judges see their assigned contest, admins see all contests
-  const contests = propContests || (
-    role?.user_type === 2 ? organizerContests : 
-    role?.user_type === 3 ? (judgeContest ? [judgeContest] : []) : 
-    allContests
-  );
+  // Filter out ended contests (is_open === false && is_tabulated === true)
+  // Memoize to prevent infinite loops in useEffect
+  const contests = useMemo(() => {
+    const sourceContests = propContests || (
+      role?.user_type === 2 ? organizerContests : 
+      role?.user_type === 3 ? (judgeContest ? [judgeContest] : []) : 
+      allContests
+    );
+    return sourceContests.filter(contest => !(contest.is_open === false && contest.is_tabulated === true));
+  }, [propContests, role?.user_type, organizerContests, judgeContest, allContests]);
 
   // Load contest data based on user role
   useEffect(() => {
+    if (!role) return;
+
+    // if parent passed contests, skip fetching from backend
+    if (propContests && propContests.length > 0) return;
+
+    let mounted = true;
     const loadData = async () => {
       setIsLoading(true);
       try {
-        if (role?.user_type === 2 && role?.user?.id) {
-          // For organizers, fetch only their assigned contests
+        if (role.user_type === 2 && role.user?.id) {
           await fetchContestsByOrganizerId(role.user.id);
-        } else if (role?.user_type === 3 && role?.user?.id) {
-          // For judges, fetch their assigned contest
+        } else if (role.user_type === 3 && role.user?.id) {
           await getContestByJudgeId(role.user.id);
         } else {
-          // For admins, fetch all available contests
           await fetchAllContests();
         }
-      } catch (error) {
-        console.warn("Backend not available");
+      } catch (err) {
+        console.warn("Backend not available", err);
       } finally {
-        setIsLoading(false);
+        if (mounted) setIsLoading(false);
       }
     };
 
     loadData();
-  }, [fetchAllContests, fetchContestsByOrganizerId, getContestByJudgeId, role]);
+    return () => { mounted = false; };
+  }, [
+    role?.user_type,
+    role?.user?.id,
+    fetchAllContests,
+    fetchContestsByOrganizerId,
+    getContestByJudgeId,
+    propContests, //effect re-evaluates if parent supplies contests later
+  ]);
 
-  // Fetch judges for each contest to display accurate judge counts
+  // Memoize contest IDs string to use as stable dependency
+  const contestIdsString = useMemo(() => {
+    return contests.map(contest => contest.id).sort().join(',');
+  }, [contests]);
+
+  // Fetch judges and clusters for each contest in parallel
   useEffect(() => {
-    if (contests.length > 0) {
-      const loadContestJudges = async () => {
-        try {
-          const contestIds = contests.map(contest => contest.id);
-          await fetchJudgesForMultipleContests(contestIds);
-        } catch (error) {
-          console.warn("Failed to fetch judges for contests");
+    // contestIdsString is '' when no contests, guard early
+    if (!contestIdsString) return;
+
+    let mounted = true;
+    const ids = contestIdsString.split(",").map((s) => Number(s)).filter(Boolean);
+    if (ids.length === 0) return;
+
+    const loadData = async () => {
+      try {
+        await Promise.all([
+          fetchJudgesForMultipleContests(ids),
+          fetchClustersForMultipleContests(ids),
+        ]);
+      } catch (err) {
+        if (mounted) {
+          console.warn("Failed to fetch contest data", err);
         }
-      };
+      }
+    };
 
-      loadContestJudges();
-    }
-  }, [contests, fetchJudgesForMultipleContests]);
 
-  // Fetch clusters for each contest to display accurate cluster information
-  useEffect(() => {
-    if (contests.length > 0) {
-      const loadContestClusters = async () => {
-        try {
-          const contestIds = contests.map(contest => contest.id);
-          await fetchClustersForMultipleContests(contestIds);
-        } catch (error) {
-          console.warn("Failed to fetch clusters for contests");
-        }
-      };
+    loadData();
 
-      loadContestClusters();
-    }
-  }, [contests, fetchClustersForMultipleContests]);
+    return () => { mounted = false; };
+  }, [contestIdsString, fetchJudgesForMultipleContests, fetchClustersForMultipleContests]);
 
   // Show loading state while data is being fetched
   if (isLoading) {
@@ -147,7 +181,7 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
       {/* Page header with title and description */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6" sx={{ fontWeight: 600 }}>
-          Contest Overview
+          Active/Upcoming Contests
         </Typography>
         <Typography variant="body2" color="text.secondary">
           View contest details, clusters, and judge assignments
@@ -219,7 +253,7 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
                 </Box>
                 
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  {contest.date}
+                  {safeFormatDate(contest.date)}
                 </Typography>
 
                 {/* Contest statistics section with key metrics */}
@@ -254,7 +288,7 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 1, backgroundColor: "#fff", borderRadius: 1 }}>
                       <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.875rem" }}>Date:</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 700, color: theme.palette.grey[600] }}>
-                        {new Date(contest.date).toLocaleDateString()}
+                        {safeFormatDate(contest.date)}
                       </Typography>
                     </Box>
                   </Box>
@@ -267,9 +301,9 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
                       Clusters
                     </Typography>
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                      {contestClusters[contest.id].map((cluster, index) => (
+                      {contestClusters[contest.id].map((cluster) => (
                         <Chip
-                          key={index}
+                          key={cluster.id ?? cluster.cluster_name}
                           label={cluster.cluster_name}
                           size="small"
                           variant="outlined"
@@ -298,9 +332,9 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
                       Judges
                     </Typography>
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                      {contestJudges[contest.id].slice(0, 4).map((judge, index) => (
+                      {contestJudges[contest.id].slice(0, 4).map((judge) => (
                         <Chip
-                          key={index}
+                          key={judge.id ?? `${judge.first_name}-${judge.last_name}`}
                           label={`${judge.first_name} ${judge.last_name}`}
                           size="small"
                           variant="outlined"
@@ -389,7 +423,7 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
             <List sx={{ p: 0 }}>
               {contestJudges[openJudgeDialog].map((judge, index) => (
                 <ListItem
-                  key={index}
+                  key={judge.id ?? `${judge.first_name}-${judge.last_name}`}
                   sx={{
                     px: 2,
                     py: 1.5,
@@ -406,7 +440,7 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
                 >
                   <ListItemText
                     primary={`${judge.first_name} ${judge.last_name}`}
-                    secondary={judge.email || ""}
+                    secondary={judge.phone_number || ""}
                     primaryTypographyProps={{
                       fontWeight: 600,
                       color: theme.palette.grey[800],

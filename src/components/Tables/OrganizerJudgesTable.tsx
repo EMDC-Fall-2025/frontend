@@ -202,21 +202,39 @@ function JudgesTable(props: IJudgesTableProps) {
         return;
       }
       
-      // Remove judge from cluster
-      await removeJudgeFromCluster(judgeId, currentCluster.id);
-      
-      // After removal, check if judge is still in any other clusters in this contest
+      // Before removal, check if judge is in any other clusters in this contest
+      // This ensures we check BEFORE removing, so we have accurate data
+      let isInOtherClusters = false;
       if (contestid) {
         const otherClusters = clusters.filter(c => c.id !== currentCluster.id);
-        const isInOtherClusters = otherClusters.some(cluster => {
+        
+        // First check local state
+        isInOtherClusters = otherClusters.some(cluster => {
           const judgesInCluster = judgesByClusterId[cluster.id] || [];
           return judgesInCluster.some(j => j.id === judgeId);
         });
         
-        // Only remove from contest if judge is not in any other clusters
-        if (!isInOtherClusters) {
-          removeJudgeFromContestStoreIfNoOtherClusters(judgeId, contestid);
+        // If not found in local state, fetch fresh data for other clusters to be sure
+        if (!isInOtherClusters && otherClusters.length > 0) {
+          // Fetch judges for all other clusters to ensure we have accurate data
+          await Promise.all(
+            otherClusters.map(cluster => fetchJudgesByClusterId(cluster.id, true))
+          );
+          
+          // Check again after fetching
+          isInOtherClusters = otherClusters.some(cluster => {
+            const judgesInCluster = judgesByClusterId[cluster.id] || [];
+            return judgesInCluster.some(j => j.id === judgeId);
+          });
         }
+      }
+      
+      // Remove judge from cluster
+      await removeJudgeFromCluster(judgeId, currentCluster.id);
+      
+      // Only remove from contest if judge is not in any other clusters
+      if (contestid && !isInOtherClusters) {
+        removeJudgeFromContestStoreIfNoOtherClusters(judgeId, contestid);
       }
       
       toast.success(`Judge removed from ${currentCluster.cluster_name} cluster successfully!`);

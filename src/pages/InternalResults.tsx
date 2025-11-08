@@ -70,7 +70,7 @@ const InternalResults: React.FC = () => {
     const interval = setInterval(() => {
       load();
     }, 20000); // 20 seconds
-
+  
     const onFocus = () => load();
     window.addEventListener("focus", onFocus);
   

@@ -28,6 +28,7 @@ import OrganizerModal from "../components/Modals/OrganizerModal";
 import ContestModal from "../components/Modals/ContestModal";
 import AdminContestTable from "../components/Tables/AdminContestTable";
 import AdminOrganizerTable from "../components/Tables/AdminOrganizerTable";
+import ContestOverviewTable from "../components/Tables/ContestOverview";
 
 export default function Admin() {
   const [value, setValue] = useState("1");
@@ -231,6 +232,7 @@ useEffect(() => {
                 value="1"
               />
               <Tab iconPosition="start" icon={<GroupIcon />} label="Manage Organizers" value="2" />
+              <Tab iconPosition="start" icon={<EmojiEventsIcon />} label="Contest Overview" value="3" />
             </TabList>
           </Box>
 
@@ -277,6 +279,29 @@ useEffect(() => {
             <Divider />
             <Box sx={{ px: 3, pb: 3 }}>
               <AdminOrganizerTable />
+            </Box>
+          </TabPanel>
+
+          {/* Contest Overview */}
+          <TabPanel
+            value="3"
+            sx={{
+              p: 0,
+              border: `1px solid ${theme.palette.grey[300]}`,
+              borderTop: 0,
+              borderBottomLeftRadius: 12,
+              borderBottomRightRadius: 12,
+              backgroundColor: "#fff",
+            }}
+          >
+            <Box sx={{ px: 3, py: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                Contest Overview
+              </Typography>
+            </Box>
+            <Divider />
+            <Box sx={{ px: 3, pb: 3 }}>
+              <ContestOverviewTable />
             </Box>
           </TabPanel>
         </TabContext>
