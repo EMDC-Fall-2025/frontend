@@ -4,6 +4,7 @@ import { useParams, Link } from "react-router-dom";
 import { Typography, Container, Tabs, Tab, Box, Stack, Alert, Button } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../theme";
+import confetti from "canvas-confetti";
 import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
 import useSpecialAwardStore from "../store/map_stores/mapAwardToTeamStore";
 import { useMapCoachToTeamStore } from "../store/map_stores/mapCoachToTeamStore";
@@ -41,6 +42,7 @@ export default function ContestScores() {
   const [coachNames, setCoachNames] = useState<{ [key: number]: string }>({});
   const [teamAwards, setTeamAwards] = useState<{ [key: number]: string }>({});
   const [activeTab, setActiveTab] = useState("prelim");
+  const [hasCelebrated, setHasCelebrated] = useState(false);
   // Check if championship advancement has occurred
 
   const hasChampionshipAdvance = teamsByContest.some((team) => team.advanced_to_championship === true);
@@ -109,6 +111,43 @@ export default function ContestScores() {
     ...team,
     team_rank: index + 1
   }));
+
+  // Trigger celebration sprinklers on first load when results are available
+  useEffect(() => {
+    if (rankedRows.length > 0 && !hasCelebrated && activeTab === "prelim") {
+      // Main confetti burst from center
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#4caf50', '#ffeb99', '#C0C0C0', '#CD7F32', '#00a353']
+      });
+      
+      // Left side burst
+      setTimeout(() => {
+        confetti({
+          particleCount: 50,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: ['#4caf50', '#ffeb99', '#C0C0C0']
+        });
+      }, 250);
+      
+      // Right side burst
+      setTimeout(() => {
+        confetti({
+          particleCount: 50,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: ['#4caf50', '#ffeb99', '#C0C0C0']
+        });
+      }, 400);
+      
+      setHasCelebrated(true);
+    }
+  }, [rankedRows.length, hasCelebrated, activeTab]);
 
   // Championship teams - teams that advanced to championship
   const championshipTeams = teamsByContest.filter((team) => team.advanced_to_championship);
@@ -190,7 +229,7 @@ export default function ContestScores() {
           </Button>
         </Box>
 
-        <Stack spacing={1} sx={{ mb: 1 }}>
+        <Stack spacing={1} sx={{ mb: 3 }}>
           <Typography
             variant="h1"
             sx={{
@@ -205,9 +244,8 @@ export default function ContestScores() {
           </Typography>
         </Stack>
 
-
         {/* Tabs Section */}
-        <Box sx={{ width: "100%", mt: 2 }}>
+        <Box sx={{ width: "100%", mt: 1 }}>
           <Tabs
             value={activeTab}
             onChange={(_, newValue) => setActiveTab(newValue)}
@@ -216,7 +254,11 @@ export default function ContestScores() {
             variant="scrollable"
             sx={{
               borderBottom: `1px solid ${theme.palette.grey[300]}`,
-              mb: 2,
+              mb: 0,
+              "& .MuiTab-root": {
+                minHeight: 64,
+                px: { xs: 1.5, sm: 2.5 },
+              },
             }}
           >
             <Tab
@@ -273,10 +315,8 @@ export default function ContestScores() {
         <Container
           maxWidth="lg"
           sx={{
-            backgroundColor: "transparent",
-            boxShadow: "none",
-            border: "none",
-            p: 4,
+            px: { xs: 3, sm: 5 },
+            py: { xs: 3, sm: 4 },
             mb: 5,
           }}
         >
@@ -284,7 +324,7 @@ export default function ContestScores() {
             variant="h5"
             sx={{ 
               fontWeight: 400, 
-              mb: 3, 
+              mb: 4, 
               textAlign: "center", 
               fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
               fontFamily: '"DM Serif Display", "Georgia", serif',
@@ -297,7 +337,16 @@ export default function ContestScores() {
           {rows.length > 0 ? (
             <ContestResultsTable rows={rankedRows.slice(0, 6)} />
           ) : (
-            <Typography>No preliminary results available.</Typography>
+            <Typography 
+              sx={{ 
+                textAlign: "center", 
+                color: "text.secondary", 
+                py: 6,
+                fontSize: { xs: "0.95rem", sm: "1rem" }
+              }}
+            >
+              No preliminary results available.
+            </Typography>
           )}
         </Container>
       )}
@@ -307,10 +356,8 @@ export default function ContestScores() {
         <Container
           maxWidth="lg"
           sx={{
-            backgroundColor: "transparent",
-            boxShadow: "none",
-            border: "none",
-            p: 4,
+            px: { xs: 3, sm: 5 },
+            py: { xs: 3, sm: 4 },
             mb: 5,
           }}
         >
@@ -318,7 +365,7 @@ export default function ContestScores() {
             variant="h5"
             sx={{ 
               fontWeight: 400, 
-              mb: 3, 
+              mb: 4, 
               textAlign: "center", 
               fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
               fontFamily: '"DM Serif Display", "Georgia", serif',
@@ -331,7 +378,14 @@ export default function ContestScores() {
           {championshipRows.length > 0 ? (
             <ContestResultsTable rows={championshipRows} />
           ) : (
-            <Typography sx={{ textAlign: "center", color: "text.secondary", py: 4 }}>
+            <Typography 
+              sx={{ 
+                textAlign: "center", 
+                color: "text.secondary", 
+                py: 6,
+                fontSize: { xs: "0.95rem", sm: "1rem" }
+              }}
+            >
               No championship teams available.
             </Typography>
           )}
@@ -340,9 +394,9 @@ export default function ContestScores() {
             variant="h5"
             sx={{ 
               fontWeight: 400, 
-              mb: 3, 
+              mb: 4, 
               textAlign: "center", 
-              mt: 5, 
+              mt: 6, 
               fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
               fontFamily: '"DM Serif Display", "Georgia", serif',
               letterSpacing: "0.02em",
@@ -354,7 +408,14 @@ export default function ContestScores() {
           {redesignRows.length > 0 ? (
             <ContestResultsTable rows={redesignRows} />
           ) : (
-            <Typography sx={{ textAlign: "center", color: "text.secondary", py: 4 }}>
+            <Typography 
+              sx={{ 
+                textAlign: "center", 
+                color: "text.secondary", 
+                py: 6,
+                fontSize: { xs: "0.95rem", sm: "1rem" }
+              }}
+            >
               No redesign teams available.
             </Typography>
           )}
@@ -366,10 +427,8 @@ export default function ContestScores() {
         <Container
           maxWidth="lg"
           sx={{
-            backgroundColor: "transparent",
-            boxShadow: "none",
-            border: "none",
-            p: 4,
+            px: { xs: 3, sm: 5 },
+            py: { xs: 3, sm: 4 },
             mb: 5,
           }}
         >
@@ -377,7 +436,7 @@ export default function ContestScores() {
             variant="h5"
             sx={{ 
               fontWeight: 400, 
-              mb: 3, 
+              mb: 4, 
               textAlign: "center", 
               fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
               fontFamily: '"DM Serif Display", "Georgia", serif',
@@ -404,10 +463,8 @@ export default function ContestScores() {
         <Container
           maxWidth="lg"
           sx={{
-            backgroundColor: "transparent",
-            boxShadow: "none",
-            border: "none",
-            p: 4,
+            px: { xs: 3, sm: 5 },
+            py: { xs: 3, sm: 4 },
             mb: 5,
           }}
         >
@@ -415,7 +472,7 @@ export default function ContestScores() {
             variant="h5"
             sx={{ 
               fontWeight: 400, 
-              mb: 3, 
+              mb: 4, 
               textAlign: "center", 
               fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
               fontFamily: '"DM Serif Display", "Georgia", serif',

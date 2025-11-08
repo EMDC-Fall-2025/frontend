@@ -18,22 +18,33 @@ interface ContestResultsTableProps {
 
 export default function ContestResultsTable({ rows }: ContestResultsTableProps) {
   return (
-    <TableContainer component={Paper} elevation={3} sx={{ width: "100%", borderRadius: 2 }}>
+    <TableContainer 
+      component={Paper} 
+      elevation={2} 
+      sx={{ 
+        width: "100%", 
+        borderRadius: "12px",
+        overflow: "hidden",
+      }}
+    >
       <Table
         sx={{
           "& th:first-of-type, & td:first-of-type": {
-            pl: 1,
+            pl: { xs: 2, sm: 3 },
+          },
+          "& th:last-of-type, & td:last-of-type": {
+            pr: { xs: 2, sm: 3 },
           },
         }}
       >
         <TableHead>
           <TableRow sx={{ bgcolor: theme.palette.primary.main }}>
-            <TableCell sx={{ color: "white", fontWeight: "bold" }}>Team Name</TableCell>
-            <TableCell sx={{ color: "white", fontWeight: "bold" }}>School</TableCell>
-            <TableCell sx={{ color: "white", fontWeight: "bold" }}>Coach</TableCell>
-            <TableCell sx={{ color: "white", fontWeight: "bold" }}>Rank</TableCell>
-            <TableCell sx={{ color: "white", fontWeight: "bold" }}>Score</TableCell>
-            <TableCell sx={{ color: "white", fontWeight: "bold" }}>Awards</TableCell>
+            <TableCell sx={{ color: "white", fontWeight: 600, fontSize: { xs: "0.875rem", sm: "0.9375rem" } }}>Team Name</TableCell>
+            <TableCell sx={{ color: "white", fontWeight: 600, fontSize: { xs: "0.875rem", sm: "0.9375rem" } }}>School</TableCell>
+            <TableCell sx={{ color: "white", fontWeight: 600, fontSize: { xs: "0.875rem", sm: "0.9375rem" } }}>Coach</TableCell>
+            <TableCell sx={{ color: "white", fontWeight: 600, fontSize: { xs: "0.875rem", sm: "0.9375rem" } }} align="center">Rank</TableCell>
+            <TableCell sx={{ color: "white", fontWeight: 600, fontSize: { xs: "0.875rem", sm: "0.9375rem" } }} align="center">Score</TableCell>
+            <TableCell sx={{ color: "white", fontWeight: 600, fontSize: { xs: "0.875rem", sm: "0.9375rem" } }}>Awards</TableCell>
           </TableRow>
         </TableHead>
 
@@ -48,15 +59,21 @@ export default function ContestResultsTable({ rows }: ContestResultsTableProps) 
                 key={row.id}
                 className={rowClass}
                 sx={{
-                  transition: "opacity 0.3s ease",
-                  "&:hover": { opacity: 0.9 },
+                  transition: "all 0.2s ease",
+                  "&:hover": { 
+                    backgroundColor: "rgba(0, 0, 0, 0.04)",
+                  },
+                  "& td": {
+                    fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+                    py: { xs: 1.25, sm: 1.5 },
+                  },
                 }}
               >
-                <TableCell>{row.team_name}</TableCell>
+                <TableCell sx={{ fontWeight: 500 }}>{row.team_name}</TableCell>
                 <TableCell>{row.school_name || "N/A"}</TableCell>
                 <TableCell>{row.coachName || "N/A"}</TableCell>
-                <TableCell>{row.team_rank || 0}</TableCell>
-                <TableCell>{row.total_score}</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}>{row.team_rank || 0}</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}>{row.total_score}</TableCell>
                 <TableCell>{row.awards || "N/A"}</TableCell>
               </TableRow>
             );
