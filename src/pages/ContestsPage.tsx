@@ -86,12 +86,12 @@ export default function Contests() {
         maxWidth="lg"
         sx={{
           px: { xs: 3, sm: 5 },
-          mt: 5,
+          mt: 2,
           mb: 2,
         }}
       >
         {/* Back to Homepage */}
-        <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 } }}>
+        <Box sx={{ mb: 1, mt: { xs: 1, sm: 2 } }}>
           <Button
             component={Link}
             to="/"

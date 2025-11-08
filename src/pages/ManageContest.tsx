@@ -118,7 +118,7 @@ export default function ManageContest() {
   return (
   <>
     {/* Back to Dashboard */}
-    <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 }, ml: { xs: 2, sm: 3 } }}>
+    <Box sx={{ mb: 1, mt: { xs: 1, sm: 2 }, ml: { xs: 2, sm: 3 } }}>
       {role?.user_type === 2 && (
         <Button
           component={RouterLink}
@@ -172,7 +172,9 @@ export default function ManageContest() {
       variant="h4" 
       sx={{ 
         fontWeight: 400,
-        m: 5,
+        mt: 2,
+        mb: 2,
+        mx: 5,
         color: theme.palette.primary.main,
         fontFamily: '"DM Serif Display", "Georgia", serif',
         fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
@@ -190,7 +192,8 @@ export default function ManageContest() {
         maxWidth: 1200,
         width: "100%",
         mx: "auto",
-        my: 2,
+        mt: 1,
+        mb: 2,
         p: 3,
         bgcolor: theme.palette.background.paper,
         borderRadius: 3,

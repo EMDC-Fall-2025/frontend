@@ -199,13 +199,13 @@ export default function ContestScores() {
         maxWidth="lg"
         sx={{
           px: { xs: 3, sm: 5 },
-          mt: 5,
+          mt: 2,
           mb: 2,
         }}
       >
 
         {/* Back link */}
-        <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 } }}>
+        <Box sx={{ mb: 1, mt: { xs: 1, sm: 2 } }}>
           <Button
             component={Link}
             to="/contestPage/"
@@ -229,7 +229,7 @@ export default function ContestScores() {
           </Button>
         </Box>
 
-        <Stack spacing={1} sx={{ mb: 3 }}>
+        <Stack spacing={1} sx={{ mb: 2 }}>
           <Typography
             variant="h1"
             sx={{
@@ -245,7 +245,7 @@ export default function ContestScores() {
         </Stack>
 
         {/* Tabs Section */}
-        <Box sx={{ width: "100%", mt: 1 }}>
+        <Box sx={{ width: "100%", mt: 0 }}>
           <Tabs
             value={activeTab}
             onChange={(_, newValue) => setActiveTab(newValue)}
@@ -316,7 +316,8 @@ export default function ContestScores() {
           maxWidth="lg"
           sx={{
             px: { xs: 3, sm: 5 },
-            py: { xs: 3, sm: 4 },
+            pt: { xs: 1, sm: 1 },
+            pb: { xs: 3, sm: 4 },
             mb: 5,
           }}
         >
@@ -324,7 +325,8 @@ export default function ContestScores() {
             variant="h5"
             sx={{ 
               fontWeight: 400, 
-              mb: 4, 
+              mb: 2, 
+              mt: 0,
               textAlign: "center", 
               fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
               fontFamily: '"DM Serif Display", "Georgia", serif',
@@ -357,7 +359,8 @@ export default function ContestScores() {
           maxWidth="lg"
           sx={{
             px: { xs: 3, sm: 5 },
-            py: { xs: 3, sm: 4 },
+            pt: { xs: 1, sm: 1 },
+            pb: { xs: 3, sm: 4 },
             mb: 5,
           }}
         >
@@ -365,7 +368,8 @@ export default function ContestScores() {
             variant="h5"
             sx={{ 
               fontWeight: 400, 
-              mb: 4, 
+              mb: 2, 
+              mt: 0,
               textAlign: "center", 
               fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
               fontFamily: '"DM Serif Display", "Georgia", serif',
@@ -394,9 +398,9 @@ export default function ContestScores() {
             variant="h5"
             sx={{ 
               fontWeight: 400, 
-              mb: 4, 
+              mb: 2, 
               textAlign: "center", 
-              mt: 6, 
+              mt: 3, 
               fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
               fontFamily: '"DM Serif Display", "Georgia", serif',
               letterSpacing: "0.02em",
@@ -428,7 +432,8 @@ export default function ContestScores() {
           maxWidth="lg"
           sx={{
             px: { xs: 3, sm: 5 },
-            py: { xs: 3, sm: 4 },
+            pt: { xs: 1, sm: 1 },
+            pb: { xs: 3, sm: 4 },
             mb: 5,
           }}
         >
@@ -436,7 +441,8 @@ export default function ContestScores() {
             variant="h5"
             sx={{ 
               fontWeight: 400, 
-              mb: 4, 
+              mb: 2, 
+              mt: 0,
               textAlign: "center", 
               fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
               fontFamily: '"DM Serif Display", "Georgia", serif',
@@ -464,7 +470,8 @@ export default function ContestScores() {
           maxWidth="lg"
           sx={{
             px: { xs: 3, sm: 5 },
-            py: { xs: 3, sm: 4 },
+            pt: { xs: 1, sm: 1 },
+            pb: { xs: 3, sm: 4 },
             mb: 5,
           }}
         >
@@ -472,7 +479,8 @@ export default function ContestScores() {
             variant="h5"
             sx={{ 
               fontWeight: 400, 
-              mb: 4, 
+              mb: 2, 
+              mt: 0,
               textAlign: "center", 
               fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
               fontFamily: '"DM Serif Display", "Georgia", serif',
