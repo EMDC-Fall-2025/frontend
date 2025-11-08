@@ -30,6 +30,9 @@ const InternalResults: React.FC = () => {
     }
   }, [parsedContestId, fetchContestById]);
 
+  const { fetchTeamsByContest, clearTeamsByContest, isLoading, teamsByContest } =
+    (useMapContestToTeamStore() as any) || {};
+
   useEffect(() => {
     if (!parsedContestId) return;
   
@@ -58,17 +61,20 @@ const InternalResults: React.FC = () => {
   
     load(); // initial
   
+    // Auto-refresh every 20 seconds
+    const interval = setInterval(() => {
+      load();
+    }, 20000); // 20 seconds
+  
     const onFocus = () => load();
     window.addEventListener("focus", onFocus);
   
     return () => {
+      clearInterval(interval);
       window.removeEventListener("focus", onFocus);
       clearTeamsByContest();
     };
-  }, [parsedContestId]);
-
-  const { fetchTeamsByContest, clearTeamsByContest, isLoading, teamsByContest } =
-    (useMapContestToTeamStore() as any) || {};
+  }, [parsedContestId, fetchTeamsByContest, clearTeamsByContest]);
 
   // Trigger tabulation when switching to championship or redesign tabs
   useEffect(() => {

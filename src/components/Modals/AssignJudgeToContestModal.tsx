@@ -274,7 +274,6 @@ export default function AssignJudgeToContestModal(
       setSuccess(response?.data?.message || "Judge successfully assigned to contest!");
 
       // Update assigned judge-cluster pairs to include the newly assigned pair
-      // This ensures the UI updates immediately if the modal is reopened
       setAssignedJudgeClusterPairs((prev) => {
         const newSet = new Set(prev);
         const pairKey = `${selectedJudgeId}-${selectedContestId}-${selectedClusterId}`;
@@ -341,7 +340,6 @@ export default function AssignJudgeToContestModal(
       setSelectedContestId(-1);
     }
     // Reset the loaded contest ref so clusters refresh when modal is reopened
-    // This ensures assigned judge-cluster pairs are up-to-date
     loadedContestIdRef.current = -1;
     handleClose();
   };

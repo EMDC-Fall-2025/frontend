@@ -118,9 +118,18 @@ const Ranking = () => {
   // Load clusters and teams for selected contest
   useEffect(() => {
     fetchClusters()
+    
+    // Auto-refresh every 20 seconds
+    const interval = setInterval(() => {
+      fetchClusters(true) // Force refresh 
+    }, 20000); 
+    
+    return () => {
+      clearInterval(interval);
+    };
   }, [fetchClusters])
 
-  // Fetch per-team submission status lazily when a cluster is opened (only once per cluster)
+  // Fetch per-team submission status (only once per cluster)
   useEffect(() => {
     const fetchStatusForCluster = async (clusterId: number) => {
       const idx = clusters.findIndex((c: any) => c.id === clusterId)
