@@ -25,7 +25,7 @@ import {
   Box,
   Typography,
   Alert,
-  
+  Chip,
 } from "@mui/material";
 import Modal from "./Modal";
 import theme from "../../theme";
@@ -38,17 +38,17 @@ import SearchBar from "../SearchBar";
 export interface IAssignJudgeToContestModalProps {
   open: boolean;
   handleClose: () => void;
-  onSuccess?: () => void; 
+  onSuccess?: () => void;
+  contestId?: number;
 }
 
 export default function AssignJudgeToContestModal(
   props: IAssignJudgeToContestModalProps
 ) {
-  const { handleClose, open, onSuccess } = props;
+  const { handleClose, open, onSuccess, contestId } = props;
 
-  // all contests fetched
-  const contests = useContestStore((s) => s.allContests);
-  const fetchAllContests = useContestStore((s) => s.fetchAllContests);
+  // Get the current contest if contestId is provided
+  const { contest, fetchContestById } = useContestStore();
 
   // ----- Form State Management -----
   const [selectedJudgeId, setSelectedJudgeId] = React.useState<number>(-1);
@@ -97,9 +97,16 @@ export default function AssignJudgeToContestModal(
     });
   }, [availableClusters, selectedJudgeId, selectedContestId, assignedJudgeClusterPairs]);
 
-  // # Load contests & judges each time the modal opens
+  // Auto-select the contest when contestId is provided
   React.useEffect(() => {
-    if (!open) return;
+    if (contestId && contestId > 0) {
+      setSelectedContestId(contestId);
+    }
+  }, [contestId]);
+
+  // Load contest and judges when modal opens
+  React.useEffect(() => {
+    if (!open || !contestId) return;
 
     let isMounted = true;
     setError(null);
@@ -107,9 +114,9 @@ export default function AssignJudgeToContestModal(
 
     (async () => {
       try {
-        // Ensure contests are loaded for the contest dropdown
-        if (contests.length === 0) {
-          await fetchAllContests();
+        // Fetch the contest if not already loaded
+        if (!contest || contest.id !== contestId) {
+          await fetchContestById(contestId);
         }
 
         // Load all judges
@@ -138,7 +145,7 @@ export default function AssignJudgeToContestModal(
     return () => {
       isMounted = false;
     };
-  }, [open, fetchAllContests, contests.length]);
+  }, [open, contestId, fetchContestById, contest]);
 
   // Load clusters when a contest is selected
   React.useEffect(() => {
@@ -268,9 +275,9 @@ export default function AssignJudgeToContestModal(
 
       onSuccess?.();
 
-      // Reset form
+      // Reset form 
       setSelectedJudgeId(-1);
-      setSelectedContestId(-1);
+      setSelectedContestId(contestId || -1);
       setSelectedClusterId(-1);
       setScoreSheets({
         presentation: false,
@@ -286,12 +293,19 @@ export default function AssignJudgeToContestModal(
     } catch (err: any) {
       const errorMessage = err?.response?.data?.error || err?.response?.data?.detail || "Failed to assign judge to contest";
       
+      // Check for preliminary cluster error - don't show toast for this
+      if (errorMessage.toLowerCase().includes("preliminary") && 
+          errorMessage.toLowerCase().includes("already assigned")) {
+        setError(errorMessage);
+      } 
       // Check for specific error about no teams in cluster
-      if (errorMessage.toLowerCase().includes("no teams") || 
-          errorMessage.toLowerCase().includes("teams") && errorMessage.toLowerCase().includes("cluster")) {
+      else if (errorMessage.toLowerCase().includes("no teams") || 
+          (errorMessage.toLowerCase().includes("teams") && errorMessage.toLowerCase().includes("cluster"))) {
         setError("Cannot assign judge: The selected cluster has no teams. Please add teams to the cluster first or select a different cluster.");
+        toast.error("Cannot assign judge: The selected cluster has no teams. Please add teams to the cluster first.");
       } else {
         setError(errorMessage);
+        toast.error("Failed to assign judge to contest. Please try again.");
       }
     } finally {
       setIsSubmitting(false);
@@ -301,6 +315,22 @@ export default function AssignJudgeToContestModal(
   const handleCloseModal = () => {
     setError(null);
     setSuccess(null);
+    // Reset form state but preserve contestId if provided
+    setSelectedJudgeId(-1);
+    setSelectedClusterId(-1);
+    setScoreSheets({
+      presentation: false,
+      journal: false,
+      mdo: false,
+      runpenalties: false,
+      otherpenalties: false,
+      redesign: false,
+      championship: false,
+    });
+    // Preserve contestId if provided, otherwise reset
+    if (!contestId) {
+      setSelectedContestId(-1);
+    }
     handleClose();
   };
 
@@ -313,110 +343,208 @@ export default function AssignJudgeToContestModal(
       <Container sx={{ 
         p: { xs: 2, sm: 3 }, 
         minWidth: { xs: "auto", sm: 500 },
-        maxWidth: { xs: "100%", sm: "600px" }
+        maxWidth: { xs: "100%", sm: "700px" }
       }}>
         {/* Success/Error Messages */}
         {success && (
-          <Alert severity="success" sx={{ mb: { xs: 1.5, sm: 2 } }}>
+          <Alert 
+            severity="success" 
+            sx={{ 
+              mb: { xs: 2, sm: 3 },
+              borderRadius: 2,
+              "& .MuiAlert-message": {
+                fontSize: { xs: "0.875rem", sm: "0.9rem" }
+              }
+            }}
+          >
             {success}
           </Alert>
         )}
         {error && (
-          <Alert severity="error" sx={{ mb: { xs: 1.5, sm: 2 } }}>
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: { xs: 2, sm: 3 },
+              borderRadius: 2,
+              "& .MuiAlert-message": {
+                fontSize: { xs: "0.875rem", sm: "0.9rem" }
+              }
+            }}
+          >
             {error}
           </Alert>
         )}
 
-        {/* Judge Selection */}
-        {allJudges.length > 0 && (
-    <Box sx={{ mb: { xs: 2, sm: 3 } }}>
-        <SearchBar 
-            judges={allJudges} 
-            onJudgeSelect={(judge)=> setSelectedJudgeId(judge?.id || -1)}
-        />
-    </Box>
-)}
-        
-        
-        {/* Contest Selection */}
-        <FormControl fullWidth sx={{ mb: { xs: 2, sm: 3 } }}>
-          <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Select Contest</InputLabel>
-          <Select
-            value={selectedContestId}
-            label="Select Contest"
-            sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}
-            onChange={(e) => {
-              const contestId = Number(e.target.value);
-              // Handle contest selection for assignment
-              setSelectedContestId(contestId);
-              setSelectedClusterId(-1); // reset cluster when contest changes
+        {/* Section 1: Judge Selection */}
+        <Box sx={{ mb: { xs: 2.5, sm: 3 } }}>
+          <Typography 
+            variant="subtitle2" 
+            sx={{ 
+              mb: { xs: 1.5, sm: 2 },
+              fontWeight: 600,
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              color: theme.palette.text.primary
             }}
           >
-            <MenuItem value={-1}>
-              <em>Choose a contest...</em>
-            </MenuItem>
-            {contests.map((contest) => (
-              <MenuItem key={contest.id} value={contest.id} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
-                {contest.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            Select Judge
+          </Typography>
+          {allJudges.length > 0 && (
+            <SearchBar 
+              judges={allJudges} 
+              onJudgeSelect={(judge)=> setSelectedJudgeId(judge?.id || -1)}
+            />
+          )}
+        </Box>
 
-        {/* Cluster Selection */}
-        <FormControl fullWidth sx={{ mb: { xs: 2, sm: 3 } }}>
-          <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Select Cluster</InputLabel>
-          <Select
-            value={selectedClusterId}
-            label="Select Cluster"
-            disabled={selectedContestId === -1}
-            sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}
-            onChange={(e) => {
-              const clusterId = Number(e.target.value);
-              setSelectedClusterId(clusterId);
-              // Reset score sheets when cluster changes to prevent invalid states
-              if (clusterId !== -1) {
-                setScoreSheets({
-                  presentation: false,
-                  journal: false,
-                  mdo: false,
-                  runpenalties: false,
-                  otherpenalties: false,
-                  redesign: false,
-                  championship: false,
-                });
-              }
+        {/* Section 2: Contest & Cluster Selection */}
+        <Box sx={{ mb: { xs: 2.5, sm: 3 } }}>
+          <Typography 
+            variant="subtitle2" 
+            sx={{ 
+              mb: { xs: 1.5, sm: 2 },
+              fontWeight: 600,
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              color: theme.palette.text.primary
             }}
           >
-            <MenuItem value={-1}>
-              <em>Choose a cluster...</em>
-            </MenuItem>
-            {filteredClusters.map((cluster) => (
-              <MenuItem key={cluster.id} value={cluster.id} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
-                {cluster.cluster_name}
-              </MenuItem>
-            ))}
-          </Select>
-          <FormHelperText sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>Only clusters from the selected contest are shown</FormHelperText>
-        </FormControl>
+            Contest & Cluster
+          </Typography>
+          
+          {/* Contest Display (read-only when contestId is provided) */}
+          {contestId ? (
+            <FormControl 
+              fullWidth 
+              sx={{ 
+                mb: { xs: 2, sm: 2.5 }
+              }} 
+              disabled
+            >
+              <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Contest</InputLabel>
+              <Select
+                value={selectedContestId}
+                label="Contest"
+                sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}
+              >
+                <MenuItem value={selectedContestId} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
+                  {contest?.name || `Contest ID: ${contestId}`}
+                </MenuItem>
+              </Select>
+            </FormControl>
+          ) : (
+            <FormControl 
+              fullWidth 
+              sx={{ 
+                mb: { xs: 2, sm: 2.5 }
+              }}
+            >
+              <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Select Contest</InputLabel>
+              <Select
+                value={selectedContestId}
+                label="Select Contest"
+                sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}
+                onChange={(e) => {
+                  const contestId = Number(e.target.value);
+                  setSelectedContestId(contestId);
+                  setSelectedClusterId(-1);
+                }}
+              >
+                <MenuItem value={-1}>
+                  <em>Choose a contest...</em>
+                </MenuItem>
+              </Select>
+            </FormControl>
+          )}
 
-        {/* Score Sheet Types */}
-        <Box sx={{ mb: { xs: 2, sm: 3 } }}>
-          <Typography variant="h6" sx={{ 
-            mb: { xs: 1.5, sm: 2 }, 
-            fontWeight: "bold",
-            fontSize: { xs: "1.1rem", sm: "1.25rem" }
-          }}>
+          {/* Cluster Selection */}
+          <FormControl 
+            fullWidth
+          >
+            <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Select Cluster</InputLabel>
+            <Select
+              value={selectedClusterId}
+              label="Select Cluster"
+              disabled={selectedContestId === -1}
+              sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}
+              onChange={(e) => {
+                const clusterId = Number(e.target.value);
+                setSelectedClusterId(clusterId);
+                if (clusterId !== -1) {
+                  setScoreSheets({
+                    presentation: false,
+                    journal: false,
+                    mdo: false,
+                    runpenalties: false,
+                    otherpenalties: false,
+                    redesign: false,
+                    championship: false,
+                  });
+                }
+              }}
+            >
+              <MenuItem value={-1}>
+                <em>Choose a cluster...</em>
+              </MenuItem>
+              {filteredClusters.map((cluster) => {
+                const clusterType = cluster.cluster_type || 
+                  (cluster.cluster_name?.toLowerCase().includes('championship') ? 'championship' :
+                   cluster.cluster_name?.toLowerCase().includes('redesign') ? 'redesign' : 'preliminary');
+                return (
+                  <MenuItem key={cluster.id} value={cluster.id} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                      <span>{cluster.cluster_name}</span>
+                      <Chip 
+                        label={clusterType.charAt(0).toUpperCase() + clusterType.slice(1)}
+                        size="small"
+                        sx={{
+                          ml: 1,
+                          height: 20,
+                          fontSize: "0.7rem",
+                          backgroundColor: 
+                            clusterType === 'championship' ? theme.palette.warning.light :
+                            clusterType === 'redesign' ? theme.palette.info.light :
+                            theme.palette.success.light,
+                          color: 
+                            clusterType === 'championship' ? theme.palette.warning.dark :
+                            clusterType === 'redesign' ? theme.palette.info.dark :
+                            theme.palette.success.dark,
+                        }}
+                      />
+                    </Box>
+                  </MenuItem>
+                );
+              })}
+            </Select>
+            <FormHelperText sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" }, mt: 0.5 }}>
+              Only clusters from the selected contest are shown
+            </FormHelperText>
+          </FormControl>
+        </Box>
+
+        {/* Section 3: Score Sheet Types */}
+        <Box sx={{ mb: { xs: 2.5, sm: 3 } }}>
+          <Typography 
+            variant="subtitle2" 
+            sx={{ 
+              mb: { xs: 1, sm: 1.5 },
+              fontWeight: 600,
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              color: theme.palette.text.primary
+            }}
+          >
             Score Sheet Types
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ 
-            mb: { xs: 1.5, sm: 2 },
-            fontSize: { xs: "0.85rem", sm: "0.875rem" }
-          }}>
+          <Typography 
+            variant="body2" 
+            color="text.secondary" 
+            sx={{ 
+              mb: { xs: 2, sm: 2.5 },
+              fontSize: { xs: "0.8rem", sm: "0.875rem" }
+            }}
+          >
             Select which types of score sheets this judge will handle:
           </Typography>
 
-          <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 0.5, sm: 1 } }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 0.75, sm: 1 } }}>
             {[
               { key: "presentation", label: "Presentation" },
               { key: "journal", label: "Journal" },
@@ -455,17 +583,27 @@ export default function AssignJudgeToContestModal(
               }
               
               return (
-                <Box key={key} sx={{ display: "flex", alignItems: "center" }}>
+                <Box 
+                  key={key}
+                  sx={{ 
+                    display: "flex", 
+                    alignItems: "flex-start",
+                    p: { xs: 0.75, sm: 1 },
+                    borderRadius: 1,
+                    transition: "all 0.2s ease",
+                    "&:hover": !isDisabled ? {
+                      backgroundColor: theme.palette.action.hover,
+                    } : {},
+                  }}
+                >
                   <Checkbox
                     checked={scoreSheets[key as keyof typeof scoreSheets]}
                     disabled={isDisabled}
                     onChange={(e) => {
                       if (isDisabled) return;
                       
-                      // Additional validation for mixed types
                       if (e.target.checked) {
                         if (key === "redesign" || key === "championship") {
-                          // If adding redesign/championship, clear all preliminary scoresheets
                           setScoreSheets({
                             presentation: false,
                             journal: false,
@@ -476,7 +614,6 @@ export default function AssignJudgeToContestModal(
                             championship: key === "championship",
                           });
                         } else {
-                          // If adding preliminary scoresheet, clear redesign/championship
                           setScoreSheets(prev => ({
                             ...prev,
                             [key]: true,
@@ -485,7 +622,6 @@ export default function AssignJudgeToContestModal(
                           }));
                         }
                       } else {
-                        // Normal toggle behavior
                         setScoreSheets(prev => ({
                           ...prev,
                           [key]: e.target.checked,
@@ -493,38 +629,44 @@ export default function AssignJudgeToContestModal(
                       }
                     }}
                     sx={{ 
-                      padding: { xs: 0.5, sm: 1 },
+                      padding: { xs: 0.5, sm: 0.75 },
                       "& .MuiSvgIcon-root": { 
-                        fontSize: { xs: "1.2rem", sm: "1.5rem" } 
+                        fontSize: { xs: "1.25rem", sm: "1.5rem" } 
                       },
                       "&.Mui-disabled": {
                         color: theme.palette.grey[400],
+                      },
+                      "&.Mui-checked": {
+                        color: theme.palette.success.main,
                       }
                     }}
                   />
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      fontSize: { xs: "0.85rem", sm: "0.875rem" },
-                      color: isDisabled ? theme.palette.grey[500] : "inherit"
-                    }}
-                  >
-                    {label}
+                  <Box sx={{ flex: 1, ml: { xs: 0.5, sm: 1 } }}>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        fontSize: { xs: "0.875rem", sm: "0.9rem" },
+                        fontWeight: 500,
+                        color: isDisabled ? theme.palette.grey[500] : theme.palette.text.primary,
+                        mb: isDisabled ? 0.5 : 0
+                      }}
+                    >
+                      {label}
+                    </Typography>
                     {isDisabled && (
                       <Typography 
-                        component="span" 
                         variant="caption" 
                         sx={{ 
                           display: "block", 
                           color: theme.palette.error.main,
-                          fontSize: "0.75rem",
-                          ml: 0.5
+                          fontSize: "0.7rem",
+                          mt: 0.25
                         }}
                       >
-                        ({disabledReason})
+                        {disabledReason}
                       </Typography>
                     )}
-                  </Typography>
+                  </Box>
                 </Box>
               );
             })}
@@ -535,8 +677,9 @@ export default function AssignJudgeToContestModal(
         <Box sx={{ 
           display: "flex", 
           gap: { xs: 1.5, sm: 2 }, 
-          justifyContent: { xs: "center", sm: "flex-end" },
-          flexDirection: { xs: "column", sm: "row" }
+          justifyContent: { xs: "stretch", sm: "flex-end" },
+          flexDirection: { xs: "column", sm: "row" },
+          pt: { xs: 1, sm: 1.5 }
         }}>
           <Button
             type="button"
@@ -547,37 +690,47 @@ export default function AssignJudgeToContestModal(
               textTransform: "none",
               borderRadius: 2,
               px: { xs: 3, sm: 4.5 },
-              py: { xs: 1, sm: 1.25 },
+              py: { xs: 1.25, sm: 1.5 },
               fontWeight: 600,
               fontSize: { xs: "0.9rem", sm: "1rem" },
               borderColor: theme.palette.grey[400],
-              color: theme.palette.grey[600],
+              color: theme.palette.grey[700],
+              backgroundColor: theme.palette.background.paper,
               "&:hover": {
                 borderColor: theme.palette.grey[600],
                 backgroundColor: theme.palette.grey[50],
               },
+              "&:disabled": {
+                borderColor: theme.palette.grey[300],
+                color: theme.palette.grey[400],
+              }
             }}
           >
             Cancel
           </Button>
           <Button
             type="button"
-            variant="outlined"
+            variant="contained"
             onClick={handleSubmit}
             disabled={isSubmitting}
             sx={{
               textTransform: "none",
               borderRadius: 2,
               px: { xs: 3, sm: 4.5 },
-              py: { xs: 1, sm: 1.25 },
+              py: { xs: 1.25, sm: 1.5 },
               fontWeight: 600,
               fontSize: { xs: "0.9rem", sm: "1rem" },
-              borderColor: theme.palette.success.main,
-              color: theme.palette.success.main,
+              bgcolor: theme.palette.success.main,
+              color: "#fff",
+              boxShadow: "none",
               "&:hover": {
-                borderColor: theme.palette.success.dark,
-                backgroundColor: "rgba(46,125,50,0.06)", // success.main @ ~6%
+                bgcolor: theme.palette.success.dark,
+                boxShadow: `0 2px 8px ${theme.palette.success.main}40`,
               },
+              "&:disabled": {
+                bgcolor: theme.palette.grey[300],
+                color: theme.palette.grey[500],
+              }
             }}
           >
             {isSubmitting ? "Assigning..." : "Assign Judge"}

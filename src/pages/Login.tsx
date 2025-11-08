@@ -88,7 +88,18 @@ export default function Login() {
         >
           <CircularProgress color="inherit" />
         </Backdrop>
-        <Typography variant="h1">Login</Typography>
+        <Typography 
+          variant="h1"
+          sx={{
+            fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+            fontFamily: '"DM Serif Display", "Georgia", serif',
+            fontWeight: 400,
+            letterSpacing: "0.02em",
+            lineHeight: 1.2,
+          }}
+        >
+          Login
+        </Typography>
         <form
           onSubmit={handleLogin}
           style={{

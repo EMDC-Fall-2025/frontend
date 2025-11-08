@@ -26,12 +26,12 @@ export default function Judging() {
   const { judge, fetchJudgeById, clearJudge } = useJudgeStore();
   const { listAdvancers } = useRankingsStore();
   const { fetchClusterByJudgeId, fetchAllClustersByJudgeId, clearCluster } = useMapClusterJudgeStore();
-  const {
-    mapClusterToTeamError,
-    clearClusterTeamMappings,
-    clearTeamsByClusterId,
-    fetchTeamsByClusterId,
-  } = useClusterTeamStore();
+  // Use selectors to subscribe to team updates
+  const mapClusterToTeamError = useClusterTeamStore((state) => state.mapClusterToTeamError);
+  const clearClusterTeamMappings = useClusterTeamStore((state) => state.clearClusterTeamMappings);
+  const clearTeamsByClusterId = useClusterTeamStore((state) => state.clearTeamsByClusterId);
+  const fetchTeamsByClusterId = useClusterTeamStore((state) => state.fetchTeamsByClusterId);
+  const teamsByClusterId = useClusterTeamStore((state) => state.teamsByClusterId);
   const [teams, setTeams] = useState<Team[]>([]);
   const [currentCluster, setCurrentCluster] = useState<any>(null);
   const [advancers, setAdvancers] = useState<any[]>([]);
@@ -116,41 +116,37 @@ export default function Judging() {
           filteredClusters = allClusters;
         }
         
-        // Fetch teams from filtered clusters only
-        const allTeams: Team[] = [];
-        
-        for (const cluster of filteredClusters) {
+        // Fetch teams from filtered clusters in parallel for better performance
+        const teamPromises = filteredClusters.map(async (cluster) => {
           try {
-            // Use store function to fetch teams for this cluster
             const teams = await fetchTeamsByClusterId(cluster.id);
-            
             if (teams && teams.length > 0) {
-              // Map teams to include advanced_to_championship field
-              const mappedTeams = teams.map((t: any) => ({
+              return teams.map((t: any) => ({
                 ...t,
                 advanced_to_championship: t.advanced_to_championship ?? false
               }));
-              allTeams.push(...mappedTeams);
             }
+            return [];
           } catch (error: any) {
             console.error(`Error fetching teams for cluster ${cluster.id}:`, error);
+            return [];
           }
-        }
+        });
+        
+        const teamResults = await Promise.all(teamPromises);
+        const allTeams: Team[] = teamResults.flat();
         
         setTeams(allTeams);
         setHasLoaded(true);
         
-        // Set the current cluster to the first cluster that has teams
+        
+        // Use already fetched data instead of fetching again
         let currentClusterToSet = null;
         for (const cluster of filteredClusters) {
-          try {
-            const teams = await fetchTeamsByClusterId(cluster.id);
-            if (teams && teams.length > 0) {
-              currentClusterToSet = cluster;
-              break;
-            }
-          } catch (error) {
-            // Silently continue
+          const teams = teamsByClusterId[cluster.id];
+          if (teams && teams.length > 0) {
+            currentClusterToSet = cluster;
+            break;
           }
         }
         
@@ -159,7 +155,7 @@ export default function Judging() {
         // If we are in championship or redesign phase, trigger tabulation to ensure
         // team championship totals are up to date, then refetch teams.
         try {
-          const contestId = currentClusterToSet?.contest_id || (allTeams[0] as any)?.contest_id || (allTeams[0] as any)?.contestid;
+          const contestId = (currentClusterToSet as any)?.contest_id || (allTeams[0] as any)?.contest_id || (allTeams[0] as any)?.contestid;
           if (contestId && championshipClusters.length > 0) {
             const token = localStorage.getItem("token");
             await fetch('/api/tabulation/tabulateScores/', {
@@ -172,16 +168,19 @@ export default function Judging() {
             });
 
             // Refetch teams after tabulation completes
-            const refreshedTeams: Team[] = [];
-            for (const cluster of filteredClusters) {
+            const refreshPromises = filteredClusters.map(async (cluster) => {
               try {
                 const t = await fetchTeamsByClusterId(cluster.id, true);
                 if (t && t.length > 0) {
-                  const mapped = t.map((x: any) => ({ ...x, advanced_to_championship: x.advanced_to_championship ?? false }));
-                  refreshedTeams.push(...mapped);
+                  return t.map((x: any) => ({ ...x, advanced_to_championship: x.advanced_to_championship ?? false }));
                 }
-              } catch {}
-            }
+                return [];
+              } catch {
+                return [];
+              }
+            });
+            
+            const refreshedTeams = (await Promise.all(refreshPromises)).flat();
             if (refreshedTeams.length > 0) {
               setTeams(refreshedTeams);
             }
@@ -194,7 +193,6 @@ export default function Judging() {
     } catch (error: any) {
       console.error('Error fetching all clusters for judge:', error);
       setHasLoaded(true);
-      // Fallback to original single cluster fetch
       fetchClusterByJudgeId(judgeId);
     }
   };
@@ -210,6 +208,28 @@ export default function Judging() {
     window.addEventListener("pagehide", handlePageHide);
     return () => window.removeEventListener("pagehide", handlePageHide);
   }, []);
+
+  // Sync local teams with store when teamsByClusterId changes
+  useEffect(() => {
+    if (currentCluster && teamsByClusterId[currentCluster.id]) {
+      const storeTeams = teamsByClusterId[currentCluster.id];
+      // Map teams to include advanced_to_championship field
+      const mappedTeams = storeTeams.map((t: any) => ({
+        ...t,
+        advanced_to_championship: t.advanced_to_championship ?? false
+      }));
+      // Only update if teams have actually changed (by comparing team names)
+      const hasChanges = teams.length !== mappedTeams.length || 
+        teams.some((t) => {
+          const storeTeam = mappedTeams.find(st => st.id === t.id);
+          return !storeTeam || storeTeam.team_name !== t.team_name;
+        });
+      
+      if (hasChanges) {
+        setTeams(mappedTeams);
+      }
+    }
+  }, [teamsByClusterId, currentCluster?.id]);
 
   const StatCard = ({ value, label }: { value: number | string; label: string }) => (
     <Card
@@ -251,9 +271,12 @@ export default function Judging() {
               <Typography 
                 variant="h4" 
                 sx={{ 
-                  fontWeight: 800, 
+                  fontWeight: 400, 
                   color: theme.palette.success.main,
-                  fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" }
+                  fontSize: { xs: "1.75rem", sm: "2.25rem", md: "2.5rem" },
+                  fontFamily: '"DM Serif Display", "Georgia", serif',
+                  letterSpacing: "0.02em",
+                  lineHeight: 1.2,
                 }}
               >
                 Judge Dashboard

@@ -81,7 +81,11 @@ export default function RedesignScoreBreakdown() {
           mt: { xs: 2, sm: 5 }, 
           mr: { xs: 2, sm: 5 }, 
           mb: { xs: 1, sm: 2 },
-          fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" }
+          fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontWeight: 400,
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
         }}
       >
         Redesign Score Breakdown
@@ -91,7 +95,11 @@ export default function RedesignScoreBreakdown() {
         variant="h2" 
         sx={{ 
           m: { xs: 2, sm: 5 },
-          fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" }
+          fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem" },
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontWeight: 400,
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
         }}
       >
         Redesign Scores

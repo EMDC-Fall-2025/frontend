@@ -38,7 +38,7 @@ export default function ContestModal(props: IContestModalProps) {
   const [contestName, setContestName] = useState("");
   //const [contestDate, setContestDate] = useState("2024-11-13");
   const contestid = contestData?.contestid;
-  const { createContest, editContest, fetchAllContests } =
+  const { createContest, editContest, fetchAllContests, allContests } =
     useContestStore();
   const { fetchOrganizerNamesByContests } = useMapContestOrganizerStore();
 
@@ -73,12 +73,20 @@ export default function ContestModal(props: IContestModalProps) {
     event.preventDefault();
     if (contestid) {
       try {
+        // Get the current contest data to preserve is_open and is_tabulated
+        const currentContest = allContests.find((c) => c.id === contestid);
+        if (!currentContest) {
+          toast.error("Contest not found. Please refresh and try again.");
+          return;
+        }
+        
         await editContest({
           id: contestid,
           name: contestName,
           date: contestDate ? contestDate.format("YYYY-MM-DD") : "",
-          is_open: false,
-          is_tabulated: false,
+          // Preserve existing is_open and is_tabulated values
+          is_open: currentContest.is_open,
+          is_tabulated: currentContest.is_tabulated,
         });
         toast.success("Contest updated successfully!");
         handleClose();

@@ -33,8 +33,6 @@ import ChampionshipScoreBreakdown from "./pages/ChampionshipScoreBreakdown";
 import RedesignScoreBreakdown from "./pages/RedesignScoreBreakdown";
 import ContestScores from "./pages/ContestScores";
 import ContestPage from "./pages/ContestsPage";
-import CssBaseline from "@mui/material/CssBaseline";
-
 
 
 
@@ -48,7 +46,6 @@ function App() {
   return (
     <>
       <ThemeProvider theme={theme}>
-        <CssBaseline />
         {currentLink !== "/set-password/" &&
           currentLink !== "/forgot-password/" &&
           currentLink !== "/login/" &&

@@ -114,9 +114,12 @@ export default function Contests() {
           <Typography
             variant="h1"
             sx={{
-              fontSize: "2rem",
-              fontWeight: 800,
+              fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+              fontWeight: 400,
               color: theme.palette.primary.main,
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
             }}
           >
             Contests

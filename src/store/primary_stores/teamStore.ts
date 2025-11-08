@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import axios from "axios";
 import { Team, NewTeam, EditedTeam } from "../../types";
+import { useMapCoachToTeamStore } from "../map_stores/mapCoachToTeamStore";
+import useMapClusterTeamStore from "../map_stores/mapClusterToTeamStore";
 
 interface TeamState {
   team: Team | null;
@@ -18,22 +20,14 @@ interface TeamState {
 
 export const useTeamStore = create<TeamState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       team: null,
       teams: [], 
       isLoadingTeam: false,
       teamError: null,
 
-      clearTeam: async () => {
-        try {
-          set({ team: null });
-          set({ teamError: null });
-        } catch (userRoleError) {
-          set({
-            teamError: "Error clearing out team in state",
-          });
-          throw new Error("Error clearing out team in state");
-        }
+      clearTeam: () => {
+        set({ team: null, teamError: null });
       },
 
       fetchTeamById: async (teamId: number) => {
@@ -56,7 +50,13 @@ export const useTeamStore = create<TeamState>()(
         }
       },
 
-      fetchAllTeams: async () => {
+      fetchAllTeams: async (forceRefresh: boolean = false) => {
+        // Check cache first - if we already have teams and not forcing refresh, return early
+        const cachedTeams = get().teams;
+        if (!forceRefresh && cachedTeams && cachedTeams.length > 0) {
+          return; // Use cached data
+        }
+        
         set({ isLoadingTeam: true });
         try {
           const token = localStorage.getItem("token");
@@ -65,8 +65,7 @@ export const useTeamStore = create<TeamState>()(
               Authorization: `Token ${token}`,
             },
           });
-          set({ teams: response.data.teams });
-          set({ teamError: null });
+          set({ teams: response.data.teams, teamError: null });
         } catch (teamError: any) {
           set({ teamError: "Failure fetching all teams" });
           throw new Error("Failure fetching all teams");
@@ -86,6 +85,18 @@ export const useTeamStore = create<TeamState>()(
             },
           });
           const createdTeam = (response.data as any)?.team;
+          const createdCoach = (response.data as any)?.coach;
+          
+          // Update coach data in mapCoachToTeamStore if coach data is present
+          if (createdTeam && createdCoach) {
+            const { updateCoachForAllTeams } = useMapCoachToTeamStore.getState();
+            // Update coach for all teams that use the same coach (by username)
+            // This includes the current team, so no need to call updateCoachByTeamId separately
+            if (createdCoach.username) {
+              updateCoachForAllTeams(createdCoach.username, createdCoach);
+            }
+          }
+          
           set({ teamError: null });
           return createdTeam;
         } catch (teamError: any) {
@@ -123,7 +134,31 @@ export const useTeamStore = create<TeamState>()(
             },
           });
           const updatedTeam = (response.data as any)?.Team;
-          set({ teamError: null });
+          const updatedCoach = (response.data as any)?.Coach;
+          
+          // Update coach data in mapCoachToTeamStore if coach data is present
+          if (updatedTeam && updatedCoach) {
+            const { updateCoachForAllTeams } = useMapCoachToTeamStore.getState();
+            // Update coach for all teams that use the same coach (by username)
+            // This includes the current team, so no need to call updateCoachByTeamId separately
+            if (updatedCoach.username) {
+              updateCoachForAllTeams(updatedCoach.username, updatedCoach);
+          }
+          }
+          
+          // Update team in team store
+          set((state) => ({
+            teams: state.teams.map((t) => t.id === updatedTeam.id ? updatedTeam : t),
+            // Also update the team object if it matches
+            team: state.team && state.team.id === updatedTeam.id ? updatedTeam : state.team,
+            teamError: null,
+          }));
+
+          // Update team in all clusters where it appears
+          if (updatedTeam) {
+            const { updateTeamInAllClusters } = useMapClusterTeamStore.getState();
+            updateTeamInAllClusters(updatedTeam.id, updatedTeam);
+          }
           return updatedTeam;
         } catch (teamError: any) {
          

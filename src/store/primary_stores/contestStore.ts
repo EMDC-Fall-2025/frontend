@@ -25,24 +25,12 @@ export const useContestStore = create<ContestState>()(
       isLoadingContest: false,
       contestError: null,
 
-      clearContest: async () => {
-        try {
-          set({ contest: null });
-          set({ contestError: null });
-        } catch (contestError) {
-          set({ contestError: "Error clearing out contest in state" });
-          throw Error("Error clearing out contest in state");
-        }
+      clearContest: () => {
+        set({ contest: null, contestError: null });
       },
 
-      clearAllContests: async () => {
-        try {
-          set({ contest: null });
-          set({ contestError: null });
-        } catch (contestError) {
-          set({ contestError: "Error clearing out allContests in state" });
-          throw Error("Error clearing out allContests in state");
-        }
+      clearAllContests: () => {
+        set({ contest: null, contestError: null });
       },
 
       fetchAllContests: async () => {
@@ -142,12 +130,19 @@ export const useContestStore = create<ContestState>()(
             },
           });
           const updatedContest: Contest = response.data.Contest;
+          
           set((state) => ({
             allContests: state.allContests.map((c) =>
               c.id === updatedContest.id ? updatedContest : c
             ),
+            // Also update the contest object if it matches
+            contest: state.contest && state.contest.id === updatedContest.id ? updatedContest : state.contest,
             contestError: null,
           }));
+
+          // Update contest in all mappings (contestsByOrganizers, etc.)
+          const { updateContestInMappings } = useMapContestOrganizerStore.getState();
+          updateContestInMappings(updatedContest.id, updatedContest);
         } catch (contestError) {
           set({ contestError: "Error editing contest: " + contestError });
           throw Error("Error editing contest: " + contestError);

@@ -13,7 +13,7 @@ import { Button, CircularProgress, Typography } from "@mui/material";
 import ClusterModal from "../Modals/ClusterModal";
 import Modal from "../Modals/Modal";
 import theme from "../../theme";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TeamModal from "../Modals/TeamModal";
 import { useMapCoachToTeamStore } from "../../store/map_stores/mapCoachToTeamStore";
 import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
@@ -42,7 +42,8 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
   );
   const [teamData, setTeamData] = useState<TeamData | undefined>(undefined);
   const { coachesByTeams } = useMapCoachToTeamStore();
-  const { teamsByClusterId } = useMapClusterTeamStore();
+  // selector to subscribe to team updates
+  const teamsByClusterId = useMapClusterTeamStore((state) => state.teamsByClusterId);
   const { deleteCluster } = useClusterStore();
   const { removeClusterFromContest } = useMapClusterToContestStore();
   const [openDisqualificationModal, setOpenDisqualificationModal] =
@@ -108,6 +109,26 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
     setTeamData(teamData);
     setOpenTeamModal(true);
   };
+
+  // Update teamData when coachesByTeams changes (e.g., after team edit)
+  useEffect(() => {
+    if (openTeamModal && teamData && coachesByTeams[teamData.id]) {
+      const coach = coachesByTeams[teamData.id];
+      // Only update if values actually changed to avoid infinite loops
+      if (
+        coach.username !== teamData.username ||
+        coach.first_name !== teamData.first_name ||
+        coach.last_name !== teamData.last_name
+      ) {
+        setTeamData({
+          ...teamData,
+          username: coach.username || teamData.username,
+          first_name: coach.first_name || teamData.first_name,
+          last_name: coach.last_name || teamData.last_name,
+        });
+      }
+    }
+  }, [coachesByTeams, openTeamModal]);
 
   const handleToggleRow = (clusterId: number) => {
     setOpenClusterIds((prevIds) =>

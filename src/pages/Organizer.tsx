@@ -5,7 +5,7 @@ import Tab from "@mui/material/Tab";
 import TabContext from "@mui/lab/TabContext";
 import TabList from "@mui/lab/TabList";
 import TabPanel from "@mui/lab/TabPanel";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Container,
   Typography,
@@ -22,6 +22,7 @@ import ContestOverviewTable from "../components/Tables/ContestOverview";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import useMapContestOrganizerStore from "../store/map_stores/mapContestToOrganizerStore";
 import useMapScoreSheetStore from "../store/map_stores/mapScoreSheetStore";
+import useOrganizerStore from "../store/primary_stores/organizerStore";
 
 // icons
 import CampaignIcon from "@mui/icons-material/Campaign";
@@ -29,7 +30,7 @@ import HistoryIcon from "@mui/icons-material/History";
 import GavelIcon from "@mui/icons-material/Gavel";
 import Ranking from "../components/Tables/Rankings";
 import { AwardIcon, Trophy } from "lucide-react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 
 export default function Organizer() {
@@ -37,9 +38,30 @@ export default function Organizer() {
   const { fetchContestsByOrganizerId, contests } = useMapContestOrganizerStore();
   const { allSheetsSubmittedForContests } = useMapScoreSheetStore();
   const { role } = useAuthStore();
+  // Use selector to subscribe to allOrganizers changes
+  const allOrganizers = useOrganizerStore((state) => state.allOrganizers);
+  const fetchAllOrganizers = useOrganizerStore((state) => state.fetchAllOrganizers);
   const navigate = useNavigate()
 
   const organizerId = role ? role.user.id : null;
+
+  // Fetch organizers to get the latest name (fallback if role isn't updated)
+  useEffect(() => {
+    if (organizerId) {
+      fetchAllOrganizers();
+    }
+  }, [organizerId, fetchAllOrganizers]);
+
+  // Get organizer name from organizer store (most up-to-date) or fallback to role
+  // This will automatically update when allOrganizers changes (e.g., when admin edits organizer)
+  // Using useMemo to ensure it recalculates when allOrganizers changes
+  const currentOrganizer = useMemo(() => {
+    if (!organizerId) return null;
+    return allOrganizers.find((org: any) => org.id === organizerId);
+  }, [organizerId, allOrganizers]);
+  
+  const organizerFirstName = currentOrganizer?.first_name || role?.user?.first_name || "";
+  const organizerLastName = currentOrganizer?.last_name || role?.user?.last_name || "";
 
   useEffect(() => {
     if (organizerId) {
@@ -90,9 +112,12 @@ export default function Organizer() {
           <Typography
             variant="h4"
             sx={{
-              fontWeight: 800,
+              fontWeight: 400,
               color: theme.palette.success.main,
-              fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" }
+              fontSize: { xs: "1.75rem", sm: "2.25rem", md: "2.5rem" },
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
             }}
           >
             Organizer Dashboard
@@ -102,7 +127,7 @@ export default function Organizer() {
             color="text.secondary"
             sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
           >
-            {role?.user?.first_name} {role?.user?.last_name}
+            {organizerFirstName} {organizerLastName}
           </Typography>
         </Stack>
 

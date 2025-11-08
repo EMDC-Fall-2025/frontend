@@ -41,31 +41,33 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
 
   const { createOrganizer, editOrganizer } = useOrganizerStore();
 
+  // Fetch user data when editing organizer
   useEffect(() => {
-    if (organizerData && organizerData.id) {
+    if (mode === "edit" && organizerData && organizerData.id) {
       getUserByRole(organizerData.id, 2).catch((error) => {
         // Silently handle 404 - organizer might not have a user mapping yet
         console.warn("Failed to fetch user by role for organizer:", error);
       });
     }
-  }, [organizerData, getUserByRole]);
+  }, [mode, organizerData, getUserByRole]);
 
+  // Update form fields based on mode and data
   useEffect(() => {
     if (mode === "new") {
       // Reset fields when creating new organizer
       setFirstName("");
       setLastName("");
       setUsername("");
-    } else if (organizerData && user) {
-      // Set fields when editing existing organizer
-      setFirstName(organizerData.first_name);
-      setLastName(organizerData.last_name);
-      setUsername(user.username);
-    } else if (!organizerData) {
-      // Reset fields if no organizer data (safety check)
-      setFirstName("");
-      setLastName("");
-      setUsername("");
+    } else if (mode === "edit") {
+      if (organizerData) {
+        // Set fields from organizer data
+        setFirstName(organizerData.first_name || "");
+        setLastName(organizerData.last_name || "");
+        // Use user.username if available, otherwise keep current username
+        if (user?.username) {
+          setUsername(user.username);
+        }
+      }
     }
   }, [mode, organizerData, user]);
 

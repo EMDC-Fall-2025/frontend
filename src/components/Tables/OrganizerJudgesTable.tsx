@@ -263,9 +263,7 @@ function JudgesTable(props: IJudgesTableProps) {
   );
 
   const rows = judges.map((judge) => {
-    // Use composite key to get status for this judge in this specific cluster
-    const statusKey = currentCluster ? `${judge.id}-${currentCluster.id}` : `${judge.id}-all`;
-    const isSubmitted = submissionStatus ? (submissionStatus[statusKey] ?? false) : false;
+    const isSubmitted = submissionStatus ? submissionStatus[judge.id] : false;
     return createDataJudge(
       `${judge.first_name} ${judge.last_name}`,
       `${titles[judge.role - 1]}`,

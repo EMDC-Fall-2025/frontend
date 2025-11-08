@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import axios from "axios";
+import useMapContestOrganizerStore from "../map_stores/mapContestToOrganizerStore";
 
 interface Organizer {
   id: number;
@@ -15,7 +16,7 @@ interface OrganizerState {
   organizer: Organizer | null;
   isLoadingOrganizer: boolean;
   organizerError: string | null;
-  fetchAllOrganizers: () => Promise<void>;
+  fetchAllOrganizers: (forceRefresh?: boolean) => Promise<void>;
   fetchOrganizerById: (organizerId: number) => Promise<void>;
   createOrganizer: (newOrganizer: Omit<Organizer, "id">) => Promise<void>;
   editOrganizer: (editedOrganizer: Organizer) => Promise<void>;
@@ -39,10 +40,10 @@ export const useOrganizerStore = create<OrganizerState>()(
         set({ organizer: null, organizerError: null });
       },
 
-      fetchAllOrganizers: async () => {
-        // Check cache first - if we already have organizers, return early
+      fetchAllOrganizers: async (forceRefresh: boolean = false) => {
+        // Check cache first - if we already have organizers and not forcing refresh, return early
         const cachedOrganizers = get().allOrganizers;
-        if (cachedOrganizers && cachedOrganizers.length > 0) {
+        if (!forceRefresh && cachedOrganizers && cachedOrganizers.length > 0) {
           return; // Use cached data
         }
         
@@ -130,7 +131,7 @@ export const useOrganizerStore = create<OrganizerState>()(
             }
           }
           set({ organizerError: errorMessage });
-          throw error; // Re-throw the original error
+          throw error; 
         } finally {
           set({ isLoadingOrganizer: false });
         }
@@ -139,6 +140,13 @@ export const useOrganizerStore = create<OrganizerState>()(
       editOrganizer: async (editedOrganizer: Organizer) => {
         set({ isLoadingOrganizer: true });
         try {
+          // Get the old organizer name before editing
+          const state = get();
+          const oldOrganizer = state.allOrganizers.find((org) => org.id === editedOrganizer.id);
+          const oldName = oldOrganizer 
+            ? `${oldOrganizer.first_name} ${oldOrganizer.last_name}`.trim()
+            : null;
+
           const token = localStorage.getItem("token");
           // Ensure id is included in the request body
           const payload = {
@@ -162,12 +170,21 @@ export const useOrganizerStore = create<OrganizerState>()(
             username: editedOrganizer.username, // Preserve username from request
           };
           
+          // Calculate new name
+          const newName = `${finalOrganizer.first_name} ${finalOrganizer.last_name}`.trim();
+          
           set((state) => ({
             allOrganizers: state.allOrganizers.map((org) =>
               org.id === editedOrganizer.id ? finalOrganizer : org
             ),
             organizerError: null,
           }));
+
+          // Update organizer name in contest mappings if name changed
+          if (oldName && newName && oldName !== newName) {
+            const { updateOrganizerNameInContests } = useMapContestOrganizerStore.getState();
+            updateOrganizerNameInContests(editedOrganizer.id, oldName, newName);
+          }
         } catch (error: any) {
           // Convert error to string to prevent React rendering issues
           let errorMessage = "Error editing organizer";
@@ -186,7 +203,7 @@ export const useOrganizerStore = create<OrganizerState>()(
             }
           }
           set({ organizerError: errorMessage });
-          throw error; // Re-throw the original error
+          throw error; 
         } finally {
           set({ isLoadingOrganizer: false });
         }

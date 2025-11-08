@@ -188,8 +188,11 @@ export default function ContestScores() {
           <Typography
             variant="h1"
             sx={{
-              fontSize: "2rem",
-              fontWeight: 800,
+              fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+              fontWeight: 400,
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
             }}
           >
             Contest Results
@@ -273,7 +276,15 @@ export default function ContestScores() {
         >
           <Typography
             variant="h5"
-            sx={{ fontWeight: 700, mb: 3, textAlign: "center", fontSize: "1.3rem" }}
+            sx={{ 
+              fontWeight: 400, 
+              mb: 3, 
+              textAlign: "center", 
+              fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
+            }}
           >
             Preliminary Round – Top 6
           </Typography>
@@ -299,7 +310,15 @@ export default function ContestScores() {
         >
           <Typography
             variant="h5"
-            sx={{ fontWeight: 700, mb: 3, textAlign: "center", fontSize: "1.3rem" }}
+            sx={{ 
+              fontWeight: 400, 
+              mb: 3, 
+              textAlign: "center", 
+              fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
+            }}
           >
             Championship Round - Top 6
           </Typography>
@@ -313,7 +332,16 @@ export default function ContestScores() {
 
           <Typography
             variant="h5"
-            sx={{ fontWeight: 700, mb: 3, textAlign: "center", mt: 5, fontSize: "1.3rem" }}
+            sx={{ 
+              fontWeight: 400, 
+              mb: 3, 
+              textAlign: "center", 
+              mt: 5, 
+              fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
+            }}
           >
             Redesign Round – Top 3
           </Typography>
@@ -341,7 +369,15 @@ export default function ContestScores() {
         >
           <Typography
             variant="h5"
-            sx={{ fontWeight: 700, mb: 3, textAlign: "center", fontSize: "1.3rem" }}
+            sx={{ 
+              fontWeight: 400, 
+              mb: 3, 
+              textAlign: "center", 
+              fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
+            }}
           >
             Award Winners
           </Typography>
@@ -371,7 +407,15 @@ export default function ContestScores() {
         >
           <Typography
             variant="h5"
-            sx={{ fontWeight: 700, mb: 3, textAlign: "center", fontSize: "1.3rem" }}
+            sx={{ 
+              fontWeight: 400, 
+              mb: 3, 
+              textAlign: "center", 
+              fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
+            }}
           >
             Contest Highlights
           </Typography>

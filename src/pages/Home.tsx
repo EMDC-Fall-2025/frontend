@@ -28,9 +28,12 @@ export default function Home() {
           <Typography 
             variant="h1"
             sx={{ 
-              fontSize: { xs: "1.5rem", sm: "1.75rem", md: "1.75rem" },
-              lineHeight: 1.3,
-              mb: 2
+              fontSize: { xs: "1.75rem", sm: "2.25rem", md: "2.5rem" },
+              lineHeight: 1.2,
+              mb: 2,
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              fontWeight: 400,
+              letterSpacing: "0.02em",
             }}
           >
             Welcome to the Engineering Machine Design Contest (EMDC) Tabulation
@@ -54,8 +57,12 @@ export default function Home() {
           <Typography 
             variant="h2"
             sx={{ 
-              fontSize: { xs: "1.25rem", sm: "1.5rem" },
-              mb: 2
+              fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem" },
+              mb: 2,
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              fontWeight: 400,
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
             }}
           >
             Contest Overview
@@ -85,8 +92,12 @@ export default function Home() {
           <Typography 
             variant="h2"
             sx={{ 
-              fontSize: { xs: "1.25rem", sm: "1.5rem" },
-              mb: 2
+              fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem" },
+              mb: 2,
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              fontWeight: 400,
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
             }}
           >
             Contest Objectives

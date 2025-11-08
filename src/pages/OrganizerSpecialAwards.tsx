@@ -144,7 +144,18 @@ export default function OrganizerSpecialAwards() {
           {"<"} Back to Organizer
         </Typography>
       </MuiLink>
-      <Typography variant="h4" sx={{ my: 4, ml: 2 }}>
+      <Typography 
+        variant="h4" 
+        sx={{ 
+          my: 4, 
+          ml: 2,
+          fontSize: { xs: "1.75rem", sm: "2.25rem", md: "2.5rem" },
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontWeight: 400,
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
+        }}
+      >
         Organizer Awards Management
       </Typography>
 

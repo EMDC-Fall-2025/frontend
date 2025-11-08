@@ -198,10 +198,9 @@ const Ranking = () => {
       return
     }
 
+    const tId = toast.loading('Advancing teams to championship...')
+
     try {
-
-      const tId = toast.loading('Advancing teams to championship...')
-
       // Call the championship advancement API
       await advanceToChampionship(selectedContest.id, selectedTeams)
 
@@ -210,10 +209,11 @@ const Ranking = () => {
 
       // Force refresh clusters to show new championship/redesign clusters
       await fetchClusters(true)
-    } catch (error) {
-      toast.error('Failed to advance to championship')
+    } catch (error: any) {
+      // Dismiss loading toast and show error
+      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to advance to championship'
+      toast.error(errorMessage, { id: tId })
       console.error('Error advancing to championship:', error)
-      alert('Error advancing to championship. Please try again.')
     }
   }
 

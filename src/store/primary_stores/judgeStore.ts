@@ -7,8 +7,7 @@ interface JudgeState {
   judge: Judge | null;
   isLoadingJudge: boolean;
   judgeError: string | null;
-  // Store submission status per judge per cluster using composite keys: "judgeId-clusterId"
-  submissionStatus: { [key: string]: boolean } | null;
+  submissionStatus: { [key: number]: boolean } | null;
   fetchJudgeById: (judgeId: number) => Promise<void>;
   createJudge: (newJudge: NewJudge) => Promise<Judge>;
   editJudge: (editedJudge: EditedJudge) => Promise<Judge>;
@@ -182,21 +181,8 @@ export const useJudgeStore = create<JudgeState>()(
               },
             }
           );
-          
-          // Merge new cluster status instead of overwriting
-          // Use composite keys: "judgeId-clusterId" to track status per cluster
-          set((state) => {
-            const newStatus: { [key: string]: boolean } = { ...(state.submissionStatus || {}) };
-            
-            // Convert response data to composite keys
-            const responseData = response.data as { [key: number]: boolean };
-            for (const judgeId in responseData) {
-              const key = clusterId ? `${judgeId}-${clusterId}` : `${judgeId}-all`;
-              newStatus[key] = responseData[judgeId];
-            }
-            
-            return { submissionStatus: newStatus, judgeError: null };
-          });
+          set({ submissionStatus: response.data });
+          set({ judgeError: null });
         } catch (judgeError: any) {
           const errorMessage =
             "Error checking score sheets submission:" + judgeError;

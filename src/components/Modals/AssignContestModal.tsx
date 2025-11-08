@@ -49,8 +49,10 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
   useEffect(() => {
     if (contestsByOrganizers[organizerId]) {
       setAssignedContests(contestsByOrganizers[organizerId] || []);
+    } else {
+      setAssignedContests([]);
     }
-  }, [organizerId]);
+  }, [organizerId, contestsByOrganizers]);
 
   // Close modal and reset form
   const handleCloseModal = () => {
