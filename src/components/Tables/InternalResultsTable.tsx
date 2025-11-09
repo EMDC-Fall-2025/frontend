@@ -18,6 +18,8 @@ import { useMapContestToTeamStore } from "../../store/map_stores/mapContestToTea
 import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
 import { useEffect, useMemo, useState } from "react";
 
+// NOTE: Per request, business logic is UNCHANGED. Only UI/interactivity tweaks for mobile & UX.
+
 const COLS = [
   { key: "rank", label: "Rank", width: "6%", align: "center" as const },
   { key: "team", label: "Team", width: "18%", align: "left" as const },
@@ -158,13 +160,21 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
   }, [filteredRows, page]);
 
   const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+
+  // UI-only: make rows clickable for the same navigation as the VIEW button
+  const handleView = (teamId: number) => {
+    if (resultType === 'preliminary') {
+      navigate(`/score-breakdown/${teamId}`);
+    } else if (resultType === 'championship') {
+      navigate(`/championship-score-breakdown/${teamId}`);
+    } else if (resultType === 'redesign') {
+      navigate(`/redesign-score-breakdown/${teamId}`);
+    }
+  };
  
-
-
-
   return (
     <Container maxWidth={false} sx={{ px: 0, py: 0 }}>
-      {/* Wrapper that enables smooth horizontal scroll on small screens */}
+      {/* Horizontal scroll on small screens with nicer scrollbar */}
       <TableContainer
         component={Paper}
         elevation={2}
@@ -174,10 +184,17 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
           overflowX: "auto",
           overflowY: "hidden",
           WebkitOverflowScrolling: "touch",
+          scrollbarWidth: 'thin',
+          '&::-webkit-scrollbar': { height: 8 },
+          '&::-webkit-scrollbar-thumb': {
+            bgcolor: (t) => alpha(t.palette.text.primary, 0.3),
+            borderRadius: 8,
+          },
         }}
       >
         <Table
           size="small"
+          stickyHeader
           sx={{
             // Fill container on larger screens; allow horizontal scroll only when needed
             width: "100%",
@@ -264,10 +281,18 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
                 <TableRow
                   key={team.id}
                   hover
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleView(team.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleView(team.id); }}
                   sx={{
                     bgcolor: rowBg,
                     borderTop: borderColor ? `3px solid ${borderColor}` : undefined,
                     borderBottom: borderColor ? `3px solid ${borderColor}` : undefined,
+                    cursor: 'pointer',
+                    transition: 'background-color 120ms ease',
+                    outline: 'none',
+                    '&:focus-visible': { boxShadow: (t) => `0 0 0 2px ${alpha(t.palette.primary.main, 0.4)}` },
                   }}
                 >
                   <TableCell align="center" sx={{ fontWeight: 900, color: borderColor ?? "text.primary" }}>
@@ -342,19 +367,13 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
                      resultType === 'redesign' ? Number((team.total_score ?? team.redesign_score) || 0).toFixed(1) : 0}
                   </TableCell>
 
-                  <TableCell align="center">
+                  <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                     <Button
                       size="small"
                       variant="outlined"
                       color="success"
                       onClick={() => {
-                        if (resultType === 'preliminary') {
-                          navigate(`/score-breakdown/${team.id}`);
-                        } else if (resultType === 'championship') {
-                          navigate(`/championship-score-breakdown/${team.id}`);
-                        } else if (resultType === 'redesign') {
-                          navigate(`/redesign-score-breakdown/${team.id}`);
-                        }
+                        handleView(team.id);
                       }}
                       sx={{
                         fontSize: { xs: "0.6rem", sm: "0.75rem" },
