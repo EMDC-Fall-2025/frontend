@@ -16,8 +16,11 @@ interface MapClusterTeamState {
   deleteClusterTeamMapping: (mapId: number, clusterId?: number) => Promise<void>;
   deleteTeamCompletely: (teamId: number) => Promise<void>;
   addTeamToCluster: (clusterId: number, team: Team) => void;
-  updateTeamInCluster: (clusterId: number, updatedTeam: Team) => void;
+  updateTeamInCluster: (clusterId: number, updatedTeam: Team) => Promise<void>;
+  removeTeamFromOtherClusters: (teamId: number, newClusterId: number) => void;
+  moveTeamToNewCluster: (oldClusterId: number, newClusterId: number, updatedTeam: Team) => void;
   updateTeamInAllClusters: (teamId: number, updatedTeam: Team) => void;
+
   clearClusters: () => void;
   clearTeamsByClusterId: () => void;
   clearClusterTeamMappings: () => void;
@@ -33,10 +36,8 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
       mapClusterToTeamError: null,
 
       clearClusters: () => set({ clusters: [], mapClusterToTeamError: null }),
-      clearTeamsByClusterId: () =>
-        set({ teamsByClusterId: {}, mapClusterToTeamError: null }),
-      clearClusterTeamMappings: () =>
-        set({ clusterTeamMappings: [], mapClusterToTeamError: null }),
+      clearTeamsByClusterId: () => set({ teamsByClusterId: {}, mapClusterToTeamError: null }),
+      clearClusterTeamMappings: () => set({ clusterTeamMappings: [], mapClusterToTeamError: null }),
 
       fetchClustersByContestId: async (contestId) => {
         set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
@@ -44,12 +45,7 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
           const token = localStorage.getItem("token");
           const response = await axios.get(
             `/api/mapping/clusterToContest/getAllClustersByContest/${contestId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+            { headers: { Authorization: `Token ${token}`, "Content-Type": "application/json" } }
           );
           set({ clusters: response.data.Clusters, isLoadingMapClusterToTeam: false });
         } catch (error) {
@@ -57,64 +53,40 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
         }
       },
 
-      fetchTeamsByClusterId: async (clusterId: number, forceRefresh: boolean = false) => {
-        // Check cache first - if we already have teams for this cluster and not forcing refresh, return early
+      fetchTeamsByClusterId: async (clusterId, forceRefresh = false) => {
         if (!forceRefresh) {
           const cachedTeams = get().teamsByClusterId[clusterId];
-          if (cachedTeams && cachedTeams.length > 0) {
-            return cachedTeams; // Use cached data - no API call, no re-render
-          }
+          if (cachedTeams?.length) return cachedTeams;
         }
-        
+
         set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
         try {
           const token = localStorage.getItem("token");
           const response = await axios.get(
             `/api/mapping/clusterToTeam/getAllTeamsByCluster/${clusterId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+            { headers: { Authorization: `Token ${token}`, "Content-Type": "application/json" } }
           );
           const teams = response.data?.Teams || [];
-          // Update store state with fetched teams
-          set((state) => ({
-            teamsByClusterId: {
-              ...state.teamsByClusterId,
-              [clusterId]: teams,
-            },
+          set((s) => ({
+            teamsByClusterId: { ...s.teamsByClusterId, [clusterId]: teams },
             isLoadingMapClusterToTeam: false,
-            mapClusterToTeamError: null,
           }));
           return teams;
         } catch (error) {
-          const errorMessage = "Error fetching teams by cluster";
-          set({ mapClusterToTeamError: errorMessage, isLoadingMapClusterToTeam: false });
-          throw new Error(errorMessage);
+          handleError(error, set, "Error fetching teams");
+          throw error;
         }
       },
 
-      createClusterTeamMapping: async (data: ClusterTeamMapping) => {
+      createClusterTeamMapping: async (data) => {
         set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.post(
-            `/api/mapping/clusterToTeam/create/`,
-            data,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
-          );
-          set((state) => ({
-            clusterTeamMappings: [
-              ...state.clusterTeamMappings,
-              response.data.mapping,
-            ],
+          const response = await axios.post(`/api/mapping/clusterToTeam/create/`, data, {
+            headers: { Authorization: `Token ${token}`, "Content-Type": "application/json" },
+          });
+          set((s) => ({
+            clusterTeamMappings: [...s.clusterTeamMappings, response.data.mapping],
             isLoadingMapClusterToTeam: false,
           }));
         } catch (error) {
@@ -122,30 +94,24 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
         }
       },
 
-      deleteClusterTeamMapping: async (mapId: number, clusterId?: number) => {
+      deleteClusterTeamMapping: async (mapId, clusterId) => {
         set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
         try {
           const token = localStorage.getItem("token");
           await axios.delete(`/api/mapping/clusterToTeam/delete/${mapId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
+            headers: { Authorization: `Token ${token}`, "Content-Type": "application/json" },
           });
-          set((state) => ({
-            clusterTeamMappings: state.clusterTeamMappings.filter(
-              (mapping) => mapping.id !== mapId
-            ),
-          
-            // Find the team with matching map_id and remove it
+
+          set((s) => ({
+            clusterTeamMappings: s.clusterTeamMappings.filter((m) => m.id !== mapId),
             teamsByClusterId: clusterId
               ? {
-                  ...state.teamsByClusterId,
-                  [clusterId]: (state.teamsByClusterId[clusterId] || []).filter(
-                    (team) => (team as any).map_id !== mapId
-                  ),
-                }
-              : state.teamsByClusterId,
+                ...s.teamsByClusterId,
+                [clusterId]: (s.teamsByClusterId[clusterId] || []).filter(
+                  (team) => (team as any).map_id !== mapId
+                ),
+              }
+              : s.teamsByClusterId,
             isLoadingMapClusterToTeam: false,
           }));
         } catch (error) {
@@ -153,98 +119,120 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
         }
       },
 
-      deleteTeamCompletely: async (teamId: number) => {
+      deleteTeamCompletely: async (teamId) => {
         set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
         try {
           const token = localStorage.getItem("token");
           await axios.delete(`/api/team/delete/${teamId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
+            headers: { Authorization: `Token ${token}`, "Content-Type": "application/json" },
           });
-          // Remove team from all clusters in UI state
-          set((state) => {
-            const updatedTeamsByClusterId: { [key: number]: Team[] } = {};
-            Object.keys(state.teamsByClusterId).forEach((clusterId) => {
-              updatedTeamsByClusterId[Number(clusterId)] = (
-                state.teamsByClusterId[Number(clusterId)] || []
-              ).filter((team) => team.id !== teamId);
-            });
-            return {
-              teamsByClusterId: updatedTeamsByClusterId,
-              isLoadingMapClusterToTeam: false,
-              mapClusterToTeamError: null,
-            };
+
+          // Remove from all clusters in local state
+          set((s) => {
+            const updated = Object.fromEntries(
+              Object.entries(s.teamsByClusterId).map(([cid, teams]) => [
+                Number(cid),
+                teams.filter((t) => t.id !== teamId),
+              ])
+            );
+            return { teamsByClusterId: updated, isLoadingMapClusterToTeam: false };
           });
         } catch (error) {
           handleError(error, set, "Error deleting team completely");
         }
       },
 
-      addTeamToCluster: (clusterId: number, team: Team) => {
-        set((state) => ({
+      //Add to cluster (auto-remove from old clusters to avoid duplicates)
+      addTeamToCluster: (clusterId, team) => {
+        const { removeTeamFromOtherClusters } = get();
+        removeTeamFromOtherClusters(team.id, clusterId);
+        set((s) => ({
           teamsByClusterId: {
-            ...state.teamsByClusterId,
-            [clusterId]: [...(state.teamsByClusterId[clusterId] || []), team],
+            ...s.teamsByClusterId,
+            [clusterId]: [...(s.teamsByClusterId[clusterId] || []), team],
           },
         }));
       },
 
-      updateTeamInCluster: (clusterId: number, updatedTeam: Team) => {
-        set((state) => ({
+      //Remove a team from all clusters except one
+      removeTeamFromOtherClusters: (teamId, newClusterId) => {
+        set((s) => {
+          const updated = { ...s.teamsByClusterId };
+          for (const [cid, teams] of Object.entries(updated)) {
+            const num = Number(cid);
+            if (num === newClusterId) continue;
+            updated[num] = teams.filter((t) => t.id !== teamId);
+          }
+          return { teamsByClusterId: updated };
+        });
+      },
+
+      //Move team between clusters instantly
+      moveTeamToNewCluster: (oldClusterId, newClusterId, updatedTeam) => {
+        set((s) => {
+          const updated = { ...s.teamsByClusterId };
+          if (updated[oldClusterId]) {
+            updated[oldClusterId] = updated[oldClusterId].filter(
+              (t) => t.id !== updatedTeam.id
+            );
+          }
+          const newTeams = updated[newClusterId] || [];
+          updated[newClusterId] = [...newTeams.filter((t) => t.id !== updatedTeam.id), updatedTeam];
+          return { teamsByClusterId: updated };
+        });
+      },
+
+      //Update and handle cluster switching instantly
+      updateTeamInCluster: async (clusterId, updatedTeam) => {
+        const { moveTeamToNewCluster, fetchTeamsByClusterId } = get();
+
+        // instant UI update
+        set((s) => ({
           teamsByClusterId: {
-            ...state.teamsByClusterId,
-            [clusterId]: (state.teamsByClusterId[clusterId] || []).map((t) =>
+            ...s.teamsByClusterId,
+            [clusterId]: (s.teamsByClusterId[clusterId] || []).map((t) =>
               t.id === updatedTeam.id ? updatedTeam : t
             ),
           },
         }));
+
+        // handle if cluster changed
+        if (updatedTeam.cluster_id && updatedTeam.cluster_id !== clusterId) {
+          moveTeamToNewCluster(clusterId, updatedTeam.cluster_id, updatedTeam);
+          await Promise.all([
+            fetchTeamsByClusterId(clusterId, true),
+            fetchTeamsByClusterId(updatedTeam.cluster_id, true),
+          ]);
+        } else {
+          await fetchTeamsByClusterId(clusterId, true);
+        }
       },
 
-      updateTeamInAllClusters: (teamId: number, updatedTeam: Team) => {
-        set((state) => {
+      //Update team across all clusters 
+      updateTeamInAllClusters: (teamId, updatedTeam) => {
+        set((s) => {
           const updatedTeamsByClusterId: { [key: number]: Team[] } = {};
-          let hasChanges = false;
-          
-          // Update team in all clusters where it appears
-          Object.keys(state.teamsByClusterId).forEach((clusterIdStr) => {
-            const clusterId = parseInt(clusterIdStr);
-            const teams = state.teamsByClusterId[clusterId];
-            if (teams && Array.isArray(teams)) {
-              const teamIndex = teams.findIndex((t: Team) => t.id === teamId);
-              if (teamIndex !== -1) {
-                const updatedTeams = [...teams];
-                updatedTeams[teamIndex] = updatedTeam;
-                updatedTeamsByClusterId[clusterId] = updatedTeams;
-                hasChanges = true;
-              }
-            }
-          });
-          
-          // Always return a new state object to ensure Zustand detects the change
-          return {
-            ...state,
-            teamsByClusterId: hasChanges
-              ? {
-                  ...state.teamsByClusterId,
-                  ...updatedTeamsByClusterId,
-                }
-              : state.teamsByClusterId,
-          };
+          for (const [cid, teams] of Object.entries(s.teamsByClusterId)) {
+            const id = Number(cid);
+            updatedTeamsByClusterId[id] = teams.map((t) =>
+              t.id === teamId ? updatedTeam : t
+            );
+          }
+          return { teamsByClusterId: updatedTeamsByClusterId };
         });
       },
     }),
     {
       name: "map-cluster-team-storage",
       storage: createJSONStorage(() => sessionStorage),
+      partialize: (s) => ({ clusters: s.clusters }),
     }
   )
 );
 
-const handleError = (error: any, set: any, defaultMessage: string) => {
+const handleError = (error: any, set: any, msg: string) => {
   set({
-    mapClusterToTeamError: error.response?.data?.detail || defaultMessage,
+    mapClusterToTeamError: error.response?.data?.detail || msg,
     isLoadingMapClusterToTeam: false,
   });
 };

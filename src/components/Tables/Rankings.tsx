@@ -52,24 +52,6 @@ const Ranking = () => {
   const fetchClusters = useCallback(async (forceRefresh = false) => {
     if (!selectedContest || !token) return
     try {
-      // 1) Try cache first (only if not forcing refresh)
-      if (!forceRefresh) {
-        try {
-          const cacheKey = `rankings:contest:${selectedContest.id}`
-          const raw = localStorage.getItem(cacheKey)
-          if (raw) {
-            const cached = JSON.parse(raw)
-            // basic TTL of 60s - if cache is fresh, use it and skip API call
-            if (cached && typeof cached === 'object' && Date.now() - (cached.timestamp || 0) < 60_000) {
-              if (Array.isArray(cached.clusters)) {
-                setClusters(cached.clusters)
-                return // Skip API call if cache is fresh
-              }
-            }
-          }
-        } catch { }
-      }
-
       // 2) Fetch fresh data from API 
       const { data: clusterResp } = await axios.get(`/api/mapping/clusterToContest/getAllClustersByContest/${selectedContest.id}/`, {
         headers: { Authorization: `Token ${token}` }
@@ -106,10 +88,6 @@ const Ranking = () => {
       setClusters(withTeams)
 
       // 2) Save fresh data to cache
-      try {
-        const cacheKey = `rankings:contest:${selectedContest.id}`
-        localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), clusters: withTeams }))
-      } catch { }
     } catch (e) {
       console.error('Failed to load contest data:', e)
     }
@@ -118,12 +96,12 @@ const Ranking = () => {
   // Load clusters and teams for selected contest
   useEffect(() => {
     fetchClusters()
-    
+
     // Auto-refresh every 20 seconds
     const interval = setInterval(() => {
       fetchClusters(true) // Force refresh 
-    }, 20000); 
-    
+    }, 20000);
+
     return () => {
       clearInterval(interval);
     };

@@ -43,7 +43,7 @@ export default function TeamModal(props: ITeamModalProps) {
   const [coachLastName, setCoachLastName] = useState("");
   const [coachEmail, setCoachEmail] = useState("");
   const { createTeam, editTeam } = useTeamStore();
-  const { addTeamToCluster } = useMapClusterTeamStore();
+  const { addTeamToCluster, updateTeamInCluster } = useMapClusterTeamStore();
 
   const title = mode === "new" ? "New Team" : "Edit Team";
 
@@ -70,20 +70,20 @@ export default function TeamModal(props: ITeamModalProps) {
           last_name: coachLastName || "",
           contestid: contestId,
         });
-        
+
         if (createdTeam) {
           // Always add team to "All Teams" cluster in UI
-          const allTeamsCluster = clusters?.find(c => c.cluster_name === "All Teams");
+          const allTeamsCluster = clusters?.find((c) => c.cluster_name === "All Teams");
           if (allTeamsCluster) {
             addTeamToCluster(allTeamsCluster.id, createdTeam);
           }
-          
+
           // If a specific cluster was also selected, add team to that cluster too
           if (cluster !== -1 && cluster !== allTeamsCluster?.id) {
             addTeamToCluster(cluster, createdTeam);
           }
         }
-        
+
         toast.success("Team created successfully!");
         onSuccess?.();
         handleCloseModal();
@@ -97,8 +97,7 @@ export default function TeamModal(props: ITeamModalProps) {
   const handleEditTeam = async () => {
     try {
       // Update team with current form values
-      // Note: username is disabled in edit mode, so we use the original teamData username
-      await editTeam({
+      const updatedTeam = await editTeam({
         id: teamData?.id ?? 0,
         team_name: teamName,
         school_name: schoolName || "NA",
@@ -109,7 +108,13 @@ export default function TeamModal(props: ITeamModalProps) {
         contestid: contestId ?? 0,
       });
 
-      // updateTeamInAllClusters is already called in editTeam, so no need to manually update clusters
+      if (updatedTeam && cluster !== -1) {
+        updateTeamInCluster(cluster, updatedTeam);
+        if (teamData && teamData.clusterid !== cluster && teamData.clusterid !== -1) {
+          updateTeamInCluster(teamData.clusterid, updatedTeam);
+        }
+      }
+
       toast.success("Team updated successfully!");
       onSuccess?.();
       handleCloseModal();
@@ -151,11 +156,7 @@ export default function TeamModal(props: ITeamModalProps) {
   };
 
   return (
-    <Modal
-      open={open}
-      handleClose={handleCloseModal}
-      title={title}
-    >
+    <Modal open={open} handleClose={handleCloseModal} title={title}>
       <form
         onSubmit={handleSubmit}
         style={{
@@ -226,7 +227,7 @@ export default function TeamModal(props: ITeamModalProps) {
           disabled={mode === "edit"}
           sx={{ mt: 3, width: 300 }}
         />
-        
+
         <Button
           type="submit"
           sx={{
@@ -243,7 +244,7 @@ export default function TeamModal(props: ITeamModalProps) {
               inset 0 1px 0 rgba(255, 255, 255, 0.2)
             `,
             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-            "&:hover": { 
+            "&:hover": {
               bgcolor: theme.palette.success.dark,
               transform: "translateY(-2px)",
               boxShadow: `
@@ -267,4 +268,3 @@ export default function TeamModal(props: ITeamModalProps) {
     </Modal>
   );
 }
-
