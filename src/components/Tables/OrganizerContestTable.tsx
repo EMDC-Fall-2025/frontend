@@ -53,14 +53,13 @@ export default function OrganizerContestTable(
 
   const [selectedContest, setSelectedContest] = useState<any>(null);
 
-  const {
-    fetchContestsByOrganizerId,
-    contests,
-    isLoadingMapContestOrganizer,
-    clearContests,
-    mapContestOrganizerError,
-    clearMapContestOrganizerError,
-  } = useMapContestOrganizerStore();
+  // Use selectors to subscribe to contest updates
+  const contests = useMapContestOrganizerStore((state) => state.contests);
+  const fetchContestsByOrganizerId = useMapContestOrganizerStore((state) => state.fetchContestsByOrganizerId);
+  const isLoadingMapContestOrganizer = useMapContestOrganizerStore((state) => state.isLoadingMapContestOrganizer);
+  const clearContests = useMapContestOrganizerStore((state) => state.clearContests);
+  const mapContestOrganizerError = useMapContestOrganizerStore((state) => state.mapContestOrganizerError);
+  const clearMapContestOrganizerError = useMapContestOrganizerStore((state) => state.clearMapContestOrganizerError);
   const { role } = useAuthStore();
   const { editContest, contestError } = useContestStore();
   const {

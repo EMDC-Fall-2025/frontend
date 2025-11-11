@@ -1,7 +1,8 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // 
 import Typography from "@mui/material/Typography";
-import { Container, Stack } from "@mui/material";
+import { Container, Stack, Button, Box } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../theme";
 import { useContestStore } from "../store/primary_stores/contestStore";
 import ContestTable from "../components/Tables/ContestTable";
@@ -22,16 +23,15 @@ export default function Contests() {
     id: number,
     name: string,
     date: string,
-    is_open: boolean
+    is_open: boolean,
+    is_tabulated?: boolean
   ) {
-    const today = new Date();
-    const contestDate = new Date(date);
     let status = "";
 
-    if (!is_open && contestDate < today) {
-      status = "Finalized";
-    } else if (is_open) {
+    if (is_open) {
       status = "In Progress";
+    } else if (is_tabulated) {
+      status = "Finalized";
     } else {
       status = "Not Started";
     }
@@ -39,13 +39,13 @@ export default function Contests() {
     return { id, name, date, status };
   }
 
+
   // Navigate to specific contest results
   const handleRowClick = (contestId: number) => {
     const contest = allContests.find((c: any) => c.id === contestId);
-    if (contest && contest.is_open == false && contest.is_tabulated == true){
-    navigate(`/contestresults/${contestId}`);
-    }
-    else{
+    if (contest && contest.is_open == false && contest.is_tabulated == true) {
+      navigate(`/contestresults/${contestId}`);
+    } else {
       toast.success(
         "🎉 Stay tuned! Results will be available once the contest ends and scores are finalized!",
         {
@@ -70,9 +70,10 @@ export default function Contests() {
 
   // transforms array into rows
   const rows = allContests
-    .map((contest: { id: number; name: string; date: string; is_open: boolean }) =>
-      createData(contest.id, contest.name, contest.date, contest.is_open)
+    .map((contest: { id: number; name: string; date: string; is_open: boolean; is_tabulated: boolean }) =>
+      createData(contest.id, contest.name, contest.date, contest.is_open, contest.is_tabulated)
     )
+
     .sort((a: { status: string }, b: { status: string }) => {
       const order = { Finalized: 1, "In Progress": 2, "Not Started": 3 };
       return order[a.status as keyof typeof order] - order[b.status as keyof typeof order];
@@ -81,25 +82,64 @@ export default function Contests() {
   return (
     <>
       {/* Title Section */}
-      <Stack spacing={1} sx={{ mt: 5, mb: 3, ml: { xs: 3, sm: 6, md: 10 } }}>
-        <Typography
-          variant="h4"
-          sx={{
-            fontWeight: 800,
-            color: theme.palette.primary.main,
-          }}
-        >
-          Contests
-        </Typography>
-      </Stack>
+      <Container
+        maxWidth="lg"
+        sx={{
+          px: { xs: 3, sm: 5 },
+          mt: 2,
+          mb: 2,
+        }}
+      >
+        {/* Back to Homepage */}
+        <Box sx={{ mb: 1, mt: { xs: 1, sm: 2 } }}>
+          <Button
+            component={Link}
+            to="/"
+            startIcon={<ArrowBackIcon />}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.success.dark,
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              fontWeight: 500,
+              px: { xs: 1.5, sm: 2 },
+              py: { xs: 0.75, sm: 1 },
+              borderRadius: "8px",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                backgroundColor: "rgba(76, 175, 80, 0.08)",
+                transform: "translateX(-2px)",
+              },
+            }}
+          >
+            Back to Homepage
+          </Button>
+        </Box>
+
+        <Stack spacing={1} sx={{ mb: 1 }}>
+          <Typography
+            variant="h1"
+            sx={{
+              fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+              fontWeight: 400,
+              color: theme.palette.primary.main,
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
+            }}
+          >
+            Contests
+          </Typography>
+        </Stack>
+
+      </Container>
 
       {/* Table Container */}
       <Container
         maxWidth="lg"
         sx={{
-          border: `1px solid ${theme.palette.grey[300]}`,
-          borderRadius: 3,
-          backgroundColor: "#fff",
+          backgroundColor: "transparent",
+          boxShadow: "none",
+          border: "none",
           p: 3,
         }}
       >

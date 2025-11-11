@@ -15,6 +15,7 @@ import React, { useEffect, useState } from "react";
 import { useOrganizerStore } from "../../store/primary_stores/organizerStore";
 import useUserRoleStore from "../../store/map_stores/mapUserToRoleStore";
 import toast from "react-hot-toast";
+import { handleAccountError } from "../../utils/errorHandler";
 
 export interface IOrganizerModalProps {
   open: boolean;
@@ -41,31 +42,33 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
 
   const { createOrganizer, editOrganizer } = useOrganizerStore();
 
+  // Fetch user data when editing organizer
   useEffect(() => {
-    if (organizerData && organizerData.id) {
+    if (mode === "edit" && organizerData && organizerData.id) {
       getUserByRole(organizerData.id, 2).catch((error) => {
         // Silently handle 404 - organizer might not have a user mapping yet
         console.warn("Failed to fetch user by role for organizer:", error);
       });
     }
-  }, [organizerData, getUserByRole]);
+  }, [mode, organizerData, getUserByRole]);
 
+  // Update form fields based on mode and data
   useEffect(() => {
     if (mode === "new") {
       // Reset fields when creating new organizer
       setFirstName("");
       setLastName("");
       setUsername("");
-    } else if (organizerData && user) {
-      // Set fields when editing existing organizer
-      setFirstName(organizerData.first_name);
-      setLastName(organizerData.last_name);
-      setUsername(user.username);
-    } else if (!organizerData) {
-      // Reset fields if no organizer data (safety check)
-      setFirstName("");
-      setLastName("");
-      setUsername("");
+    } else if (mode === "edit") {
+      if (organizerData) {
+        // Set fields from organizer data
+        setFirstName(organizerData.first_name || "");
+        setLastName(organizerData.last_name || "");
+        // Use user.username if available, otherwise keep current username
+        if (user?.username) {
+          setUsername(user.username);
+        }
+      }
     }
   }, [mode, organizerData, user]);
 
@@ -94,35 +97,7 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
       toast.success("Organizer created successfully!");
       handleCloseModal(); // Use handleCloseModal to reset fields
     } catch (error: any) {
-      // Handle organizer creation errors with user-friendly messages
-      let errorMessage = "";
-      
-      // Extract error message from various possible response structures
-      if (error?.response?.data) {
-        const data = error.response.data;
-        if (typeof data === 'string') {
-          errorMessage = data;
-        } else if (data.error && typeof data.error === 'string') {
-          errorMessage = data.error;
-        } else if (data.detail && typeof data.detail === 'string') {
-          errorMessage = data.detail;
-        } else if (data.message && typeof data.message === 'string') {
-          errorMessage = data.message;
-        } else if (data.errors && typeof data.errors === 'object') {
-          // Handle Django-style error objects
-          errorMessage = JSON.stringify(data.errors);
-        }
-      } else if (error?.message && typeof error.message === 'string') {
-        errorMessage = error.message;
-      }
-      
-      if (errorMessage.toLowerCase().includes("already exists") || 
-          errorMessage.toLowerCase().includes("duplicate") ||
-          errorMessage.toLowerCase().includes("username") && errorMessage.toLowerCase().includes("taken")) {
-        toast.error("Account already exists in the system");
-      } else {
-        toast.error("Failed to create organizer. Please try again.");
-      }
+      handleAccountError(error, "create");
     }
   };
 
@@ -146,8 +121,7 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
         toast.success("Organizer updated successfully!");
         handleCloseModal(); // Use handleCloseModal to reset fields
       } catch (error: any) {
-        // Handle organizer update errors
-        toast.error("Failed to update organizer. Please try again.");
+        handleAccountError(error, "update");
       }
     }
   };
@@ -209,18 +183,39 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
           }
           sx={{ mt: 3, width: 300 }}
         />
-        {/* Submit button - updated to use modern green success theme */}
+        {/* Submit button - updated with smooth 3D effect and green glow */}
         <Button
           type="submit"
           sx={{
             width: 170,
             height: 44,
             bgcolor: theme.palette.success.main,
-            "&:hover": { bgcolor: theme.palette.success.dark },
             color: "#fff",
             mt: 4,
             textTransform: "none",
-            borderRadius: 2,
+            borderRadius: "12px",
+            boxShadow: `
+              0 4px 12px rgba(76, 175, 80, 0.3),
+              0 2px 4px rgba(76, 175, 80, 0.2),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2)
+            `,
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            "&:hover": { 
+              bgcolor: theme.palette.success.dark,
+              transform: "translateY(-2px)",
+              boxShadow: `
+                0 6px 16px rgba(76, 175, 80, 0.4),
+                0 4px 8px rgba(76, 175, 80, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2)
+              `,
+            },
+            "&:active": {
+              transform: "translateY(0px)",
+              boxShadow: `
+                0 2px 8px rgba(76, 175, 80, 0.3),
+                inset 0 2px 4px rgba(0, 0, 0, 0.1)
+              `,
+            },
           }}
         >
           {buttonText}

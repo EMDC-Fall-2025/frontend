@@ -18,6 +18,7 @@ import {
 import Modal from "./Modal";
 import theme from "../../theme";
 import toast from "react-hot-toast";
+import { handleAccountError } from "../../utils/errorHandler";
 import { useEffect, useState } from "react";
 import useUserRoleStore from "../../store/map_stores/mapUserToRoleStore";
 import { useJudgeStore } from "../../store/primary_stores/judgeStore";
@@ -221,34 +222,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
         toast.success("Judge created successfully!");
         handleCloseModal();
       } catch (error: any) {
-        let errorMessage = "";
-
-  
-        if (error?.response?.data) {
-          const data = error.response.data;
-          if (typeof data === 'string') {
-            errorMessage = data;
-          } else if (data.error && typeof data.error === 'string') {
-            errorMessage = data.error;
-          } else if (data.detail && typeof data.detail === 'string') {
-            errorMessage = data.detail;
-          } else if (data.message && typeof data.message === 'string') {
-            errorMessage = data.message;
-          } else if (data.errors && typeof data.errors === 'object') {
-       
-            errorMessage = JSON.stringify(data.errors);
-          }
-        } else if (error?.message && typeof error.message === 'string') {
-          errorMessage = error.message;
-        }
-
-        if (errorMessage.toLowerCase().includes("already exists") ||
-          errorMessage.toLowerCase().includes("duplicate") ||
-          errorMessage.toLowerCase().includes("username") && errorMessage.toLowerCase().includes("taken")) {
-          toast.error("Account already exists in the system");
-        } else {
-          toast.error("Failed to create judge. Please try again.");
-        }
+        handleAccountError(error, "create");
       }
     }
   };
@@ -314,34 +288,12 @@ export default function JudgeModal(props: IJudgeModalProps) {
         handleCloseModal();
       } catch (error: any) {
         console.error("Judge update error:", error);
-
-        let errorMessage = "";
-        if (error?.response?.data) {
-          const data = error.response.data;
-          if (typeof data === 'string') {
-            errorMessage = data;
-          } else if (data.error && typeof data.error === 'string') {
-            errorMessage = data.error;
-          } else if (data.detail && typeof data.detail === 'string') {
-            errorMessage = data.detail;
-          } else if (data.message && typeof data.message === 'string') {
-            errorMessage = data.message;
-          } else if (data.errors && typeof data.errors === 'object') {
-            errorMessage = JSON.stringify(data.errors);
-          }
-        } else if (error?.message && typeof error.message === 'string') {
-          errorMessage = error.message;
-        }
-
+        const errorMessage = handleAccountError(error, "update");
         setErrorMessage(errorMessage || null);
         setErrors({
           ...errors,
           cluster: errorMessage ? true : false,
         });
-        
-        if (!errorMessage) {
-          toast.error("Failed to update judge. Please try again.");
-        }
       }
     }
   };
@@ -683,13 +635,34 @@ export default function JudgeModal(props: IJudgeModalProps) {
               width: { xs: "100%", sm: 130 },
               height: { xs: 40, sm: 44 },
               bgcolor: theme.palette.success.main,
-              "&:hover": { bgcolor: theme.palette.success.dark },
               color: "#fff",
               mt: { xs: 2, sm: 3 },
               textTransform: "none",
-              borderRadius: 2,
+              borderRadius: "12px",
               fontSize: { xs: "0.9rem", sm: "1rem" },
               fontWeight: 600,
+              boxShadow: `
+                0 4px 12px rgba(76, 175, 80, 0.3),
+                0 2px 4px rgba(76, 175, 80, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2)
+              `,
+              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              "&:hover": { 
+                bgcolor: theme.palette.success.dark,
+                transform: "translateY(-2px)",
+                boxShadow: `
+                  0 6px 16px rgba(76, 175, 80, 0.4),
+                  0 4px 8px rgba(76, 175, 80, 0.3),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.2)
+                `,
+              },
+              "&:active": {
+                transform: "translateY(0px)",
+                boxShadow: `
+                  0 2px 8px rgba(76, 175, 80, 0.3),
+                  inset 0 2px 4px rgba(0, 0, 0, 0.1)
+                `,
+              },
             }}
           >
             {buttonText}

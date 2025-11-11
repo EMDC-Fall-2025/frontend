@@ -153,7 +153,17 @@ export default function Coach() {
     <Box sx={{ pb: 8, backgroundColor: "#fafafa", minHeight: "100vh" }}>
       <Container maxWidth="lg">
         <Stack spacing={1} sx={{ mb: 3, mt: 3 }}>
-          <Typography variant="h4" sx={{ fontWeight: 800, color: theme.palette.success.main }}>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontWeight: 400, 
+              color: theme.palette.success.main,
+              fontSize: { xs: "1.75rem", sm: "2.25rem", md: "2.5rem" },
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
+            }}
+          >
             Coach Dashboard
           </Typography>
           <Typography variant="subtitle1" color="text.secondary">

@@ -37,20 +37,16 @@ function createData(
 export default function AdminContestTable() {
   const navigate = useNavigate();
 
-  // Contest store for managing contest data
-  const {
-    fetchAllContests,
-    allContests,
-    deleteContest,
-    isLoadingContest,
-  } = useContestStore();
+  // Contest store for managing contest data - use selectors to subscribe to updates
+  const allContests = useContestStore((state) => state.allContests);
+  const fetchAllContests = useContestStore((state) => state.fetchAllContests);
+  const deleteContest = useContestStore((state) => state.deleteContest);
+  const isLoadingContest = useContestStore((state) => state.isLoadingContest);
 
-  // Organizer mapping store for contest-organizer relationships
-  const {
-    fetchOrganizerNamesByContests,
-    organizerNamesByContests,
-    isLoadingMapContestOrganizer,
-  } = useMapContestOrganizerStore();
+  // Organizer mapping store for contest-organizer relationships - use selectors to subscribe to updates
+  const organizerNamesByContests = useMapContestOrganizerStore((state) => state.organizerNamesByContests);
+  const fetchOrganizerNamesByContests = useMapContestOrganizerStore((state) => state.fetchOrganizerNamesByContests);
+  const isLoadingMapContestOrganizer = useMapContestOrganizerStore((state) => state.isLoadingMapContestOrganizer);
 
   // Modal state management
   const [openAreYouSure, setOpenAreYouSure] = useState(false);

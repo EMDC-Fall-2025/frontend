@@ -13,9 +13,11 @@ interface MapClusterTeamState {
   fetchClustersByContestId: (contestId: number) => Promise<void>;
   fetchTeamsByClusterId: (clusterId: number, forceRefresh?: boolean) => Promise<Team[]>;
   createClusterTeamMapping: (data: ClusterTeamMapping) => Promise<void>;
-  deleteClusterTeamMapping: (mapId: number) => Promise<void>;
+  deleteClusterTeamMapping: (mapId: number, clusterId?: number) => Promise<void>;
+  deleteTeamCompletely: (teamId: number) => Promise<void>;
   addTeamToCluster: (clusterId: number, team: Team) => void;
   updateTeamInCluster: (clusterId: number, updatedTeam: Team) => void;
+  updateTeamInAllClusters: (teamId: number, updatedTeam: Team) => void;
   clearClusters: () => void;
   clearTeamsByClusterId: () => void;
   clearClusterTeamMappings: () => void;
@@ -120,7 +122,7 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
         }
       },
 
-      deleteClusterTeamMapping: async (mapId: number) => {
+      deleteClusterTeamMapping: async (mapId: number, clusterId?: number) => {
         set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
         try {
           const token = localStorage.getItem("token");
@@ -134,10 +136,49 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
             clusterTeamMappings: state.clusterTeamMappings.filter(
               (mapping) => mapping.id !== mapId
             ),
+          
+            // Find the team with matching map_id and remove it
+            teamsByClusterId: clusterId
+              ? {
+                  ...state.teamsByClusterId,
+                  [clusterId]: (state.teamsByClusterId[clusterId] || []).filter(
+                    (team) => (team as any).map_id !== mapId
+                  ),
+                }
+              : state.teamsByClusterId,
             isLoadingMapClusterToTeam: false,
           }));
         } catch (error) {
           handleError(error, set, "Error deleting cluster-team mapping");
+        }
+      },
+
+      deleteTeamCompletely: async (teamId: number) => {
+        set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
+        try {
+          const token = localStorage.getItem("token");
+          await axios.delete(`/api/team/delete/${teamId}/`, {
+            headers: {
+              Authorization: `Token ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+          // Remove team from all clusters in UI state
+          set((state) => {
+            const updatedTeamsByClusterId: { [key: number]: Team[] } = {};
+            Object.keys(state.teamsByClusterId).forEach((clusterId) => {
+              updatedTeamsByClusterId[Number(clusterId)] = (
+                state.teamsByClusterId[Number(clusterId)] || []
+              ).filter((team) => team.id !== teamId);
+            });
+            return {
+              teamsByClusterId: updatedTeamsByClusterId,
+              isLoadingMapClusterToTeam: false,
+              mapClusterToTeamError: null,
+            };
+          });
+        } catch (error) {
+          handleError(error, set, "Error deleting team completely");
         }
       },
 
@@ -159,6 +200,39 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
             ),
           },
         }));
+      },
+
+      updateTeamInAllClusters: (teamId: number, updatedTeam: Team) => {
+        set((state) => {
+          const updatedTeamsByClusterId: { [key: number]: Team[] } = {};
+          let hasChanges = false;
+          
+          // Update team in all clusters where it appears
+          Object.keys(state.teamsByClusterId).forEach((clusterIdStr) => {
+            const clusterId = parseInt(clusterIdStr);
+            const teams = state.teamsByClusterId[clusterId];
+            if (teams && Array.isArray(teams)) {
+              const teamIndex = teams.findIndex((t: Team) => t.id === teamId);
+              if (teamIndex !== -1) {
+                const updatedTeams = [...teams];
+                updatedTeams[teamIndex] = updatedTeam;
+                updatedTeamsByClusterId[clusterId] = updatedTeams;
+                hasChanges = true;
+              }
+            }
+          });
+          
+          // Always return a new state object to ensure Zustand detects the change
+          return {
+            ...state,
+            teamsByClusterId: hasChanges
+              ? {
+                  ...state.teamsByClusterId,
+                  ...updatedTeamsByClusterId,
+                }
+              : state.teamsByClusterId,
+          };
+        });
       },
     }),
     {

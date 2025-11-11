@@ -2,10 +2,10 @@ import {
   Box,
   Button,
   Container,
-  Link,
   Tab,
   Typography,
 } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link as RouterLink } from "react-router-dom";
 import theme from "../theme";
@@ -46,8 +46,9 @@ export default function ManageContest() {
 
   const { role } = useAuthStore();
 
-  // Contest data management
-  const { contest, fetchContestById } = useContestStore();
+  // Contest data management - use selector to subscribe to contest updates
+  const contest = useContestStore((state) => state.contest);
+  const fetchContestById = useContestStore((state) => state.fetchContestById);
   
   const { getAllJudgesByContestId } = useContestJudgeStore();
 
@@ -117,40 +118,72 @@ export default function ManageContest() {
   return (
   <>
     {/* Back to Dashboard */}
-    {role?.user_type === 2 && (
-      <Link component={RouterLink} to="/organizer" sx={{ textDecoration: "none" }}>
-        <Typography
-          variant="body2"
+    <Box sx={{ mb: 1, mt: { xs: 1, sm: 2 }, ml: { xs: 2, sm: 3 } }}>
+      {role?.user_type === 2 && (
+        <Button
+          component={RouterLink}
+          to="/organizer"
+          startIcon={<ArrowBackIcon />}
           sx={{
-            m: 2,
-            color: theme.palette.primary.main,
-            "&:hover": { textDecoration: "underline" },
+            textTransform: "none",
+            color: theme.palette.success.dark,
+            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+            fontWeight: 500,
+            px: { xs: 1.5, sm: 2 },
+            py: { xs: 0.75, sm: 1 },
+            borderRadius: "8px",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              backgroundColor: "rgba(76, 175, 80, 0.08)",
+              transform: "translateX(-2px)",
+            },
           }}
         >
-          {"<"} Back to Dashboard
-        </Typography>
-      </Link>
-    )}
-    {role?.user_type === 1 && (
-      <Link component={RouterLink} to="/admin" sx={{ textDecoration: "none" }}>
-        <Typography
-          variant="body2"
+          Back to Dashboard
+        </Button>
+      )}
+      {role?.user_type === 1 && (
+        <Button
+          component={RouterLink}
+          to="/admin"
+          startIcon={<ArrowBackIcon />}
           sx={{
-            m: 2,
-            color: theme.palette.primary.main,
-            "&:hover": { textDecoration: "underline" },
+            textTransform: "none",
+            color: theme.palette.success.dark,
+            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+            fontWeight: 500,
+            px: { xs: 1.5, sm: 2 },
+            py: { xs: 0.75, sm: 1 },
+            borderRadius: "8px",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              backgroundColor: "rgba(76, 175, 80, 0.08)",
+              transform: "translateX(-2px)",
+            },
           }}
         >
-          {"<"} Back to Dashboard
-        </Typography>
-      </Link>
-    )}
+          Back to Dashboard
+        </Button>
+      )}
+    </Box>
 
     {/* Page Title */}
-    <Typography variant="h4" 
-    sx={{ fontWeight: 700, m: 5,color: theme.palette.primary.main}}>
+    <Typography 
+      variant="h4" 
+      sx={{ 
+        fontWeight: 400,
+        mt: 2,
+        mb: 2,
+        mx: 5,
+        color: theme.palette.primary.main,
+        fontFamily: '"DM Serif Display", "Georgia", serif',
+        fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+        letterSpacing: "0.02em",
+        lineHeight: 1.2,
+      }}
+    >
       Manage {contest?.name}
-      </Typography>
+    </Typography>
     
 
     {/* Main Container */}
@@ -159,7 +192,8 @@ export default function ManageContest() {
         maxWidth: 1200,
         width: "100%",
         mx: "auto",
-        my: 2,
+        mt: 1,
+        mb: 2,
         p: 3,
         bgcolor: theme.palette.background.paper,
         borderRadius: 3,
@@ -411,6 +445,7 @@ export default function ManageContest() {
     />
     <AssignJudgeToContestModal
       open={openAssignJudgeModal}
+      contestId={parsedContestId}
       handleClose={() => {
         setOpenAssignJudgeModal(false);
       }}

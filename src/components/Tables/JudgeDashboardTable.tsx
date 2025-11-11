@@ -441,14 +441,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
               opacity: isPreliminary ? 0.6 : 1,
             }}
           >
-            {(() => {
-              const label = isPreliminary ? `${buttonText} (Preliminary)` : buttonText;
-              if (type === 7) {
-                const cs = (team as any)?.championship_score;
-                return `${label} ${cs != null ? Number(cs).toFixed(1) : ''}`;
-              }
-              return label;
-            })()}
+            {isPreliminary ? `${buttonText} (Preliminary)` : buttonText}
           </Button>
         ) : (
           <Button
@@ -479,15 +472,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
               )
             }
           >
-            {(() => {
-              const label = isPreliminary ? `${buttonText} (Preliminary)` : buttonText;
-              if (type === 7) {
-                const cs = (team as any)?.championship_score;
-                return `${label} ${cs != null ? Number(cs).toFixed(1) : ''}`;
-              }
-              const t = getTotal(judge?.id, team.id, type);
-              return `${label} ${t ?? ''}`;
-            })()}
+            {isPreliminary ? `${buttonText} (Preliminary)` : buttonText} {getTotal(judge?.id, team.id, type)}
           </Button>
         )}
       </>

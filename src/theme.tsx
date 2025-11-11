@@ -40,6 +40,8 @@ const theme = createTheme({
     },
   },
   components: {
+
+
     MuiContainer: {
       styleOverrides: {
         root: {
@@ -51,9 +53,25 @@ const theme = createTheme({
     MuiTable: {
       styleOverrides: {
         root: {
-          '& .MuiTableCell-root': {
-            padding: '8px 4px',
-            fontSize: '0.875rem',
+          "& .MuiTableCell-root": {
+            padding: "8px 4px",
+            fontSize: "0.875rem",
+          },
+        },
+      },
+    },
+
+    MuiTableRow: {
+      styleOverrides: {
+        root: {
+          "&.sparkle-gold.MuiTableRow-root": {
+            backgroundColor: "#ffeb99 !important",
+          },
+          "&.sparkle-silver.MuiTableRow-root": {
+            backgroundColor: "#e0e0e0 !important",
+          },
+          "&.sparkle-bronze.MuiTableRow-root": {
+            backgroundColor: "#d6a56f !important",
           },
         },
       },

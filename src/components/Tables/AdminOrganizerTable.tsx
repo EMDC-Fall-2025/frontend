@@ -13,7 +13,7 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { Button, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import useOrganizerStore from "../../store/primary_stores/organizerStore";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback, memo } from "react";
 import OrganizerModal from "../Modals/OrganizerModal";
 import AreYouSureModal from "../Modals/AreYouSureModal";
 import useMapContestOrganizerStore from "../../store/map_stores/mapContestToOrganizerStore";
@@ -22,7 +22,7 @@ import toast from "react-hot-toast";
 import GroupIcon from "@mui/icons-material/Group";
 import CampaignIcon from "@mui/icons-material/Campaign";
 
-function Row(props: { 
+const Row = memo(function Row(props: { 
   row: { id: number; first_name: string; last_name: string; organizer: any };
   onEdit: (organizer: any) => void;
   onDelete: (id: number) => void;
@@ -34,10 +34,9 @@ function Row(props: {
   const [contestId, setContestId] = useState(0);
   const [openAreYouSureUnassign, setOpenAreYouSureUnassign] = useState(false);
 
-  const {
-    contestsByOrganizers,
-    deleteContestOrganizerMapping,
-  } = useMapContestOrganizerStore();
+  // Use selectors to subscribe to contest updates
+  const contestsByOrganizers = useMapContestOrganizerStore((state) => state.contestsByOrganizers);
+  const deleteContestOrganizerMapping = useMapContestOrganizerStore((state) => state.deleteContestOrganizerMapping);
 
   const handleOpenAreYouSureUnassign = (organizerId: number, contestId: number) => {
     setOrganizerId(organizerId);
@@ -271,10 +270,13 @@ function Row(props: {
       />
     </React.Fragment>
   );
-}
+});
 
 export default function AdminOrganizerTable() {
   const { allOrganizers, fetchAllOrganizers, deleteOrganizer } = useOrganizerStore();
+  // Use selectors to subscribe to contest updates
+  const contestsByOrganizers = useMapContestOrganizerStore((state) => state.contestsByOrganizers);
+  const fetchContestsByOrganizers = useMapContestOrganizerStore((state) => state.fetchContestsByOrganizers);
   const [openOrganizerModal, setOpenOrganizerModal] = useState(false);
   const [organizerData, setOrganizerData] = useState<any>(null);
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
@@ -282,12 +284,14 @@ export default function AdminOrganizerTable() {
   const [organizerId, setOrganizerId] = useState(0);
   
   useEffect(() => {
-      fetchAllOrganizers();
-    const { contestsByOrganizers, fetchContestsByOrganizers } = useMapContestOrganizerStore.getState();
+    fetchAllOrganizers();
+  }, [fetchAllOrganizers]);
+
+  useEffect(() => {
     if (!contestsByOrganizers || Object.keys(contestsByOrganizers).length === 0) {
       fetchContestsByOrganizers();
     }
-  }, []);
+  }, [contestsByOrganizers, fetchContestsByOrganizers]);
 
   const rows = useMemo(() => 
     allOrganizers
@@ -301,7 +305,7 @@ export default function AdminOrganizerTable() {
     [allOrganizers]
   );
 
-  const handleOpenEditOrganizer = (organizer: any) => {
+  const handleOpenEditOrganizer = useCallback((organizer: any) => {
     setOrganizerData({
       id: organizer.id,
       first_name: organizer.first_name,
@@ -309,7 +313,7 @@ export default function AdminOrganizerTable() {
       username: organizer.username,
     });
     setOpenOrganizerModal(true);
-  };
+  }, []);
 
   const handleDelete = async (id: number) => {
     if (!id || id === 0) {
@@ -341,15 +345,15 @@ export default function AdminOrganizerTable() {
     }
   };
 
-  const handleOpenAreYouSure = (id: number) => {
+  const handleOpenAreYouSure = useCallback((id: number) => {
     setOrganizerId(id);
     setOpenAreYouSure(true);
-  };
+  }, []);
 
-  const handleOpenAssignContest = (id: number) => {
+  const handleOpenAssignContest = useCallback((id: number) => {
     setOrganizerId(id);
     setOpenAssignContest(true);
-  };
+  }, []);
 
   return (
     <TableContainer component={Box}>

@@ -1,4 +1,6 @@
-import { CircularProgress, Link, Typography } from "@mui/material";
+import { CircularProgress, Link, Typography, Button, Box } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import theme from "../theme";
 import ScoreBreakdownTableStandard from "../components/Tables/ScoreBreakdownTableStandard";
 import { journalQuestions } from "../data/journalQuestions";
 import { presentationQuestions } from "../data/presentationQuestions";
@@ -44,21 +46,28 @@ export default function PulicScoreBreakdown() {
     <CircularProgress />
   ) : (
     <>
-      <Link
-        onClick={() => navigate(-1)}
-        sx={{ textDecoration: "none", cursor: "pointer" }}
-      >
-        <Typography 
-          variant="body2" 
-          sx={{ 
-            ml: { xs: 1, sm: 2 }, 
-            mt: { xs: 1, sm: 2 },
-            fontSize: { xs: "0.9rem", sm: "1rem" }
+      <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 }, ml: { xs: 2, sm: 3 } }}>
+        <Button
+          onClick={() => navigate(-1)}
+          startIcon={<ArrowBackIcon />}
+          sx={{
+            textTransform: "none",
+            color: theme.palette.success.dark,
+            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+            fontWeight: 500,
+            px: { xs: 1.5, sm: 2 },
+            py: { xs: 0.75, sm: 1 },
+            borderRadius: "8px",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              backgroundColor: "rgba(76, 175, 80, 0.08)",
+              transform: "translateX(-2px)",
+            },
           }}
         >
-          {"<"} Back to Results{" "}
-        </Typography>
-      </Link>
+          Back to Results
+        </Button>
+      </Box>
       <Typography 
         variant="h1" 
         sx={{ 
@@ -66,7 +75,11 @@ export default function PulicScoreBreakdown() {
           mt: { xs: 2, sm: 5 }, 
           mr: { xs: 2, sm: 5 }, 
           mb: { xs: 1, sm: 2 },
-          fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" }
+          fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontWeight: 400,
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
         }}
       >
         Score Breakdown
@@ -76,7 +89,11 @@ export default function PulicScoreBreakdown() {
         variant="h2" 
         sx={{ 
           m: { xs: 2, sm: 5 },
-          fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" }
+          fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem" },
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontWeight: 400,
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
         }}
       >
         Journal
@@ -86,7 +103,11 @@ export default function PulicScoreBreakdown() {
         variant="h2" 
         sx={{ 
           m: { xs: 2, sm: 5 },
-          fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" }
+          fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem" },
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontWeight: 400,
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
         }}
       >
         Presentation
@@ -96,7 +117,11 @@ export default function PulicScoreBreakdown() {
         variant="h2" 
         sx={{ 
           m: { xs: 2, sm: 5 },
-          fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" }
+          fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem" },
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontWeight: 400,
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
         }}
       >
         Machine Design and Operation
@@ -111,7 +136,11 @@ export default function PulicScoreBreakdown() {
           mt: { xs: 2, sm: 5 }, 
           ml: { xs: 2, sm: 5 }, 
           mr: { xs: 2, sm: 5 },
-          fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" }
+          fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem" },
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontWeight: 400,
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
         }}
       >
         General Penalties
@@ -123,7 +152,11 @@ export default function PulicScoreBreakdown() {
           mt: { xs: 2, sm: 5 }, 
           ml: { xs: 2, sm: 5 }, 
           mr: { xs: 2, sm: 5 },
-          fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" }
+          fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem" },
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontWeight: 400,
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
         }}
       >
         Run Penalties

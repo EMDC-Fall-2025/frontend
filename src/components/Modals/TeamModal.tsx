@@ -10,6 +10,7 @@ import {
 import Modal from "./Modal";
 import theme from "../../theme";
 import toast from "react-hot-toast";
+import { handleAccountError } from "../../utils/errorHandler";
 import { useEffect, useState } from "react";
 import { useTeamStore } from "../../store/primary_stores/teamStore";
 import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
@@ -42,7 +43,7 @@ export default function TeamModal(props: ITeamModalProps) {
   const [coachLastName, setCoachLastName] = useState("");
   const [coachEmail, setCoachEmail] = useState("");
   const { createTeam, editTeam } = useTeamStore();
-  const { addTeamToCluster, updateTeamInCluster } = useMapClusterTeamStore();
+  const { addTeamToCluster } = useMapClusterTeamStore();
 
   const title = mode === "new" ? "New Team" : "Edit Team";
 
@@ -70,43 +71,24 @@ export default function TeamModal(props: ITeamModalProps) {
           contestid: contestId,
         });
         
-        if (createdTeam && cluster !== -1) {
-          addTeamToCluster(cluster, createdTeam);
+        if (createdTeam) {
+          // Always add team to "All Teams" cluster in UI
+          const allTeamsCluster = clusters?.find(c => c.cluster_name === "All Teams");
+          if (allTeamsCluster) {
+            addTeamToCluster(allTeamsCluster.id, createdTeam);
+          }
+          
+          // If a specific cluster was also selected, add team to that cluster too
+          if (cluster !== -1 && cluster !== allTeamsCluster?.id) {
+            addTeamToCluster(cluster, createdTeam);
+          }
         }
         
         toast.success("Team created successfully!");
         onSuccess?.();
         handleCloseModal();
       } catch (error: any) {
-     
-        let errorMessage = "";
-        
-        // Extract error message 
-        if (error?.response?.data) {
-          const data = error.response.data;
-          if (typeof data === 'string') {
-            errorMessage = data;
-          } else if (data.error && typeof data.error === 'string') {
-            errorMessage = data.error;
-          } else if (data.detail && typeof data.detail === 'string') {
-            errorMessage = data.detail;
-          } else if (data.message && typeof data.message === 'string') {
-            errorMessage = data.message;
-          } else if (data.errors && typeof data.errors === 'object') {
-        
-            errorMessage = JSON.stringify(data.errors);
-          }
-        } else if (error?.message && typeof error.message === 'string') {
-          errorMessage = error.message;
-        }
-        
-        if (errorMessage.toLowerCase().includes("already exists") || 
-            errorMessage.toLowerCase().includes("duplicate") ||
-            errorMessage.toLowerCase().includes("username") && errorMessage.toLowerCase().includes("taken")) {
-          toast.error("Account already exists in the system");
-        } else {
-          toast.error("Failed to create team. Please try again.");
-        }
+        handleAccountError(error, "create");
       }
     }
   };
@@ -115,25 +97,19 @@ export default function TeamModal(props: ITeamModalProps) {
   const handleEditTeam = async () => {
     try {
       // Update team with current form values
-      const updatedTeam = await editTeam({
+      // Note: username is disabled in edit mode, so we use the original teamData username
+      await editTeam({
         id: teamData?.id ?? 0,
         team_name: teamName,
         school_name: schoolName || "NA",
         clusterid: cluster,
-        username: coachEmail,
+        username: teamData?.username || coachEmail, // Use original username from teamData if available
         first_name: coachFirstName,
         last_name: coachLastName,
         contestid: contestId ?? 0,
       });
 
-    
-      if (updatedTeam && cluster !== -1) {
-        updateTeamInCluster(cluster, updatedTeam);
-        if (teamData && teamData.clusterid !== cluster && teamData.clusterid !== -1) {
-          updateTeamInCluster(teamData.clusterid, updatedTeam);
-        }
-      }
-
+      // updateTeamInAllClusters is already called in editTeam, so no need to manually update clusters
       toast.success("Team updated successfully!");
       onSuccess?.();
       handleCloseModal();
@@ -247,6 +223,7 @@ export default function TeamModal(props: ITeamModalProps) {
           variant="outlined"
           value={coachEmail}
           onChange={(e: any) => setCoachEmail(e.target.value)}
+          disabled={mode === "edit"}
           sx={{ mt: 3, width: 300 }}
         />
         
@@ -256,11 +233,32 @@ export default function TeamModal(props: ITeamModalProps) {
             width: 150,
             height: 44,
             bgcolor: theme.palette.success.main,
-            "&:hover": { bgcolor: theme.palette.success.dark },
             color: "#fff",
             mt: 3,
             textTransform: "none",
-            borderRadius: 2,
+            borderRadius: "12px",
+            boxShadow: `
+              0 4px 12px rgba(76, 175, 80, 0.3),
+              0 2px 4px rgba(76, 175, 80, 0.2),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2)
+            `,
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            "&:hover": { 
+              bgcolor: theme.palette.success.dark,
+              transform: "translateY(-2px)",
+              boxShadow: `
+                0 6px 16px rgba(76, 175, 80, 0.4),
+                0 4px 8px rgba(76, 175, 80, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2)
+              `,
+            },
+            "&:active": {
+              transform: "translateY(0px)",
+              boxShadow: `
+                0 2px 8px rgba(76, 175, 80, 0.3),
+                inset 0 2px 4px rgba(0, 0, 0, 0.1)
+              `,
+            },
           }}
         >
           {buttonText}
@@ -269,3 +267,4 @@ export default function TeamModal(props: ITeamModalProps) {
     </Modal>
   );
 }
+

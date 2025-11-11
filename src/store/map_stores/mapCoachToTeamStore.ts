@@ -14,11 +14,13 @@ interface MapCoachTeamState {
   clearTeams: () => void;
   fetchCoachesByTeams: (data: object) => Promise<void>;
   clearCoachesByTeams: () => void;
+  updateCoachByTeamId: (teamId: number, coach: Coach) => void;
+  updateCoachForAllTeams: (username: string, coach: Coach) => void;
 }
 
 export const useMapCoachToTeamStore = create<MapCoachTeamState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       teams: [],
       coach: null,
       isLoadingMapCoachToTeam: false,
@@ -27,6 +29,55 @@ export const useMapCoachToTeamStore = create<MapCoachTeamState>()(
 
       clearTeams: () => set({ teams: [] }),
       clearCoachesByTeams: () => set({ coachesByTeams: {} }),
+      
+      updateCoachByTeamId: (teamId: number, coach: Coach) => {
+        set((state) => {
+          const existingCoach = state.coachesByTeams[teamId];
+          // Preserve username from existing coach if new coach doesn't have it
+    
+          const updatedCoach: Coach = {
+            ...coach,
+            username: coach.username || existingCoach?.username || "",
+          };
+          return {
+            coachesByTeams: {
+              ...state.coachesByTeams,
+              [teamId]: updatedCoach,
+            },
+          };
+        });
+      },
+
+      updateCoachForAllTeams: (username: string, coach: Coach) => {
+        set((state) => {
+          const updatedCoachesByTeams: Record<number, Coach> = {};
+          let hasChanges = false;
+          
+          // Update coach for all teams that have this username
+          Object.keys(state.coachesByTeams).forEach((teamIdStr) => {
+            const teamId = parseInt(teamIdStr);
+            const existingCoach = state.coachesByTeams[teamId];
+            if (existingCoach && existingCoach.username === username) {
+              updatedCoachesByTeams[teamId] = {
+                ...coach,
+                username: coach.username || existingCoach.username || username,
+              };
+              hasChanges = true;
+            }
+          });
+          
+          // Always return a new state object to ensure Zustand detects the change
+          return {
+            ...state,
+            coachesByTeams: hasChanges
+              ? {
+                  ...state.coachesByTeams,
+                  ...updatedCoachesByTeams,
+                }
+              : state.coachesByTeams,
+          };
+        });
+      },
 
       createCoachTeamMapping: async (data: object) => {
         set({ isLoadingMapCoachToTeam: true });
@@ -49,12 +100,24 @@ export const useMapCoachToTeamStore = create<MapCoachTeamState>()(
       },
 
       fetchCoachesByTeams: async (data: object) => {
+        // Check cache first - only fetch coaches for teams we don't have yet
+        const teams = Array.isArray(data) ? data : [];
+        const teamsToFetch = teams.filter((team: any) => {
+          const teamId = team.id || team;
+          return !get().coachesByTeams[teamId];
+        });
+        
+        // If we already have all coaches, return early
+        if (teamsToFetch.length === 0) {
+          return;
+        }
+        
         set({ isLoadingMapCoachToTeam: true });
         try {
           const token = localStorage.getItem("token");
           const response = await axios.post(
             "/api/mapping/coachToTeam/coachesByTeams/",
-            data,
+            teamsToFetch,
             {
               headers: {
                 Authorization: `Token ${token}`,
@@ -67,8 +130,8 @@ export const useMapCoachToTeamStore = create<MapCoachTeamState>()(
               ...state.coachesByTeams,
               ...response.data,
             },
+            mapCoachToTeamError: null,
           }));
-          set({ mapCoachToTeamError: null });
         } catch (mapCoachToTeamError: any) {
           const errorMessage = "Failed to get coaches by teams mapping";
           set({ mapCoachToTeamError: errorMessage });

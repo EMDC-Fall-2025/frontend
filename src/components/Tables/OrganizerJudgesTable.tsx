@@ -11,7 +11,7 @@ import Typography from "@mui/material/Typography";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { Button, Container, CircularProgress } from "@mui/material";
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import JudgeModal from "../Modals/JudgeModal";
 import { useNavigate } from "react-router-dom";
 import { useMapClusterJudgeStore } from "../../store/map_stores/mapClusterToJudgeStore";
@@ -178,15 +178,22 @@ function JudgesTable(props: IJudgesTableProps) {
     }
   }, [judges, fetchClustersForJudges]);
 
-  const handleOpenJudgeModal = (judgeData: JudgeData) => {
+  // Memoize the handler to prevent unnecessary re-renders
+  const handleOpenJudgeModal = useCallback((judgeData: JudgeData) => {
     setJudgeData(judgeData);
     setOpenJudgeModal(true);
-  };
+  }, []);
 
-  const handleOpenAreYouSure = (judgeId: number) => {
+  // Memoize the handler to prevent unnecessary re-renders
+  const handleOpenAreYouSure = useCallback((judgeId: number) => {
     setJudgeId(judgeId);
     setOpenAreYouSure(true);
-  };
+  }, []);
+
+  // Memoize navigate handler
+  const handleNavigateToJudging = useCallback((judgeId: number) => {
+    navigate(`/judging/${judgeId}/`);
+  }, [navigate]);
 
   const handleDelete = async (judgeId: number) => {
     try {
@@ -195,21 +202,39 @@ function JudgesTable(props: IJudgesTableProps) {
         return;
       }
       
-      // Remove judge from cluster
-      await removeJudgeFromCluster(judgeId, currentCluster.id);
-      
-      // After removal, check if judge is still in any other clusters in this contest
+      // Before removal, check if judge is in any other clusters in this contest
+      // This ensures we check BEFORE removing, so we have accurate data
+      let isInOtherClusters = false;
       if (contestid) {
         const otherClusters = clusters.filter(c => c.id !== currentCluster.id);
-        const isInOtherClusters = otherClusters.some(cluster => {
+        
+        // First check local state
+        isInOtherClusters = otherClusters.some(cluster => {
           const judgesInCluster = judgesByClusterId[cluster.id] || [];
           return judgesInCluster.some(j => j.id === judgeId);
         });
         
-        // Only remove from contest if judge is not in any other clusters
-        if (!isInOtherClusters) {
-          removeJudgeFromContestStoreIfNoOtherClusters(judgeId, contestid);
+        // If not found in local state, fetch fresh data for other clusters to be sure
+        if (!isInOtherClusters && otherClusters.length > 0) {
+          // Fetch judges for all other clusters to ensure we have accurate data
+          await Promise.all(
+            otherClusters.map(cluster => fetchJudgesByClusterId(cluster.id, true))
+          );
+          
+          // Check again after fetching
+          isInOtherClusters = otherClusters.some(cluster => {
+            const judgesInCluster = judgesByClusterId[cluster.id] || [];
+            return judgesInCluster.some(j => j.id === judgeId);
+          });
         }
+      }
+      
+      // Remove judge from cluster
+      await removeJudgeFromCluster(judgeId, currentCluster.id);
+      
+      // Only remove from contest if judge is not in any other clusters
+      if (contestid && !isInOtherClusters) {
+        removeJudgeFromContestStoreIfNoOtherClusters(judgeId, contestid);
       }
       
       toast.success(`Judge removed from ${currentCluster.cluster_name} cluster successfully!`);
@@ -262,10 +287,9 @@ function JudgesTable(props: IJudgesTableProps) {
     currentCluster.cluster_name?.toLowerCase().includes('redesign')
   );
 
-  const rows = judges.map((judge) => {
-    // Use composite key to get status for this judge in this specific cluster
-    const statusKey = currentCluster ? `${judge.id}-${currentCluster.id}` : `${judge.id}-all`;
-    const isSubmitted = submissionStatus ? (submissionStatus[statusKey] ?? false) : false;
+  // Memoize rows to prevent recreating buttons on every render
+  const rows = useMemo(() => judges.map((judge) => {
+    const isSubmitted = submissionStatus ? submissionStatus[judge.id] : false;
     return createDataJudge(
       `${judge.first_name} ${judge.last_name}`,
       `${titles[judge.role - 1]}`,
@@ -384,7 +408,7 @@ function JudgesTable(props: IJudgesTableProps) {
       </Button>,
       isSubmitted
     );
-  });
+  }), [judges, submissionStatus, isChampionshipOrRedesignCluster, handleOpenJudgeModal, handleOpenAreYouSure, handleNavigateToJudging, currentCluster, judgeClusters, navigate]);
 
   return (
     <TableContainer component={Box}>

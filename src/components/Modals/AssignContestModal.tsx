@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import Modal from "./Modal";
 import theme from "../../theme";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import toast from "react-hot-toast";
 import { Contest } from "../../types";
 import useContestStore from "../../store/primary_stores/contestStore";
@@ -31,26 +31,20 @@ export interface IAssignContestModalProps {
 
 export default function OrganizerModal(props: IAssignContestModalProps) {
   const { handleClose, open, organizerId } = props;
-  
-  // Contest store for available contests
-  const { allContests } = useContestStore();
-  
-  // Contest-organizer mapping store for assignments
-  const {
-    contestsByOrganizers,
-    createContestOrganizerMapping,
-  } = useMapContestOrganizerStore();
-  
+
+  // Contest store for available contests - use selector for reactive updates
+  const allContests = useContestStore((state) => state.allContests);
+
+  // Contest-organizer mapping store for assignments - use selector for reactive updates
+  const contestsByOrganizers = useMapContestOrganizerStore((state) => state.contestsByOrganizers);
+  const createContestOrganizerMapping = useMapContestOrganizerStore((state) => state.createContestOrganizerMapping);
+  const fetchContestsByOrganizerId = useMapContestOrganizerStore((state) => state.fetchContestsByOrganizerId);
+
   const title = "Assign Contest To Organizer";
   const [contestId, setContestId] = useState(0);
-  const [assignedContests, setAssignedContests] = useState<Contest[]>([]);
-
-  // Load assigned contests when organizer changes
-  useEffect(() => {
-    if (contestsByOrganizers[organizerId]) {
-      setAssignedContests(contestsByOrganizers[organizerId] || []);
-    }
-  }, [organizerId]);
+  
+  // Use selector to reactively get assigned contests for this organizer
+  const assignedContests = contestsByOrganizers[organizerId] || [];
 
   // Close modal and reset form
   const handleCloseModal = () => {
@@ -61,9 +55,17 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
   // Assign contest to organizer
   const handleAssignContest = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    if (!contestId) {
+      toast.error("Please select a contest before assigning.");
+      return;
+    }
+
     if (organizerId) {
       try {
         await createContestOrganizerMapping(organizerId, contestId);
+        // Refresh the contests for this organizer to ensure UI updates
+        await fetchContestsByOrganizerId(organizerId);
         toast.success("Contest assigned to organizer successfully!");
         handleClose();
       } catch (error) {
@@ -131,21 +133,43 @@ export default function OrganizerModal(props: IAssignContestModalProps) {
             ))}
           </Select>
         </FormControl>
-        {/* Submit button - updated to use modern green success theme */}
+
         <Button
           type="submit"
           sx={{
             width: { xs: "100%", sm: 170 },
             height: { xs: 40, sm: 44 },
-            bgcolor: theme.palette.success.main,          
-            "&:hover": { bgcolor: theme.palette.success.dark },
+            bgcolor: theme.palette.success.main,
             color: "#fff",
             mt: { xs: 3, sm: 4 },
             textTransform: "none",
-            borderRadius: 2,
+            borderRadius: "12px",
             fontSize: { xs: "0.9rem", sm: "1rem" },
+            boxShadow: `
+              0 4px 12px rgba(76, 175, 80, 0.3),
+              0 2px 4px rgba(76, 175, 80, 0.2),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2)
+            `,
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            "&:hover": { 
+              bgcolor: theme.palette.success.dark,
+              transform: "translateY(-2px)",
+              boxShadow: `
+                0 6px 16px rgba(76, 175, 80, 0.4),
+                0 4px 8px rgba(76, 175, 80, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2)
+              `,
+            },
+            "&:active": {
+              transform: "translateY(0px)",
+              boxShadow: `
+                0 2px 8px rgba(76, 175, 80, 0.3),
+                inset 0 2px 4px rgba(0, 0, 0, 0.1)
+              `,
+            },
             px: { xs: 3, sm: 4.5 },
             py: { xs: 1, sm: 1.25 },
+            whiteSpace: "nowrap",
           }}
         >
           Assign Contest

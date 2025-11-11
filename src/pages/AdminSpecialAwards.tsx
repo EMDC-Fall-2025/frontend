@@ -13,6 +13,9 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { Link } from "react-router-dom";
+import theme from "../theme";
 import useSpecialAwardStore, { SpecialAward } from "../store/map_stores/mapAwardToTeamStore";
 
 export default function AdminSpecialAwardsPage() {
@@ -83,7 +86,7 @@ export default function AdminSpecialAwardsPage() {
       const updatedAward = {
         ...editingAward,
         award_name: awardName,
-        isJudge: isJudge, 
+        isJudge: isJudge,
       };
       await updateAward(editingAward.teamid, editingAward.award_name, updatedAward);
       setEditingAward(null);
@@ -105,8 +108,52 @@ export default function AdminSpecialAwardsPage() {
   };
 
   return (
-    <Container>
-      <Typography variant="h1" sx={{ m: 5 }}>
+    <Container
+      maxWidth="lg"
+      sx={{
+        px: { xs: 3, sm: 5 },
+        mt: 5,
+        mb: 2,
+      }}
+    >
+      {/* Back to Admin  */}
+      <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 }, ml: { xs: 2, sm: 3 } }}>
+        <Button
+          component={Link}
+          to="/admin/"
+          startIcon={<ArrowBackIcon />}
+          sx={{
+            textTransform: "none",
+            color: theme.palette.success.dark,
+            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+            fontWeight: 500,
+            px: { xs: 1.5, sm: 2 },
+            py: { xs: 0.75, sm: 1 },
+            borderRadius: "8px",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              backgroundColor: "rgba(76, 175, 80, 0.08)",
+              transform: "translateX(-2px)",
+            },
+          }}
+        >
+          Back to Admin Dashboard
+        </Button>
+      </Box>
+
+      {/* Aligned Title */}
+      <Typography
+        variant="h1"
+        sx={{
+          fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+          fontWeight: 400,
+          color: theme.palette.primary.main,
+          mb: 3,
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
+        }}
+      >
         Special Awards Management
       </Typography>
 

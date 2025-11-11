@@ -28,6 +28,8 @@ interface MapContestOrganizerState {
   removeContestFromOrganizer: (organizerId: number, contestId: number) => void;
   removeOrganizerFromAllContests: (organizerId: number, organizerName: string) => void;
   removeContestFromAllOrganizers: (contestId: number) => void;
+  updateOrganizerNameInContests: (organizerId: number, oldName: string, newName: string) => void;
+  updateContestInMappings: (contestId: number, updatedContest: Contest) => void;
   clearContests: () => void;
   clearOrganizers: () => void;
   clearMapContestOrganizerError: () => void;
@@ -293,6 +295,95 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
               ...updatedContestsByOrganizers,
             },
             organizerNamesByContests: updatedOrganizerNames,
+          };
+        });
+      },
+
+      updateOrganizerNameInContests: (organizerId: number, oldName: string, newName: string) => {
+        set((state) => {
+          const updatedOrganizerNames: Record<number, string[]> = {};
+          
+          // First, try to use contestsByOrganizers to get the specific contests for this organizer
+          const contests = state.contestsByOrganizers[organizerId] || [];
+          const contestIdsToUpdate = new Set<number>();
+          
+          // If we have contests from contestsByOrganizers, use those (more accurate)
+          if (contests.length > 0) {
+            contests.forEach((contest: Contest) => {
+              contestIdsToUpdate.add(contest.id);
+            });
+          } else {
+            // Fallback: search all contests for the old name
+            // This handles cases where contestsByOrganizers isn't populated
+            Object.keys(state.organizerNamesByContests).forEach((contestIdStr) => {
+              const contestId = parseInt(contestIdStr);
+              const currentNames = (state.organizerNamesByContests[contestId] || []) as string[];
+              if (currentNames.includes(oldName)) {
+                contestIdsToUpdate.add(contestId);
+              }
+            });
+          }
+          
+          // Update organizer name in all relevant contests
+          contestIdsToUpdate.forEach((contestId) => {
+            const currentNames = (state.organizerNamesByContests[contestId] || []) as string[];
+            if (currentNames.includes(oldName)) {
+              const updatedNames = currentNames.map(name => name === oldName ? newName : name);
+              updatedOrganizerNames[contestId] = updatedNames;
+            }
+          });
+          
+          // Only update if there are changes
+          if (Object.keys(updatedOrganizerNames).length > 0) {
+            return {
+              organizerNamesByContests: {
+                ...state.organizerNamesByContests,
+                ...updatedOrganizerNames,
+              },
+            };
+          }
+          
+          return state;
+        });
+      },
+
+      updateContestInMappings: (contestId: number, updatedContest: Contest) => {
+        set((state) => {
+          const updatedContestsByOrganizers: Record<number, Contest[] | null> = {};
+          let hasChanges = false;
+          
+          // Update contest in all organizers' assigned contests
+          Object.keys(state.contestsByOrganizers).forEach((organizerIdStr) => {
+            const organizerId = parseInt(organizerIdStr);
+            const contests = state.contestsByOrganizers[organizerId];
+            if (contests && Array.isArray(contests)) {
+              const contestIndex = contests.findIndex((c: Contest) => c.id === contestId);
+              if (contestIndex !== -1) {
+                const updatedContests = [...contests];
+                updatedContests[contestIndex] = updatedContest;
+                updatedContestsByOrganizers[organizerId] = updatedContests;
+                hasChanges = true;
+              }
+            }
+          });
+          
+          // Also update the contests array if it contains this contest
+          const contestIndex = state.contests.findIndex((c: Contest) => c.id === contestId);
+          const updatedContests = contestIndex !== -1 
+            ? state.contests.map((c: Contest) => c.id === contestId ? updatedContest : c)
+            : state.contests;
+          
+          // Always return a new state object to ensure Zustand detects the change
+          // This ensures components subscribed to these fields will re-render
+          return {
+            ...state,
+            contestsByOrganizers: hasChanges 
+              ? {
+                  ...state.contestsByOrganizers,
+                  ...updatedContestsByOrganizers,
+                }
+              : state.contestsByOrganizers,
+            contests: contestIndex !== -1 ? updatedContests : state.contests,
           };
         });
       },
