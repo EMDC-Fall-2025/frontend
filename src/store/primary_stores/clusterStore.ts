@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { Cluster } from "../../types";
 
 interface ClusterState {
@@ -37,13 +37,7 @@ export const useClusterStore = create<ClusterState>()(
       fetchClusterById: async (clusterId: number) => {
         set({ isLoadingCluster: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/cluster/get/${clusterId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          const response = await api.get(`/api/cluster/get/${clusterId}/`);
           // API returns { Cluster: {...} }
           set({ cluster: (response.data as any)?.Cluster ?? null });
           set({ clusterError: null });
@@ -63,13 +57,7 @@ export const useClusterStore = create<ClusterState>()(
       }) => {
         set({ isLoadingCluster: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(`/api/cluster/create/`, data, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          const response = await api.post(`/api/cluster/create/`, data);
           const createdCluster = (response.data as any)?.cluster || response.data;
           set({ cluster: createdCluster });
           set({ clusterError: null });
@@ -86,13 +74,7 @@ export const useClusterStore = create<ClusterState>()(
       editCluster: async (data: { id: number; cluster_name: string; cluster_type?: string }) => {
         set({ isLoadingCluster: true });
         try {
-          const token = localStorage.getItem("token");
-          const res = await axios.post(`/api/cluster/edit/`, data, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          const res = await api.post(`/api/cluster/edit/`, data);
           if (res.status !== 200) {
             throw new Error(`Unexpected status ${res.status}`);
           }
@@ -110,13 +92,7 @@ export const useClusterStore = create<ClusterState>()(
       deleteCluster: async (clusterId: number) => {
         set({ isLoadingCluster: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/cluster/delete/${clusterId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          await api.delete(`/api/cluster/delete/${clusterId}/`);
           set({ cluster: null });
           set({ clusterError: null });
         } catch (error) {

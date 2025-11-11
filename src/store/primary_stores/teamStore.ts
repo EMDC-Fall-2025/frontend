@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { Team, NewTeam, EditedTeam } from "../../types";
 import { useMapCoachToTeamStore } from "../map_stores/mapCoachToTeamStore";
 import useMapClusterTeamStore from "../map_stores/mapClusterToTeamStore";
@@ -33,14 +33,8 @@ export const useTeamStore = create<TeamState>()(
       fetchTeamById: async (teamId: number) => {
         set({ isLoadingTeam: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/team/get/${teamId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-          set({ team: response.data.Team });
+          const { data } = await api.get(`/api/team/get/${teamId}/`);
+          set({ team: data.Team });
           set({ teamError: null });
         } catch (teamError: any) {
           set({ teamError: "Failure fetching team" });
@@ -59,13 +53,8 @@ export const useTeamStore = create<TeamState>()(
         
         set({ isLoadingTeam: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get("/api/team/getAllTeams/", {
-            headers: {
-              Authorization: `Token ${token}`,
-            },
-          });
-          set({ teams: response.data.teams, teamError: null });
+          const { data } = await api.get("/api/team/getAllTeams/");
+          set({ teams: data.teams, teamError: null });
         } catch (teamError: any) {
           set({ teamError: "Failure fetching all teams" });
           throw new Error("Failure fetching all teams");
@@ -77,15 +66,9 @@ export const useTeamStore = create<TeamState>()(
       createTeam: async (newTeam: NewTeam) => {
         set({ isLoadingTeam: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(`/api/team/create/`, newTeam, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-          const createdTeam = (response.data as any)?.team;
-          const createdCoach = (response.data as any)?.coach;
+          const { data } = await api.post(`/api/team/create/`, newTeam);
+          const createdTeam = (data as any)?.team;
+          const createdCoach = (data as any)?.coach;
           
           // Update coach data in mapCoachToTeamStore if coach data is present
           if (createdTeam && createdCoach) {
@@ -126,15 +109,9 @@ export const useTeamStore = create<TeamState>()(
       editTeam: async (editedTeam: EditedTeam) => {
         set({ isLoadingTeam: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(`/api/team/edit/`, editedTeam, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-          const updatedTeam = (response.data as any)?.Team;
-          const updatedCoach = (response.data as any)?.Coach;
+          const { data } = await api.post(`/api/team/edit/`, editedTeam);
+          const updatedTeam = (data as any)?.Team;
+          const updatedCoach = (data as any)?.Coach;
           
           // Update coach data in mapCoachToTeamStore if coach data is present
           if (updatedTeam && updatedCoach) {
@@ -187,12 +164,7 @@ export const useTeamStore = create<TeamState>()(
       deleteTeam: async (teamId: number) => {
         set({ isLoadingTeam: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/team/delete/${teamId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-            },
-          });
+          await api.delete(`/api/team/delete/${teamId}/`);
           set({ team: null });
           set({ teamError: null });
         } catch (teamError) {

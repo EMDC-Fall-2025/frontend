@@ -26,6 +26,23 @@ import { useMapCoachToTeamStore } from "../store/map_stores/mapCoachToTeamStore"
 import useMapClusterTeamStore from "../store/map_stores/mapClusterToTeamStore";
 import { useAuthStore } from "../store/primary_stores/authStore";
 
+const ACTIVE_TAB_COOKIE = "manageContestActiveTab";
+const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
+
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = document.cookie.match(
+    new RegExp(`(?:^|; )${escapedName}=([^;]*)`)
+  );
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function setCookie(name: string, value: string, maxAgeSeconds: number) {
+  if (typeof document === "undefined") return;
+  document.cookie = `${name}=${encodeURIComponent(value)};path=/;max-age=${maxAgeSeconds};samesite=lax`;
+}
+
 /**
  * ManageContest Component
  * 
@@ -35,9 +52,7 @@ export default function ManageContest() {
   const { contestId } = useParams();
   const parsedContestId = contestId ? parseInt(contestId, 10) : 0;
 
-  const [value, setValue] = useState(
-    () => localStorage.getItem("activeTab") || "1"
-  );
+  const [value, setValue] = useState(() => getCookie(ACTIVE_TAB_COOKIE) || "1");
   // Modal state management for different creation/editing operations
   const [openJudgeModal, setOpenJudgeModal] = useState(false);
   const [openClusterModal, setOpenClusterModal] = useState(false);
@@ -111,79 +126,88 @@ export default function ManageContest() {
 
   const handleChange = (_event: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);
-    localStorage.setItem("activeTab", newValue);
+    setCookie(ACTIVE_TAB_COOKIE, newValue, COOKIE_MAX_AGE_SECONDS);
   };
 
 
   return (
   <>
-    {/* Back to Dashboard */}
-    <Box sx={{ mb: 1, mt: { xs: 1, sm: 2 }, ml: { xs: 2, sm: 3 } }}>
-      {role?.user_type === 2 && (
-        <Button
-          component={RouterLink}
-          to="/organizer"
-          startIcon={<ArrowBackIcon />}
-          sx={{
-            textTransform: "none",
-            color: theme.palette.success.dark,
-            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
-            fontWeight: 500,
-            px: { xs: 1.5, sm: 2 },
-            py: { xs: 0.75, sm: 1 },
-            borderRadius: "8px",
-            transition: "all 0.2s ease",
-            "&:hover": {
-              backgroundColor: "rgba(76, 175, 80, 0.08)",
-              transform: "translateX(-2px)",
-            },
-          }}
-        >
-          Back to Dashboard
-        </Button>
-      )}
-      {role?.user_type === 1 && (
-        <Button
-          component={RouterLink}
-          to="/admin"
-          startIcon={<ArrowBackIcon />}
-          sx={{
-            textTransform: "none",
-            color: theme.palette.success.dark,
-            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
-            fontWeight: 500,
-            px: { xs: 1.5, sm: 2 },
-            py: { xs: 0.75, sm: 1 },
-            borderRadius: "8px",
-            transition: "all 0.2s ease",
-            "&:hover": {
-              backgroundColor: "rgba(76, 175, 80, 0.08)",
-              transform: "translateX(-2px)",
-            },
-          }}
-        >
-          Back to Dashboard
-        </Button>
-      )}
-    </Box>
-
-    {/* Page Title */}
-    <Typography 
-      variant="h4" 
-      sx={{ 
-        fontWeight: 400,
-        mt: 2,
-        mb: 2,
-        mx: 5,
-        color: theme.palette.primary.main,
-        fontFamily: '"DM Serif Display", "Georgia", serif',
-        fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
-        letterSpacing: "0.02em",
-        lineHeight: 1.2,
+    {/* Header Section - Centered on larger screens */}
+    <Container
+      sx={{
+        maxWidth: 1200,
+        width: "100%",
+        mx: "auto",
+        px: { xs: 2, sm: 3 },
       }}
     >
-      Manage {contest?.name}
-    </Typography>
+      {/* Back to Dashboard */}
+      <Box sx={{ mb: 1, mt: { xs: 1, sm: 2 } }}>
+        {role?.user_type === 2 && (
+          <Button
+            component={RouterLink}
+            to="/organizer"
+            startIcon={<ArrowBackIcon />}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.success.dark,
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              fontWeight: 500,
+              px: { xs: 1.5, sm: 2 },
+              py: { xs: 0.75, sm: 1 },
+              borderRadius: "8px",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                backgroundColor: "rgba(76, 175, 80, 0.08)",
+                transform: "translateX(-2px)",
+              },
+            }}
+          >
+            Back to Dashboard
+          </Button>
+        )}
+        {role?.user_type === 1 && (
+          <Button
+            component={RouterLink}
+            to="/admin"
+            startIcon={<ArrowBackIcon />}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.success.dark,
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              fontWeight: 500,
+              px: { xs: 1.5, sm: 2 },
+              py: { xs: 0.75, sm: 1 },
+              borderRadius: "8px",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                backgroundColor: "rgba(76, 175, 80, 0.08)",
+                transform: "translateX(-2px)",
+              },
+            }}
+          >
+            Back to Dashboard
+          </Button>
+        )}
+      </Box>
+
+      {/* Page Title */}
+      <Typography 
+        variant="h4" 
+        sx={{ 
+          fontWeight: 400,
+          mt: 2,
+          mb: 2,
+          color: theme.palette.primary.main,
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
+        }}
+      >
+        Manage {contest?.name}
+      </Typography>
+    </Container>
     
 
     {/* Main Container */}

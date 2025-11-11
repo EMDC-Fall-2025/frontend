@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { Cluster } from "../../types";
 
 interface MapClusterContestState {
@@ -46,15 +46,8 @@ export const useMapClusterToContestStore = create<MapClusterContestState>()(
         
         set({ isLoadingMapClusterContest: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/clusterToContest/getAllClustersByContest/${contestId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+          const response = await api.get(
+            `/api/mapping/clusterToContest/getAllClustersByContest/${contestId}/`
           );
           // Ensure cluster_type is present and normalized
           const clusters = (response.data.Clusters || []).map((c: any) => ({
@@ -153,15 +146,8 @@ export const useMapClusterToContestStore = create<MapClusterContestState>()(
         try {
           for (const contestId of contestsToFetch) {
             try {
-              const token = localStorage.getItem("token");
-              const response = await axios.get(
-                `/api/mapping/clusterToContest/getAllClustersByContest/${contestId}/`,
-                {
-                  headers: {
-                    Authorization: `Token ${token}`,
-                    "Content-Type": "application/json",
-                  },
-                }
+              const response = await api.get(
+                `/api/mapping/clusterToContest/getAllClustersByContest/${contestId}/`
               );
               contestClustersMap[contestId] = response.data.Clusters || [];
             } catch (error) {

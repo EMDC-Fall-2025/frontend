@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import useMapContestOrganizerStore from "../map_stores/mapContestToOrganizerStore";
 
 interface Organizer {
@@ -49,15 +49,9 @@ export const useOrganizerStore = create<OrganizerState>()(
         
         set({ isLoadingOrganizer: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/organizer/getAll/`, {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Token ${token}`,
-            },
-          });
+          const { data } = await api.get(`/api/organizer/getAll/`);
           set({
-            allOrganizers: response.data.organizers,
+            allOrganizers: data.organizers,
             organizerError: null,
           });
         } catch (error) {
@@ -71,16 +65,8 @@ export const useOrganizerStore = create<OrganizerState>()(
       fetchOrganizerById: async (organizerId: number) => {
         set({ isLoadingOrganizer: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/organizer/get/${organizerId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-              },
-            }
-          );
-          set({ organizer: response.data.Organizer, organizerError: null });
+          const { data } = await api.get(`/api/organizer/get/${organizerId}/`);
+          set({ organizer: data.Organizer, organizerError: null });
         } catch (error) {
           set({ organizerError: "Error fetching organizer: " + error });
           throw new Error("Error fetching organizer: " + error);
@@ -92,22 +78,12 @@ export const useOrganizerStore = create<OrganizerState>()(
       createOrganizer: async (newOrganizer: Omit<Organizer, "id">) => {
         set({ isLoadingOrganizer: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(
-            `/api/organizer/create/`,
-            newOrganizer,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
-          );
+          const { data } = await api.post(`/api/organizer/create/`, newOrganizer);
           // Extract organizer from response - backend returns { user, organizer, user_map }
-          const apiOrganizer = response.data.organizer || response.data;
+          const apiOrganizer = data.organizer || data;
           const createdOrganizer: Organizer = {
             ...apiOrganizer,
-            username: newOrganizer.username || response.data.user?.username || apiOrganizer.username || '',
+            username: newOrganizer.username || data.user?.username || apiOrganizer.username || '',
           };
           set((state) => ({
             allOrganizers: [...state.allOrganizers, createdOrganizer],
@@ -147,7 +123,6 @@ export const useOrganizerStore = create<OrganizerState>()(
             ? `${oldOrganizer.first_name} ${oldOrganizer.last_name}`.trim()
             : null;
 
-          const token = localStorage.getItem("token");
           // Ensure id is included in the request body
           const payload = {
             id: editedOrganizer.id,
@@ -156,15 +131,10 @@ export const useOrganizerStore = create<OrganizerState>()(
             username: editedOrganizer.username,
             password: editedOrganizer.password || "password", // Backend might need this
           };
-          const response = await axios.post(`/api/organizer/edit/`, payload, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          const { data } = await api.post(`/api/organizer/edit/`, payload);
           
           // Use the response data from backend to update state
-          const updatedOrganizer = response.data.organizer || editedOrganizer;
+          const updatedOrganizer = data.organizer || editedOrganizer;
           const finalOrganizer: Organizer = {
             ...updatedOrganizer,
             username: editedOrganizer.username, // Preserve username from request
@@ -212,12 +182,7 @@ export const useOrganizerStore = create<OrganizerState>()(
       deleteOrganizer: async (organizerId: number) => {
         set({ isLoadingOrganizer: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/organizer/delete/${organizerId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-            },
-          });
+          await api.delete(`/api/organizer/delete/${organizerId}/`);
           // Only update state if deletion succeeds
           set((state) => ({
             allOrganizers: state.allOrganizers.filter(
@@ -255,16 +220,10 @@ export const useOrganizerStore = create<OrganizerState>()(
       ) => {
         set({ isLoadingOrganizer: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.post(
-            `/api/organizer/disqualifyTeam/`,
-            { teamid: teamId, organizer_disqualified: organizer_disqualified },
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-              },
-            }
-          );
+          await api.post(`/api/organizer/disqualifyTeam/`, {
+            teamid: teamId,
+            organizer_disqualified: organizer_disqualified,
+          });
           set({ organizerError: null });
         } catch (error) {
           set({

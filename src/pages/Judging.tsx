@@ -19,6 +19,7 @@ import useClusterTeamStore from "../store/map_stores/mapClusterToTeamStore";
 import JudgeDashboardTable from "../components/Tables/JudgeDashboardTable";
 import theme from "../theme";
 import { Team } from "../types";
+import { api } from "../lib/api";
 
 export default function Judging() {
   const { judgeId } = useParams();
@@ -157,14 +158,8 @@ export default function Judging() {
         try {
           const contestId = (currentClusterToSet as any)?.contest_id || (allTeams[0] as any)?.contest_id || (allTeams[0] as any)?.contestid;
           if (contestId && championshipClusters.length > 0) {
-            const token = localStorage.getItem("token");
-            await fetch('/api/tabulation/tabulateScores/', {
-              method: 'PUT',
-              headers: {
-                'Authorization': `Token ${token}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ contestid: contestId })
+            await api.put(`/api/tabulation/tabulateScores/`, {
+              contestid: contestId,
             });
 
             // Refetch teams after tabulation completes

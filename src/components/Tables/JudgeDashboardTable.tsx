@@ -36,6 +36,7 @@ import theme from "../../theme";
 import useMapContestJudgeStore from "../../store/map_stores/mapContestToJudgeStore";
 import { useAuthStore } from "../../store/primary_stores/authStore";
 import { Team, Contest } from "../../types";
+import { api } from "../../lib/api";
 
 interface IJudgeDashboardProps {
   teams: Team[];
@@ -266,20 +267,10 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
     
     for (const team of teamsToFetchInfo) {
       try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(`/api/mapping/contestToTeam/getContestByTeam/${team.id}/`, {
-          headers: {
-            'Authorization': `Token ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.Contest) {
-            contestMap[team.id] = data.Contest;
-          }
+        const response = await api.get(`/api/mapping/contestToTeam/getContestByTeam/${team.id}/`);
+        if (response.data?.Contest) {
+          contestMap[team.id] = response.data.Contest;
         } else {
-          console.error(`Failed to fetch contest for team ${team.id}:`, response.status);
           contestMap[team.id] = null;
         }
       } catch (error) {

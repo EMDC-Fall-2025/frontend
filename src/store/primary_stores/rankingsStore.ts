@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { Contest, Cluster } from "../../types";
 
 interface RankingsState {
@@ -44,12 +44,8 @@ export const useRankingsStore = create<RankingsState>()(
       fetchContestsForOrganizer: async (organizerId: number) => {
         set({ isLoadingRankings: true, rankingsError: null });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/contestToOrganizer/getByOrganizer/${organizerId}/`,
-            {
-              headers: { Authorization: `Token ${token}` }
-            }
+          const response = await api.get(
+            `/api/mapping/contestToOrganizer/getByOrganizer/${organizerId}/`
           );
           const contestsData = response.data?.Contests ?? [];
           set({ 
@@ -70,14 +66,9 @@ export const useRankingsStore = create<RankingsState>()(
       fetchClustersWithTeamsForContest: async (contestId: number) => {
         set({ isLoadingRankings: true, rankingsError: null });
         try {
-          const token = localStorage.getItem("token");
-          
           // Fetch clusters for the contest
-          const clusterResponse = await axios.get(
-            `/api/mapping/clusterToContest/getAllClustersByContest/${contestId}/`,
-            {
-              headers: { Authorization: `Token ${token}` }
-            }
+          const clusterResponse = await api.get(
+            `/api/mapping/clusterToContest/getAllClustersByContest/${contestId}/`
           );
           
           const clusterData = (clusterResponse.data?.Clusters ?? []).map((c: any) => ({ 
@@ -91,11 +82,8 @@ export const useRankingsStore = create<RankingsState>()(
           const clustersWithTeams = await Promise.all(
             clusterData.map(async (cluster: any) => {
               try {
-                const teamResponse = await axios.get(
-                  `/api/mapping/clusterToTeam/getAllTeamsByCluster/${cluster.id}/`,
-                  {
-                    headers: { Authorization: `Token ${token}` }
-                  }
+                const teamResponse = await api.get(
+                  `/api/mapping/clusterToTeam/getAllTeamsByCluster/${cluster.id}/`
                 );
                 
                 
@@ -118,11 +106,8 @@ export const useRankingsStore = create<RankingsState>()(
                 const teamsWithStatus = await Promise.all(
                   rankedTeams.map(async (t: any) => {
                     try {
-                      const statusResponse = await axios.get(
-                        `/api/mapping/scoreSheet/allSubmittedForTeam/${t.id}/`,
-                        {
-                          headers: { Authorization: `Token ${token}` }
-                        }
+                      const statusResponse = await api.get(
+                        `/api/mapping/scoreSheet/allSubmittedForTeam/${t.id}/`
                       );
                       const total = t.total_score ?? 0;
                       const status = (statusResponse.data?.allSubmitted && total > 0)
@@ -160,18 +145,14 @@ export const useRankingsStore = create<RankingsState>()(
       advanceToChampionship: async (contestId: number, championshipTeamIds: number[]) => {
         set({ isLoadingRankings: true, rankingsError: null });
         try {
-          const token = localStorage.getItem("token");
           const requestData = {
             contestid: contestId,
             championship_team_ids: championshipTeamIds
           };
           
-          const response = await axios.post(
+          const response = await api.post(
             `/api/advance/advanceToChampionship/`,
-            requestData,
-            {
-              headers: { Authorization: `Token ${token}` }
-            }
+            requestData
           );
           
           if (response.data.ok) {
@@ -198,14 +179,10 @@ export const useRankingsStore = create<RankingsState>()(
       undoChampionshipAdvancement: async (contestId: number) => {
         set({ isLoadingRankings: true, rankingsError: null });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(
+          const response = await api.post(
             `/api/advance/undoChampionshipAdvancement/`,
             {
               contestid: contestId,
-            },
-            {
-              headers: { Authorization: `Token ${token}` }
             }
           );
           
@@ -229,12 +206,8 @@ export const useRankingsStore = create<RankingsState>()(
       listAdvancers: async (contestId: number) => {
         set({ isLoadingRankings: true, rankingsError: null });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/tabulation/listAdvancers/?contestid=${contestId}`,
-            {
-              headers: { Authorization: `Token ${token}` }
-            }
+          const response = await api.get(
+            `/api/tabulation/listAdvancers/?contestid=${contestId}`
           );
           
           if (response.data.ok) {

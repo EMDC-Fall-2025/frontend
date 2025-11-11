@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import toast from "react-hot-toast";
 import { ScoreSheet, ScoreSheetDetails } from "../../types";
 
@@ -86,13 +86,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
       // Optimized submission method - no loading state for instant response
       submitScoreSheet: async (data: Partial<ScoreSheet>) => {
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(`/api/scoreSheet/edit/`, data, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          const response = await api.post(`/api/scoreSheet/edit/`, data);
           
           set({ scoreSheet: response.data.edit_score_sheets });
           set({ scoreSheetError: null });
@@ -121,13 +115,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
       fetchScoreSheetById: async (scoresId: number) => {
         set({ isLoadingScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/scoreSheet/get/${scoresId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          const response = await api.get(`/api/scoreSheet/get/${scoresId}/`);
           set({ scoreSheet: response.data.ScoreSheet });
           set({ scoreSheetError: null });
         } catch (scoreSheetError: any) {
@@ -141,15 +129,8 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
       getScoreSheetBreakdown: async (teamId: number) => {
         set({ isLoadingScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/scoreSheet/getDetails/${teamId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+          const response = await api.get(
+            `/api/scoreSheet/getDetails/${teamId}/`
           );
           set({ scoreSheetBreakdown: response.data as ScoreSheetDetails });
           set({ scoreSheetError: null });
@@ -165,13 +146,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
       createScoreSheet: async (data: Partial<ScoreSheet>) => {
         set({ isLoadingScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(`/api/scoreSheet/create/`, data, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          const response = await api.post(`/api/scoreSheet/create/`, data);
           set({ scoreSheet: response.data });
           set({ scoreSheetError: null });
         } catch (scoreSheetError: any) {
@@ -186,13 +161,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
       editScoreSheet: async (data: Partial<ScoreSheet>) => {
         set({ isLoadingScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(`/api/scoreSheet/edit/`, data, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          const response = await api.post(`/api/scoreSheet/edit/`, data);
           set({ scoreSheet: response.data.edit_score_sheets });
           set({ scoreSheetError: null });
           
@@ -227,16 +196,9 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
       updateScores: async (data: Partial<ScoreSheet>) => {
         set({ isLoadingScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(
+          const response = await api.post(
             `/api/scoreSheet/edit/updateScores/`,
-            data,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+            data
           );
           set({ scoreSheet: response.data.updated_sheet });
           set({ scoreSheetError: null });
@@ -260,16 +222,9 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
       ) => {
         set({ isLoadingScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(
+          const response = await api.post(
             `/api/scoreSheet/edit/editField/`,
-            { id, field, new_value: newValue },
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+            { id, field, new_value: newValue }
           );
           set({ scoreSheet: response.data.score_sheet });
           set({ scoreSheetError: null });
@@ -285,12 +240,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
       deleteScoreSheet: async (scoresId: number) => {
         set({ isLoadingScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/scoreSheet/delete/${scoresId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-            },
-          });
+          await api.delete(`/api/scoreSheet/delete/${scoresId}/`);
           set({ scoreSheet: null });
         } catch (scoreSheetError: any) {
           set({ scoreSheetError: "Failed to delete score sheet" });
@@ -311,16 +261,9 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
       ) => {
         set({ isLoadingScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.post(
+          await api.post(
             `/api/scoreSheet/createForCluster/`,
-            { judgeId, clusterId, penalties, presentation, journal, mdo },
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+            { judgeId, clusterId, penalties, presentation, journal, mdo }
           );
           set({ scoreSheetError: null });
         } catch (scoreSheetError: any) {
@@ -339,29 +282,17 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
       fetchMultipleScoreSheets: async (teamIds: number[], judgeId: number, sheetType: number) => {
         set({ isLoadingScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          
           // First get the score sheet IDs for each team
           const sheetsPromises = teamIds.map(async (teamId) => {
             try {
               // Fetch score sheet data
-              const mapResponse = await axios.get(`/api/mapping/scoreSheet/getByTeamJudge/${sheetType}/${judgeId}/${teamId}/`, {
-                headers: {
-                  Authorization: `Token ${token}`,
-                  "Content-Type": "application/json",
-                }
-              });
+              const mapResponse = await api.get(`/api/mapping/scoreSheet/getByTeamJudge/${sheetType}/${judgeId}/${teamId}/`);
           
               const scoreSheetId = mapResponse.data.ScoreSheet?.id;
 
           
               if (scoreSheetId) {
-                const sheetResponse = await axios.get(`/api/scoreSheet/get/${scoreSheetId}/`, {
-                  headers: {
-                    Authorization: `Token ${token}`,
-                    "Content-Type": "application/json",
-                  }
-                });
+                const sheetResponse = await api.get(`/api/scoreSheet/get/${scoreSheetId}/`);
           
                 return {
                   ...sheetResponse.data.ScoreSheet,
@@ -396,15 +327,8 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
       updateMultipleScores: async (scoreSheets: Partial<ScoreSheet>[]) => {
         set({ isLoadingScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          
           const updatePromises = scoreSheets.map(sheet => 
-            axios.post(`/api/scoreSheet/edit/updateScores/`, sheet, {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              }
-            })
+            api.post(`/api/scoreSheet/edit/updateScores/`, sheet)
           );
           
           await Promise.all(updatePromises);
@@ -433,17 +357,10 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
       submitMultipleScoreSheets: async (scoreSheets: Partial<ScoreSheet>[]) => {
         set({ isLoadingScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          
           const submitPromises = scoreSheets.map(sheet => 
-            axios.post(`/api/scoreSheet/edit/`, {
+            api.post(`/api/scoreSheet/edit/`, {
               ...sheet,
               isSubmitted: true
-            }, {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              }
             })
           );
           

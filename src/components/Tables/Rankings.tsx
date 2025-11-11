@@ -1,23 +1,24 @@
 import { Button, Box, Checkbox, Collapse, IconButton, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, Chip } from "@mui/material";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import theme from "../../theme";
 import { TriangleIcon, Trophy } from "lucide-react";
 import { useAuthStore } from "../../store/primary_stores/authStore";
 import { useRankingsStore } from "../../store/primary_stores/rankingsStore";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { api } from "../../lib/api";
 
 // Rankings component for displaying team rankings by cluster
 const Ranking = () => {
   const navigate = useNavigate();
   const [selectedTeams, setSelectedTeams] = useState<number[]>([])
   const [openCluster, setOpenCluster] = useState<Set<number>>(new Set())
-  const { isAuthenticated, role, token } = useAuthStore()
+  const { isAuthenticated, role } = useAuthStore()
 
   const [contests, setContests] = useState<any[]>([])
   const [clusters, setClusters] = useState<any[]>([])
   const [selectedContest, setSelectedContest] = useState<any>(null)
+  const cacheRef = useRef<Map<number, { timestamp: number; clusters: any[] }>>(new Map())
 
   const { advanceToChampionship, undoChampionshipAdvancement } = useRankingsStore()
 
@@ -25,7 +26,7 @@ const Ranking = () => {
   useEffect(() => {
     const fetchContests = async () => {
       try {
-        if (!isAuthenticated || !token) {
+        if (!isAuthenticated) {
           console.error('Please log in to view rankings')
           return
         }
@@ -34,9 +35,7 @@ const Ranking = () => {
           console.error('Organizer ID not found')
           return
         }
-        const { data } = await axios.get(`/api/mapping/contestToOrganizer/getByOrganizer/${organizerId}/`, {
-          headers: { Authorization: `Token ${token}` }
-        })
+        const { data } = await api.get(`/api/mapping/contestToOrganizer/getByOrganizer/${organizerId}/`)
         const contestsData = data?.Contests ?? []
         setContests(contestsData)
         if (contestsData.length > 0) setSelectedContest(contestsData[0])
@@ -46,41 +45,28 @@ const Ranking = () => {
       }
     }
     if (isAuthenticated) fetchContests()
-  }, [isAuthenticated, role, token])
+  }, [isAuthenticated, role])
 
   // Extract fetch function so it can be called after advancement
   const fetchClusters = useCallback(async (forceRefresh = false) => {
-    if (!selectedContest || !token) return
+    if (!selectedContest) return
     try {
       // 1) Try cache first (only if not forcing refresh)
       if (!forceRefresh) {
-        try {
-          const cacheKey = `rankings:contest:${selectedContest.id}`
-          const raw = localStorage.getItem(cacheKey)
-          if (raw) {
-            const cached = JSON.parse(raw)
-            // basic TTL of 60s - if cache is fresh, use it and skip API call
-            if (cached && typeof cached === 'object' && Date.now() - (cached.timestamp || 0) < 60_000) {
-              if (Array.isArray(cached.clusters)) {
-                setClusters(cached.clusters)
-                return // Skip API call if cache is fresh
-              }
-            }
-          }
-        } catch { }
+        const cached = cacheRef.current.get(selectedContest.id)
+        if (cached && Date.now() - cached.timestamp < 60_000 && Array.isArray(cached.clusters)) {
+          setClusters(cached.clusters)
+          return
+        }
       }
 
       // 2) Fetch fresh data from API 
-      const { data: clusterResp } = await axios.get(`/api/mapping/clusterToContest/getAllClustersByContest/${selectedContest.id}/`, {
-        headers: { Authorization: `Token ${token}` }
-      })
+      const { data: clusterResp } = await api.get(`/api/mapping/clusterToContest/getAllClustersByContest/${selectedContest.id}/`)
       const clusterData = (clusterResp?.Clusters ?? []).map((c: any) => ({ id: c.id, cluster_name: c.cluster_name ?? c.name, cluster_type: c.cluster_type, teams: [], _statusFetched: false }))
       const withTeams = await Promise.all(
         clusterData.map(async (cluster: any) => {
           try {
-            const { data: teamResp } = await axios.get(`/api/mapping/clusterToTeam/getAllTeamsByCluster/${cluster.id}/`, {
-              headers: { Authorization: `Token ${token}` }
-            })
+            const { data: teamResp } = await api.get(`/api/mapping/clusterToTeam/getAllTeamsByCluster/${cluster.id}/`)
             const teams = (teamResp?.Teams ?? []).map((t: any) => ({
               id: t.id,
               team_name: t.team_name ?? t.name,
@@ -106,14 +92,11 @@ const Ranking = () => {
       setClusters(withTeams)
 
       // 2) Save fresh data to cache
-      try {
-        const cacheKey = `rankings:contest:${selectedContest.id}`
-        localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), clusters: withTeams }))
-      } catch { }
+      cacheRef.current.set(selectedContest.id, { timestamp: Date.now(), clusters: withTeams })
     } catch (e) {
       console.error('Failed to load contest data:', e)
     }
-  }, [selectedContest, token])
+  }, [selectedContest])
 
   // Load clusters and teams for selected contest
   useEffect(() => {
@@ -140,9 +123,7 @@ const Ranking = () => {
         const updatedTeams = await Promise.all(
           (cluster.teams ?? []).map(async (t: any) => {
             try {
-              const { data: s } = await axios.get(`/api/mapping/scoreSheet/allSubmittedForTeam/${t.id}/`, {
-                headers: { Authorization: `Token ${token}` }
-              })
+              const { data: s } = await api.get(`/api/mapping/scoreSheet/allSubmittedForTeam/${t.id}/`)
               const total = t.total_score ?? 0
               const status = (s?.allSubmitted && total > 0)
                 ? 'completed'
@@ -157,19 +138,15 @@ const Ranking = () => {
         next[idx] = { ...cluster, teams: updatedTeams, _statusFetched: true }
         setClusters(next)
         // Update cache with enriched status data
-        try {
-          if (selectedContest?.id) {
-            const cacheKey = `rankings:contest:${selectedContest.id}`
-            const raw = localStorage.getItem(cacheKey)
-            const cached = raw ? JSON.parse(raw) : { timestamp: Date.now(), clusters: [] }
-            const cachedClusters = Array.isArray(cached.clusters) ? cached.clusters : []
-            const cidx = cachedClusters.findIndex((c: any) => c.id === clusterId)
-            if (cidx >= 0) {
-              cachedClusters[cidx] = { ...cachedClusters[cidx], teams: updatedTeams, _statusFetched: true }
-            }
-            localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), clusters: cachedClusters }))
+        if (selectedContest?.id) {
+          const cached = cacheRef.current.get(selectedContest.id)
+          if (cached) {
+            const cloned = cached.clusters.map((c: any) =>
+              c.id === clusterId ? { ...c, teams: updatedTeams, _statusFetched: true } : c
+            )
+            cacheRef.current.set(selectedContest.id, { timestamp: cached.timestamp, clusters: cloned })
           }
-        } catch { }
+        }
       } catch {
         // ignore status fetch errors
       }
@@ -179,7 +156,7 @@ const Ranking = () => {
     openCluster.forEach((clusterId) => {
       fetchStatusForCluster(clusterId)
     })
-  }, [openCluster, clusters, token])
+  }, [openCluster, clusters])
 
   // autoselect
   useEffect(() => {

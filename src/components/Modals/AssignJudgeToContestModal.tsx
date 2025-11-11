@@ -32,7 +32,7 @@ import theme from "../../theme";
 import toast from "react-hot-toast";
 import { useContestStore } from "../../store/primary_stores/contestStore";
 import { Judge } from "../../types";
-import axios from "axios";
+import { api } from "../../lib/api";
 import SearchBar from "../SearchBar";
 
 export interface IAssignJudgeToContestModalProps {
@@ -120,15 +120,8 @@ export default function AssignJudgeToContestModal(
         }
 
         // Load all judges
-        const token = localStorage.getItem("token");
-        const response = await axios.get(
+        const response = await api.get(
           "/api/judge/getAll/",
-          {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
         );
         if (!isMounted) return;
         if (response.data?.Judges) {
@@ -161,17 +154,9 @@ export default function AssignJudgeToContestModal(
       // Fetch clusters and assigned judges for this contest
       (async () => {
         try {
-          const token = localStorage.getItem("token");
-          
           // #Fetch clusters for the selected contest
-          const clustersResponse = await axios.get(
+          const clustersResponse = await api.get(
             `/api/mapping/clusterToContest/getAllClustersByContest/${selectedContestId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
           );
           
           // Process clusters response and update state
@@ -186,14 +171,8 @@ export default function AssignJudgeToContestModal(
           await Promise.all(
             (clustersResponse.data?.Clusters || []).map(async (cluster: any) => {
               try {
-                const judgesByClusterResponse = await axios.get(
+                const judgesByClusterResponse = await api.get(
                   `/api/mapping/clusterToJudge/getAllJudgesByCluster/${cluster.id}/`,
-                  {
-                    headers: {
-                      Authorization: `Token ${token}`,
-                      "Content-Type": "application/json",
-                    },
-                  }
                 );
                 if (judgesByClusterResponse.data?.Judges) {
                   judgesByClusterResponse.data.Judges.forEach((judge: any) => {
@@ -256,19 +235,9 @@ export default function AssignJudgeToContestModal(
         ...scoreSheets,
       };
 
-      // Get authentication token for API request
-      const token = localStorage.getItem("token");
-      // Validate token and prepare assignment payload
-      
-      const response = await axios.post(
+      const response = await api.post(
         "/api/mapping/contestToJudge/assign/",
         payload,
-        {
-          headers: {
-            Authorization: `Token ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
       );
 
       setSuccess(response?.data?.message || "Judge successfully assigned to contest!");

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { EditedJudge, Judge, NewJudge } from "../../types";
 import { extractErrorMessage } from "../../utils/errorHandler";
 
@@ -8,7 +8,7 @@ interface JudgeState {
   judge: Judge | null;
   isLoadingJudge: boolean;
   judgeError: string | null;
-  submissionStatus: { [key: number]: boolean } | null;
+  submissionStatus: { [clusterId: number]: { [judgeId: number]: boolean } } | null;
   fetchJudgeById: (judgeId: number) => Promise<void>;
   createJudge: (newJudge: NewJudge) => Promise<Judge>;
   editJudge: (editedJudge: EditedJudge) => Promise<Judge>;
@@ -53,14 +53,8 @@ export const useJudgeStore = create<JudgeState>()(
       fetchJudgeById: async (judgeId: number) => {
         set({ isLoadingJudge: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/judge/get/${judgeId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-          set({ judge: response.data.Judge });
+          const { data } = await api.get(`/api/judge/get/${judgeId}/`);
+          set({ judge: data.Judge });
           set({ judgeError: null });
         } catch (judgeError: any) {
           const errorMessage = "Error fetching judge:" + judgeError;
@@ -74,14 +68,8 @@ export const useJudgeStore = create<JudgeState>()(
       createJudge: async (newJudge: NewJudge) => {
         set({ isLoadingJudge: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(`/api/judge/create/`, newJudge, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-          const createdJudge = (response.data as any)?.judge;
+          const { data } = await api.post(`/api/judge/create/`, newJudge);
+          const createdJudge = (data as any)?.judge;
           set({ judge: createdJudge, judgeError: null });
           return createdJudge;
         } catch (judgeError: any) {
@@ -97,14 +85,8 @@ export const useJudgeStore = create<JudgeState>()(
       editJudge: async (editedJudge: EditedJudge) => {
         set({ isLoadingJudge: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(`/api/judge/edit/`, editedJudge, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-          const updatedJudge = response.data.judge;
+          const { data } = await api.post(`/api/judge/edit/`, editedJudge);
+          const updatedJudge = data.judge;
           set(() => ({
             judge: updatedJudge,
           }));
@@ -123,12 +105,7 @@ export const useJudgeStore = create<JudgeState>()(
       deleteJudge: async (judgeId: number) => {
         set({ isLoadingJudge: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/judge/delete/${judgeId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-            },
-          });
+          await api.delete(`/api/judge/delete/${judgeId}/`);
           set({ judgeError: null });
         } catch (judgeError) {
           const errorMessage = "Error deleting judge:" + judgeError;
@@ -142,19 +119,21 @@ export const useJudgeStore = create<JudgeState>()(
       checkAllScoreSheetsSubmitted: async (judges: Judge[], clusterId?: number) => {
         set({ isLoadingJudge: true });
         try {
-          const token = localStorage.getItem("token");
           const url = clusterId ? `/api/judge/allScoreSheetsSubmitted/?cluster_id=${clusterId}` : `/api/judge/allScoreSheetsSubmitted/`;
-          const response = await axios.post(
-            url,
-            judges,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
+          const { data } = await api.post(url, judges);
+          
+          // Store submission status per cluster to avoid overwriting other clusters
+          if (clusterId) {
+            set((state) => ({
+              submissionStatus: {
+                ...(state.submissionStatus || {}),
+                [clusterId]: data,
               },
-            }
-          );
-          set({ submissionStatus: response.data });
+            }));
+          } else {
+            // If no clusterId, store as before (for backward compatibility)
+            set({ submissionStatus: { 0: data } });
+          }
           set({ judgeError: null });
         } catch (judgeError: any) {
           const errorMessage =
@@ -169,17 +148,10 @@ export const useJudgeStore = create<JudgeState>()(
       judgeDisqualifyTeam: async (teamId: number, isDisqualified: boolean) => {
         set({ isLoadingJudge: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.post(
-            `/api/judge/disqualifyTeam/`,
-            { teamid: teamId, judge_disqualified: isDisqualified },
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
-          );
+          await api.post(`/api/judge/disqualifyTeam/`, {
+            teamid: teamId,
+            judge_disqualified: isDisqualified,
+          });
           set({ judgeError: null });
         } catch (judgeError: any) {
           const errorMessage = "Error disqualifying team:" + judgeError;

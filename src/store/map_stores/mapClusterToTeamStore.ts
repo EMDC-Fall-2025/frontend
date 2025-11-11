@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { Cluster, Team, ClusterTeamMapping } from "../../types";
 
 interface MapClusterTeamState {
@@ -41,15 +41,8 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
       fetchClustersByContestId: async (contestId) => {
         set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/clusterToContest/getAllClustersByContest/${contestId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+          const response = await api.get(
+            `/api/mapping/clusterToContest/getAllClustersByContest/${contestId}/`
           );
           set({ clusters: response.data.Clusters, isLoadingMapClusterToTeam: false });
         } catch (error) {
@@ -68,15 +61,8 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
         
         set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/clusterToTeam/getAllTeamsByCluster/${clusterId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+          const response = await api.get(
+            `/api/mapping/clusterToTeam/getAllTeamsByCluster/${clusterId}/`
           );
           const teams = response.data?.Teams || [];
           // Update store state with fetched teams
@@ -99,16 +85,9 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
       createClusterTeamMapping: async (data: ClusterTeamMapping) => {
         set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(
+          const response = await api.post(
             `/api/mapping/clusterToTeam/create/`,
-            data,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+            data
           );
           set((state) => ({
             clusterTeamMappings: [
@@ -125,13 +104,7 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
       deleteClusterTeamMapping: async (mapId: number, clusterId?: number) => {
         set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/mapping/clusterToTeam/delete/${mapId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          await api.delete(`/api/mapping/clusterToTeam/delete/${mapId}/`);
           set((state) => ({
             clusterTeamMappings: state.clusterTeamMappings.filter(
               (mapping) => mapping.id !== mapId
@@ -156,13 +129,7 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
       deleteTeamCompletely: async (teamId: number) => {
         set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/team/delete/${teamId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          await api.delete(`/api/team/delete/${teamId}/`);
           // Remove team from all clusters in UI state
           set((state) => {
             const updatedTeamsByClusterId: { [key: number]: Team[] } = {};

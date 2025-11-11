@@ -254,7 +254,6 @@ export default function Nav() {
       <SetSharedPasswordDialog
         open={openSetShared}
         onClose={() => setOpenSetShared(false)}
-        token={token}
       />
 
       {/* Snackbar (kept, but no shortcut triggers it now) */}

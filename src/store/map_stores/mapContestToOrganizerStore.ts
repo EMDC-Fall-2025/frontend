@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { Contest, Organizer } from "../../types";
 import useContestStore from "../primary_stores/contestStore";
 import useOrganizerStore from "../primary_stores/organizerStore";
@@ -82,16 +82,10 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
         });
 
         try {
-          const token = localStorage.getItem("token");
-          await axios.post(
-            `/api/mapping/contestToOrganizer/create/`,
-            { contestid: contestId, organizerid: organizerId },
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-              },
-            }
-          );
+          await api.post(`/api/mapping/contestToOrganizer/create/`, {
+            contestid: contestId,
+            organizerid: organizerId,
+          });
           // Get the contest from contest store and update directly
           const allContests = useContestStore.getState().allContests;
           const contest = allContests.find((c: Contest) => c.id === contestId);
@@ -106,15 +100,7 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
             organizerName = `${organizer.first_name} ${organizer.last_name}`.trim();
           } else if (organizerId) {
             try {
-              const organizerToken = localStorage.getItem("token");
-              const organizerResponse = await axios.get(
-                `/api/organizer/get/${organizerId}/`,
-                {
-                  headers: {
-                    Authorization: `Token ${organizerToken}`,
-                  },
-                }
-              );
+              const organizerResponse = await api.get(`/api/organizer/get/${organizerId}/`);
               const fetchedOrganizer = organizerResponse.data.organizer || organizerResponse.data;
               if (fetchedOrganizer) {
                 organizerName = `${fetchedOrganizer.first_name} ${fetchedOrganizer.last_name}`.trim();
@@ -167,15 +153,7 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
         });
 
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(
-            `/api/mapping/contestToOrganizer/delete/${organizerId}/${contestId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-              },
-            }
-          );
+          await api.delete(`/api/mapping/contestToOrganizer/delete/${organizerId}/${contestId}/`);
           
           // Get organizer to get name for removing from organizerNamesByContests
           const allOrganizers = useOrganizerStore.getState().allOrganizers;
@@ -395,14 +373,8 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
         });
 
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/contestToOrganizer/getByOrganizer/${organizerId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-              },
-            }
+          const response = await api.get(
+            `/api/mapping/contestToOrganizer/getByOrganizer/${organizerId}/`
           );
           set({
             contests: response.data.Contests,
@@ -422,14 +394,8 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
           mapContestOrganizerError: null,
         });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/organizerToContest/getOrganizersByContest/${contestId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-              },
-            }
+          const response = await api.get(
+            `/api/mapping/organizerToContest/getOrganizersByContest/${contestId}/`
           );
           set({
             organizers: response.data.Organizers,
@@ -455,14 +421,8 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
           mapContestOrganizerError: null,
         });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/contestToOrganizer/getAllContestsPerOrganizer/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-              },
-            }
+          const response = await api.get(
+            `/api/mapping/contestToOrganizer/getAllContestsPerOrganizer/`
           );
           set({
             contestsByOrganizers: response.data,
@@ -489,14 +449,8 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
           mapContestOrganizerError: null,
         });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/contestToOrganizer/getOrganizerNames/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-              },
-            }
+          const response = await api.get(
+            `/api/mapping/contestToOrganizer/getOrganizerNames/`
           );
 
           const responseData = response.data;

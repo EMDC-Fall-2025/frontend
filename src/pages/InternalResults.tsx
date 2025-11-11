@@ -7,7 +7,7 @@ import { useAuthStore } from "../store/primary_stores/authStore";
 import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
 import InternalResultsTable from "../components/Tables/InternalResultsTable";
 
-import axios from "axios";
+import { api } from "../lib/api";
 import useContestStore from "../store/primary_stores/contestStore";
 
   
@@ -44,16 +44,9 @@ const InternalResults: React.FC = () => {
     const load = async () => {
       try {
         // Tabulate scores to ensure they're calculated
-        const token = localStorage.getItem("token");
-        await axios.put(
+        await api.put(
           "/api/tabulation/tabulateScores/",
           { contestid: parsedContestId },
-          {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
         );
         
         // Fetch the updated teams with calculated scores
@@ -86,16 +79,9 @@ const InternalResults: React.FC = () => {
     if ((activeTab === 1 || activeTab === 2) && parsedContestId) { // Championship or Redesign tab
       const runTabulation = async () => {
         try {
-          const token = localStorage.getItem("token");
-          await axios.put(
+          await api.put(
             "/api/tabulation/tabulateScores/",
             { contestid: parsedContestId },
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
           );
           
           // Fetch the updated teams with calculated scores

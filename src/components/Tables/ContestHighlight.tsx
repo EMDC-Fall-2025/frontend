@@ -3,19 +3,37 @@ import { Grid, Card, CardContent, Typography, Box, CircularProgress } from "@mui
 import GroupsIcon from "@mui/icons-material/Groups";
 import GavelIcon from "@mui/icons-material/Gavel";
 import MilitaryTechIcon from "@mui/icons-material/MilitaryTech";
+import { useParams } from "react-router-dom";
 import theme from "../../theme";
 import { useMapContestToTeamStore } from "../../store/map_stores/mapContestToTeamStore";
 import useContestJudgeStore from "../../store/map_stores/mapContestToJudgeStore";
 import { useContestStore } from "../../store/primary_stores/contestStore";
 
 export default function ContestHighlightPage() {
+  const { contestId } = useParams<{ contestId: string }>();
+  const contestIdNumber = contestId ? parseInt(contestId, 10) : null;
+  
   const { isLoadingContest } = useContestStore();
   const { teamsByContest, isLoadingMapContestToTeam } = useMapContestToTeamStore();
-  const { judges, isLoadingMapContestJudge } = useContestJudgeStore();
+  
+  // Use selector to get judges for this specific contest - this ensures reactivity
+  const contestJudges = useContestJudgeStore((state) => state.contestJudges);
+  const getAllJudgesByContestId = useContestJudgeStore((state) => state.getAllJudgesByContestId);
+  const isLoadingMapContestJudge = useContestJudgeStore((state) => state.isLoadingMapContestJudge);
+
+  // Get judges for this specific contest
+  const judgesForContest = contestIdNumber ? (contestJudges[contestIdNumber] || []) : [];
 
   const [totalTeams, setTotalTeams] = useState<number>(0);
   const [totalJudges, setTotalJudges] = useState<number>(0);
   const [mostPointsTeam, setMostPointsTeam] = useState<string>("N/A");
+
+  // Fetch judges for the contest when contestId is available - force refresh to get latest data
+  useEffect(() => {
+    if (contestIdNumber) {
+      getAllJudgesByContestId(contestIdNumber, true); // Force refresh to get latest count
+    }
+  }, [contestIdNumber, getAllJudgesByContestId]);
 
   // Count total teams
   useEffect(() => {
@@ -27,15 +45,23 @@ export default function ContestHighlightPage() {
         t.total_score > (max?.total_score || 0) ? t : max, teamsByContest[0]
       );
       if (highest) setMostPointsTeam(`${highest.team_name} – ${highest.total_score}`);
+    } else {
+      setTotalTeams(0);
     }
   }, [teamsByContest]);
 
-  // Count total judges
+  // Count total judges - deduplicate by judge ID to ensure accurate count
   useEffect(() => {
-    if (judges && judges.length > 0) {
-      setTotalJudges(judges.length);
+    if (judgesForContest && judgesForContest.length > 0) {
+      // Deduplicate judges by ID in case of duplicates
+      const uniqueJudges = Array.from(
+        new Map(judgesForContest.map(judge => [judge.id, judge])).values()
+      );
+      setTotalJudges(uniqueJudges.length);
+    } else {
+      setTotalJudges(0);
     }
-  }, [judges]);
+  }, [judgesForContest]);
 
   if (isLoadingContest || isLoadingMapContestToTeam || isLoadingMapContestJudge) {
     return (

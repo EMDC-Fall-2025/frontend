@@ -10,15 +10,14 @@ import {
   Alert,
   Stack,
 } from "@mui/material";
-import axios from "axios";
+import { api } from "../../lib/api";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  token: string | null;
 };
 
-export default function SetSharedPasswordDialog({ open, onClose, token }: Props) {
+export default function SetSharedPasswordDialog({ open, onClose }: Props) {
   const [role, setRole] = useState<2 | 3>(2); // 2=Organizer, 3=Judge
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -38,17 +37,11 @@ export default function SetSharedPasswordDialog({ open, onClose, token }: Props)
       setErr("Passwords do not match.");
       return;
     }
-    if (!token) {
-      setErr("Missing auth token.");
-      return;
-    }
-
     try {
       setLoading(true);
-      const res = await axios.post(
+      const res = await api.post(
         `/api/auth/set-shared-password/`,
-        { role, password },
-        { headers: { Authorization: `Token ${token}` } }
+        { role, password }
       );
       setOk(res.data?.message || "Shared password set successfully.");
       setPassword("");

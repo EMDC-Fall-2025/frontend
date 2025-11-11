@@ -289,7 +289,11 @@ function JudgesTable(props: IJudgesTableProps) {
 
   // Memoize rows to prevent recreating buttons on every render
   const rows = useMemo(() => judges.map((judge) => {
-    const isSubmitted = submissionStatus ? submissionStatus[judge.id] : false;
+    // Get submission status for this specific cluster
+    const clusterSubmissionStatus = currentCluster?.id && submissionStatus 
+      ? submissionStatus[currentCluster.id] 
+      : null;
+    const isSubmitted = clusterSubmissionStatus ? clusterSubmissionStatus[judge.id] : false;
     return createDataJudge(
       `${judge.first_name} ${judge.last_name}`,
       `${titles[judge.role - 1]}`,
@@ -408,7 +412,7 @@ function JudgesTable(props: IJudgesTableProps) {
       </Button>,
       isSubmitted
     );
-  }), [judges, submissionStatus, isChampionshipOrRedesignCluster, handleOpenJudgeModal, handleOpenAreYouSure, handleNavigateToJudging, currentCluster, judgeClusters, navigate]);
+  }), [judges, submissionStatus, currentCluster?.id, isChampionshipOrRedesignCluster, handleOpenJudgeModal, handleOpenAreYouSure, handleNavigateToJudging, currentCluster, judgeClusters, navigate]);
 
   return (
     <TableContainer component={Box}>

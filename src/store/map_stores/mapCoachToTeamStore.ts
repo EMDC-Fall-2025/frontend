@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { Team, Coach } from "../../types";
 
 interface MapCoachTeamState {
@@ -82,13 +82,7 @@ export const useMapCoachToTeamStore = create<MapCoachTeamState>()(
       createCoachTeamMapping: async (data: object) => {
         set({ isLoadingMapCoachToTeam: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.post("/api/mapping/coachToTeam/create/", data, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          await api.post("/api/mapping/coachToTeam/create/", data);
           set({ mapCoachToTeamError: null });
         } catch (mapCoachToTeamError: any) {
           const errorMessage = "Failed to create coach-team mapping";
@@ -114,16 +108,9 @@ export const useMapCoachToTeamStore = create<MapCoachTeamState>()(
         
         set({ isLoadingMapCoachToTeam: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(
+          const response = await api.post(
             "/api/mapping/coachToTeam/coachesByTeams/",
-            teamsToFetch,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+            teamsToFetch
           );
           set((state) => ({
             coachesByTeams: {
@@ -144,15 +131,8 @@ export const useMapCoachToTeamStore = create<MapCoachTeamState>()(
       fetchTeamsByCoachId: async (coachId: number) => {
         set({ isLoadingMapCoachToTeam: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/coachToTeam/teamsByCoach/${coachId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+          const response = await api.get(
+            `/api/mapping/coachToTeam/teamsByCoach/${coachId}/`
           );
           set({ teams: response.data.Teams, mapCoachToTeamError: null });
         } catch (mapCoachToTeamError: any) {
@@ -167,13 +147,7 @@ export const useMapCoachToTeamStore = create<MapCoachTeamState>()(
       deleteCoachTeamMapping: async (mapId: number) => {
         set({ isLoadingMapCoachToTeam: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/mapping/coachToTeam/delete/${mapId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          await api.delete(`/api/mapping/coachToTeam/delete/${mapId}/`);
           set({ mapCoachToTeamError: null });
         } catch (mapCoachToTeamError: any) {
           const errorMessage = "Failed to delete coach-team mapping";

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { Contest, NewContest } from "../../types";
 import useMapContestOrganizerStore from "../map_stores/mapContestToOrganizerStore";
 
@@ -42,13 +42,8 @@ export const useContestStore = create<ContestState>()(
         
         set({ isLoadingContest: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/contest/getAll/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-            },
-          });
-          set({ allContests: response.data.Contests });
+          const { data } = await api.get(`/api/contest/getAll/`);
+          set({ allContests: data.Contests });
           set({ contestError: null });
         } catch (contestError) {
           set({ contestError: "Error fetching contests: " + contestError });
@@ -74,14 +69,9 @@ export const useContestStore = create<ContestState>()(
         
         set({ isLoadingContest: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/contest/get/${contestId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-            },
-          });
+          const { data } = await api.get(`/api/contest/get/${contestId}/`);
           set({
-            contest: response.data.Contest,
+            contest: data.Contest,
           });
           set({ contestError: null });
         } catch (contestError) {
@@ -95,18 +85,8 @@ export const useContestStore = create<ContestState>()(
       createContest: async (newContest: NewContest) => {
         set({ isLoadingContest: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(
-            `/api/contest/create/`,
-            newContest,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
-          );
-          const createdContest: Contest = response.data.contest;
+          const { data } = await api.post(`/api/contest/create/`, newContest);
+          const createdContest: Contest = data.contest;
           set((state) => ({
             allContests: [...state.allContests, createdContest],
             contestError: null,
@@ -122,14 +102,8 @@ export const useContestStore = create<ContestState>()(
       editContest: async (editedContest: Contest) => {
         set({ isLoadingContest: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(`/api/contest/edit/`, editedContest, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-          const updatedContest: Contest = response.data.Contest;
+          const { data } = await api.post(`/api/contest/edit/`, editedContest);
+          const updatedContest: Contest = data.Contest;
           
           set((state) => ({
             allContests: state.allContests.map((c) =>
@@ -154,12 +128,7 @@ export const useContestStore = create<ContestState>()(
       deleteContest: async (contestId: number) => {
         set({ isLoadingContest: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/contest/delete/${contestId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-            },
-          });
+          await api.delete(`/api/contest/delete/${contestId}/`);
           set((state) => ({
             allContests: state.allContests.filter((c) => c.id !== contestId),
             contestError: null,

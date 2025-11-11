@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { Judge, Cluster } from "../../types";
 
@@ -82,15 +82,8 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
         
         set({ isLoadingMapClusterJudge: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/clusterToJudge/getAllJudgesByCluster/${clusterId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+          const response = await api.get(
+            `/api/mapping/clusterToJudge/getAllJudgesByCluster/${clusterId}/`
           );
           set((state) => ({
             judgesByClusterId: {
@@ -155,15 +148,8 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
       fetchClusterByJudgeId: async (judgeId) => {
         set({ isLoadingMapClusterJudge: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/clusterToJudge/getClusterByJudge/${judgeId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+          const response = await api.get(
+            `/api/mapping/clusterToJudge/getClusterByJudge/${judgeId}/`
           );
           set({ cluster: response.data.Cluster, mapClusterJudgeError: null });
         } catch (error) {
@@ -179,18 +165,10 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
         set({ isLoadingMapClusterJudge: true });
         const clusters: Record<number, Cluster> = {};
         try {
-          const token = localStorage.getItem("token");
-
           await Promise.all(
             judges.map(async (judge) => {
-              const response = await axios.get(
-                `/api/mapping/clusterToJudge/getClusterByJudge/${judge.id}/`,
-                {
-                  headers: {
-                    Authorization: `Token ${token}`,
-                    "Content-Type": "application/json",
-                  },
-                }
+              const response = await api.get(
+                `/api/mapping/clusterToJudge/getClusterByJudge/${judge.id}/`
               );
               clusters[judge.id] = response.data.Cluster;
             })
@@ -209,15 +187,8 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
       fetchAllClustersByJudgeId: async (judgeId: number) => {
         set({ isLoadingMapClusterJudge: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/clusterToJudge/getAllClustersByJudge/${judgeId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+          const response = await api.get(
+            `/api/mapping/clusterToJudge/getAllClustersByJudge/${judgeId}/`
           );
           set({ mapClusterJudgeError: null });
           return response.data?.Clusters || [];
@@ -233,16 +204,9 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
       createClusterJudgeMapping: async (mapData) => {
         set({ isLoadingMapClusterJudge: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(
+          const response = await api.post(
             `/api/mapping/clusterToJudge/create/`,
-            mapData,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+            mapData
           );
           return response.data;
         } catch (error) {
@@ -257,13 +221,7 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
       deleteClusterJudgeMapping: async (mapId, clusterId) => {
         set({ isLoadingMapClusterJudge: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/mapping/clusterToJudge/delete/${mapId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          await api.delete(`/api/mapping/clusterToJudge/delete/${mapId}/`);
 
           set((state) => ({
             judgesByClusterId: {
@@ -287,10 +245,7 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
       removeJudgeFromContest: async (judgeId: number, contestId: number) => {
         set({ isLoadingMapClusterJudge: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/mapping/contestToJudge/remove/${judgeId}/${contestId}/`, {
-            headers: { Authorization: `Token ${token}` },
-          });
+          await api.delete(`/api/mapping/contestToJudge/remove/${judgeId}/${contestId}/`);
           set({ mapClusterJudgeError: null });
         } catch (error) {
           const errorMessage = "Error removing judge from contest";
@@ -317,10 +272,7 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
         }));
         
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/mapping/clusterToJudge/remove/${judgeId}/${clusterId}/`, {
-            headers: { Authorization: `Token ${token}` },
-          });
+          await api.delete(`/api/mapping/clusterToJudge/remove/${judgeId}/${clusterId}/`);
       
           set({ mapClusterJudgeError: null });
         } catch (error) {

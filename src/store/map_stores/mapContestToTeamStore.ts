@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { Contest, Team } from "../../types";
 
 interface MapContestToTeamState {
@@ -28,16 +28,9 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
       fetchContestsByTeams: async (teams: Team[]) => {
         set({ isLoadingMapContestToTeam: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(
+          const response = await api.post(
             "/api/mapping/contestToTeam/contestsByTeams/",
-            teams,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+            teams
           );
 
           set({
@@ -67,15 +60,8 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
         
         set({ isLoadingMapContestToTeam: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/teamToContest/getTeamsByContest/${contestId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+          const response = await api.get(
+            `/api/mapping/teamToContest/getTeamsByContest/${contestId}/`
           );
 
           set({

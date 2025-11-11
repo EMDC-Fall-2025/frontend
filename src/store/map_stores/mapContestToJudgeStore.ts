@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { Contest, Judge, MapContestToJudge } from "../../types";
 
 interface MapContestJudgeState {
@@ -75,16 +75,9 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
       createContestJudgeMapping: async (mapData: MapContestToJudge) => {
         set({ isLoadingMapContestJudge: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(
+          const response = await api.post(
             `/api/mapping/contestToJudge/create/`,
-            mapData,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+            mapData
           );
           set((state) => ({
             mappings: [...state.mappings, response.data],
@@ -111,14 +104,8 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
         
         set({ isLoadingMapContestJudge: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/judgeToContest/getAllJudges/${contestId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-              },
-            }
+          const response = await api.get(
+            `/api/mapping/judgeToContest/getAllJudges/${contestId}/`
           );
           // Update judges and contestJudges map
           const judges = response.data.Judges || [];
@@ -152,14 +139,8 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
         
         set({ isLoadingMapContestJudge: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/contestToJudge/getContestByJudge/${judgeId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-              },
-            }
+          const response = await api.get(
+            `/api/mapping/contestToJudge/getContestByJudge/${judgeId}/`
           );
           set({
             contest: response.data.Contest,
@@ -208,12 +189,7 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
       deleteContestJudgeMappingById: async (mapId: number) => {
         set({ isLoadingMapContestJudge: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/mapping/contestToJudge/delete/${mapId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-            },
-          });
+          await api.delete(`/api/mapping/contestToJudge/delete/${mapId}/`);
           set((state) => ({
             mappings: state.mappings.filter((mapping) => mapping.id !== mapId),
           }));
@@ -247,10 +223,7 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
         }));
         
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/mapping/contestToJudge/remove/${judgeId}/${contestId}/`, {
-            headers: { Authorization: `Token ${token}` },
-          });
+          await api.delete(`/api/mapping/contestToJudge/remove/${judgeId}/${contestId}/`);
           // Success:  no refresh needed
           set({ mapContestJudgeError: null });
         } catch (error) {
@@ -313,14 +286,8 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
         try {
           for (const contestId of contestsToFetch) {
             try {
-              const token = localStorage.getItem("token");
-              const response = await axios.get(
-                `/api/mapping/judgeToContest/getAllJudges/${contestId}/`,
-                {
-                  headers: {
-                    Authorization: `Token ${token}`,
-                  },
-                }
+              const response = await api.get(
+                `/api/mapping/judgeToContest/getAllJudges/${contestId}/`
               );
               contestJudgesMap[contestId] = response.data.Judges || [];
             } catch (error) {

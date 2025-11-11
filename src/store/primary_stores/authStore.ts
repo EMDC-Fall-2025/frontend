@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { Role } from "../../types";
 
 interface AuthState {
@@ -9,9 +9,8 @@ interface AuthState {
   authError: string | null;
   isAuthenticated: boolean;
   isLoadingAuth: boolean;
-  token: null | string;
   login: (username: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -22,24 +21,19 @@ export const useAuthStore = create<AuthState>()(
       authError: null,
       isAuthenticated: false,
       isLoadingAuth: false,
-      token: null,
 
       login: async (username, password) => {
         set({ isLoadingAuth: true });
         set({ authError: null });
         try {
-          const response = await axios.post(`/api/login/`, {
-            username: username,
-            password: password,
+          const { data } = await api.post(`/api/login/`, {
+            username,
+            password,
           });
 
-          const { token, user, role } = response.data;
-          localStorage.setItem("token", token);
-
           set({
-            user,
-            role,
-            token,
+            user: data.user,
+            role: data.role ?? null,
             isAuthenticated: true,
             isLoadingAuth: false,
           });
@@ -51,13 +45,22 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => {
-        set({ user: null, role: null, isAuthenticated: false, token: null });
+      logout: async () => {
+        try {
+          await api.post(`/api/logout/`, {});
+        } finally {
+          set({ user: null, role: null, isAuthenticated: false });
+        }
       },
     }),
     {
       name: "auth-storage",
       storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({
+        user: state.user,
+        role: state.role,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );
