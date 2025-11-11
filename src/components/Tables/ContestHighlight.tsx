@@ -10,7 +10,7 @@ import { useContestStore } from "../../store/primary_stores/contestStore";
 
 export default function ContestHighlightPage() {
   const { isLoadingContest } = useContestStore();
-  const { teamsByContest, isLoadingMapContestTeam } = useMapContestToTeamStore();
+  const { teamsByContest, isLoadingMapContestToTeam } = useMapContestToTeamStore();
   const { judges, isLoadingMapContestJudge } = useContestJudgeStore();
 
   const [totalTeams, setTotalTeams] = useState<number>(0);
@@ -37,7 +37,7 @@ export default function ContestHighlightPage() {
     }
   }, [judges]);
 
-  if (isLoadingContest || isLoadingMapContestTeam || isLoadingMapContestJudge) {
+  if (isLoadingContest || isLoadingMapContestToTeam || isLoadingMapContestJudge) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "40vh" }}>
         <CircularProgress />
