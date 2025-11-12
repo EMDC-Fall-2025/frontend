@@ -216,7 +216,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   // NEW: multi-team scoring dialog state
   const [openMultiDialog, setOpenMultiDialog] = useState(false);
   const [multiType, setMultiType] = useState<
-    "presentation" | "journal" | "machine-design"
+    "presentation" | "journal" | "machine-design" | "general-penalties" | "run-penalties"
   >("presentation");
 
   const handleToggle = (teamId: number) => {
@@ -337,9 +337,31 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   const handleConfirmMulti = () => {
     if (!judge || !contest?.id) return;
 
-    
-    const typePath = multiType === "machine-design" ? "machinedesign" : multiType;
-    const route = `/multi-team-${typePath}-score/${judge.id}/${contest.id}/`;
+    //Handle routing based on selection
+    let route = "";
+    switch (multiType) {
+      case "presentation":
+        route = `/multi-team-presentation-score/${judge.id}/${contest.id}/`;
+        break;
+      case "journal":
+        route = `/multi-team-journal-score/${judge.id}/${contest.id}/`;
+        break;
+      case "machine-design":
+        route = `/multi-team-machinedesign-score/${judge.id}/${contest.id}/`;
+        break;
+      case "general-penalties":
+        route = `/multi-team-general-penalties/${judge.id}/${contest.id}/`;
+        break;
+      case "run-penalties":
+        route = `/multi-team-run-penalties/${judge.id}/${contest.id}/`;
+        break;
+      default:
+        return; 
+    }
+
+    // keep slugs consistent with your routes
+    //const typePath = multiType === "machine-design" ? "machinedesign" : multiType;
+    //const route = `/multi-team-${typePath}-score/${judge.id}/${contest.id}/`;
     
     // Navigate to scoring page
     navigate(route);
@@ -411,9 +433,13 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
     const isPreliminary = isPreliminaryScoresheet(team.id, type);
     const isEditable = isScoresheetEditable(team.id, type);
 
+    const isPenaltySheet = type === 4 || type === 5; // 4 = Run Penalties, 5 = General Penalties
+    const isSubmitted = getIsSubmitted(judge?.id, team.id, type);
+
+
     return (
       <>
-        {!getIsSubmitted(judge?.id, team.id, type) ? (
+        {(!isSubmitted || isPenaltySheet) ? (
           <Button
             variant="contained"
             onClick={() => isEditable ? navigate(`/${url}/${judge.id}/${team.id}/`) : null}
@@ -441,7 +467,8 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
               opacity: isPreliminary ? 0.6 : 1,
             }}
           >
-            {isPreliminary ? `${buttonText} (Preliminary)` : buttonText}
+            {isPreliminary ? `${buttonText} (Preliminary)` : buttonText} {getTotal(judge?.id, team.id, type)}
+
           </Button>
         ) : (
           <Button
@@ -544,7 +571,8 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
               fontSize: { xs: "0.9rem", sm: "1rem" },
               fontWeight: 600,
             }}
-            disabled={!contest?.id} 
+            disabled={!contest?.id || !contest?.is_open}
+            //disabled={!contest?.id} 
           >
             Score Multiple Teams
           </Button>
@@ -863,6 +891,26 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                 value="machine-design" 
                 control={<Radio />} 
                 label="Machine Design" 
+                sx={{ 
+                  "& .MuiFormControlLabel-label": { 
+                    fontSize: { xs: "0.9rem", sm: "1rem" } 
+                  } 
+                }}
+              />
+              <FormControlLabel 
+                value="general-penalties" 
+                control={<Radio />} 
+                label="General Penalties" 
+                sx={{ 
+                  "& .MuiFormControlLabel-label": { 
+                    fontSize: { xs: "0.9rem", sm: "1rem" } 
+                  } 
+                }}
+              />
+              <FormControlLabel 
+                value="run-penalties" 
+                control={<Radio />} 
+                label="Run Penalties" 
                 sx={{ 
                   "& .MuiFormControlLabel-label": { 
                     fontSize: { xs: "0.9rem", sm: "1rem" } 

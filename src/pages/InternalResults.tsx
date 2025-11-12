@@ -9,7 +9,8 @@ import InternalResultsTable from "../components/Tables/InternalResultsTable";
 
 import axios from "axios";
 import useContestStore from "../store/primary_stores/contestStore";
-
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
   
 
 const InternalResults: React.FC = () => {
@@ -126,6 +127,39 @@ const InternalResults: React.FC = () => {
     };
   }, [contestId, fetchTeamsByContest, clearTeamsByContest]);
 
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(18);
+    doc.text('Master ScoreSheet Results', 14, 20);
+    doc.setFontSize(14);
+    doc.text(contest?.name || 'Contest', 14, 30);
+    
+    // Get table data
+    const teams = teamsByContest || [];
+    const tableData = teams.map((team: any, index: number) => [
+      index + 1,
+      team.team_name,
+      team.school_name || 'N/A',
+      team.journal_score || 0,
+      team.presentation_score || 0,
+      team.machine_score || 0,
+      team.general_penalties || 0,
+      team.run_penalties || 0,
+      team.total_score || 0,
+    ]);
+    
+    // Generate table
+    autoTable(doc, {
+      startY: 40,
+      head: [['Rank', 'Team', 'School', 'Journal', 'Present.', 'Machine', 'Gen. Penalties', 'Run Penalties', 'Total']],
+      body: tableData,
+    });
+    
+    doc.save(`MasterScoreSheet_${contest?.name || 'Contest'}.pdf`);
+  };
+
   return (
     <Box sx={{ bgcolor: "#fff", minHeight: "100vh" }}>
       <Container maxWidth={false} sx={{ px: { xs: 1.5, md: 3 }, py: { xs: 1.5, md: 3 } }}>
@@ -177,32 +211,42 @@ const InternalResults: React.FC = () => {
         </Box>
 
         <Paper elevation={2} sx={{ p: { xs: 2, md: 3 }, mb: 2, borderRadius: 1 }}>
-          <Typography 
-            variant="h4" 
-            fontWeight={800}
-            sx={{ fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" } }}
-          >
-            Master ScoreSheet Results
-          </Typography>
-          <Typography 
-            variant="h6" 
-            color="success.main" 
-            sx={{ 
-              mt: 1,
-              fontSize: { xs: "1rem", sm: "1.25rem" }
-            }}
-          >
-            {isLoadingContest ? "Loading..." : contest?.name || `ID: ${contestId}`}
-          </Typography>
-          <Box sx={{ mt: 1 }}>
-            <Chip 
-              size="small" 
-              color="success" 
-              label={isLoading ? "Loading…" : "Live"}
-              sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}
-            />
-          </Box>
-        </Paper>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Box>
+              <Typography 
+              variant="h4" 
+              fontWeight={800}
+              sx={{ fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" } }}
+              >
+                Master ScoreSheet Results
+                </Typography>
+                <Typography 
+                variant="h6" 
+                color="success.main" 
+                sx={{ mt: 1,fontSize: { xs: "1rem", sm: "1.25rem" }
+              }}
+              >
+                {isLoadingContest ? "Loading..." : contest?.name || `ID: ${contestId}`}
+                </Typography>
+                <Box sx={{ mt: 1 }}>
+                  <Chip 
+                  size="small" 
+                  color="success" 
+                  label={isLoading ? "Loading…" : "Live"}
+                  sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}
+                  />
+                  </Box>
+                  </Box>
+                  <Button 
+                  variant="contained" 
+                  color="success" 
+                  onClick={handleDownloadPDF}
+                  sx={{ ml: 2 }}
+                  >
+                    Download PDF
+                    </Button>
+                    </Box>
+                    </Paper>
 
         
         <Box sx={{ mb: 2 }}>

@@ -13,7 +13,8 @@ export default defineConfig(({ mode }) => {
   // Safe defaults:
   // - Host dev → talk to backend on host port 7004
   // - Vite in Docker → talk to Django service on its container port 7004
-  const defaultTarget = inDocker ? "http://django-api:7004" : "http://127.0.0.1:7004";
+  const defaultTarget = inDocker ? "http://django-api:7004" : "http://127.0.0.1:8000";
+  
 
   // Allow override via PROXY_TARGET in .env*
   const target = env.PROXY_TARGET || defaultTarget;

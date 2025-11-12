@@ -104,7 +104,7 @@ export default function GeneralPenalties() {
       generalPenaltiesQuestions.forEach((question) => {
         const fieldValue = Number(scoreSheet[question.field as keyof ScoreSheet]);
         const pointValue = question.pointValue;
-        newPenaltyState[question.id] = fieldValue === 0 ? 0 : fieldValue / pointValue;
+        newPenaltyState[question.id] = fieldValue === 0 ? 0 : Math.abs(fieldValue) / pointValue;
       });
 
       setPenaltyState(newPenaltyState);

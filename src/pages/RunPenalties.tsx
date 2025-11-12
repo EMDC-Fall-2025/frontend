@@ -101,7 +101,7 @@ export default function Penalties() {
           if (i === 9) {
             newPenaltyState[i] = ""; // comments row
           } else if (pointValue != undefined) {
-            newPenaltyState[i] = fieldValue === 0 ? 0 : fieldValue / pointValue;
+            newPenaltyState[i] = fieldValue === 0 ? 0 : Math.abs(fieldValue) / pointValue;
           }
         } else {
           if (i === 9) {

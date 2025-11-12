@@ -29,6 +29,8 @@ import MultiTeamPresentationScore from "./pages/PresentationMultiTeamScore";
 import MultiTeamJournalScore from "./pages/JournalMultiTeamScore";
 import MultiTeamMachineDesignScore from "./pages/MachineDesignMultiTeamScore";
 import ChampionshipScore from "./pages/ChampionshipScore";
+import GeneralPenaltiesMultiTeam from "./pages/GeneralPenaltiesMultiTeam";
+import RunPenaltiesMultiTeam from "./pages/RunPenaltiesMultiTeam";
 import ChampionshipScoreBreakdown from "./pages/ChampionshipScoreBreakdown";
 import RedesignScoreBreakdown from "./pages/RedesignScoreBreakdown";
 import ContestScores from "./pages/ContestScores";
@@ -108,6 +110,18 @@ function App() {
             <Route
               path="/multi-team-presentation-score/:judgeId/:contestId/"
               element={<MultiTeamPresentationScore />}
+            />
+          )}
+          {isAuthenticated && role?.user_type != 4 && (
+            <Route
+              path="/multi-team-general-penalties/:judgeId/:contestId/"
+              element={<GeneralPenaltiesMultiTeam />}
+            />
+          )}
+          {isAuthenticated && role?.user_type != 4 && (
+            <Route
+              path="/multi-team-run-penalties/:judgeId/:contestId/"
+              element={<RunPenaltiesMultiTeam />}
             />
           )}
 
