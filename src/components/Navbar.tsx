@@ -250,12 +250,13 @@ export default function Nav() {
         handleSubmit={handleLogout}
       />
 
-      {/* Admin: Set Shared Password */}
-      <SetSharedPasswordDialog
-        open={openSetShared}
-        onClose={() => setOpenSetShared(false)}
-        token={token}
-      />
+      {/* Admin: Set Shared Password - Only render for admins */}
+      {isAuthenticated && isAdmin && (
+        <SetSharedPasswordDialog
+          open={openSetShared}
+          onClose={() => setOpenSetShared(false)}
+        />
+      )}
 
       {/* Snackbar (kept, but no shortcut triggers it now) */}
       <Snackbar
