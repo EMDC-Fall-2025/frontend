@@ -43,11 +43,11 @@ export default function ForgotPassword() {
         { withCredentials: true }
       );
 
-      // Check if there's an error in the response (non-admin user)
+      // Check if there's an error in the response (non-admin/coach user)
       if (response.data?.error) {
-        // Show error toast for non-admin users
+        // Show error toast for non-admin/coach users
         toast.error(
-          "Password reset is only available for administrators. Please contact an administrator for assistance.",
+          "Password reset is only available for administrators and coaches. Please contact an administrator for assistance.",
           {
             duration: 6000,
             style: {
@@ -57,9 +57,9 @@ export default function ForgotPassword() {
         );
         setError(response.data.detail || response.data.error);
       } else {
-        // Success - admin email sent
+        // Success - admin/coach email sent
         toast.success(
-          "If this email belongs to an admin, a password reset link has been sent.",
+          "If this email belongs to an admin or coach, a password reset link has been sent.",
           {
             duration: 5000,
           }
@@ -79,9 +79,9 @@ export default function ForgotPassword() {
         "Failed to send password reset email. Please try again.";
 
       if (err?.response?.status === 403) {
-        // Non-admin user - show toast
+        // Non-admin/coach user - show toast
         toast.error(
-          "Password reset is only available for administrators. Please contact an administrator for assistance.",
+          "Password reset is only available for administrators and coaches. Please contact an administrator for assistance.",
           {
             duration: 6000,
             style: {
@@ -131,7 +131,7 @@ export default function ForgotPassword() {
         >
           Enter your email address to receive a password reset link.
           <br />
-          <strong>Note: Password reset is only available for administrators.</strong>
+          <strong>Note: Password reset is only available for administrators and coaches.</strong>
         </Typography>
         <form
           onSubmit={handleSubmit}

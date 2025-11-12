@@ -9,6 +9,7 @@ import {
     TextField,
     Typography,
     Alert,
+    Box,
   } from "@mui/material";
   import TriangleBackground from "../components/TriangleBackground";
   import { useState } from "react";
@@ -17,6 +18,24 @@ import {
   import { useNavigate } from "react-router";
   import { useSignupStore } from "../store/primary_stores/signupStore";
   
+  // Password validation helper
+  const validatePassword = (pwd: string): { valid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    if (pwd.length < 8) {
+      errors.push("At least 8 characters");
+    }
+    if (!/[A-Z]/.test(pwd)) {
+      errors.push("One uppercase letter");
+    }
+    if (!/[a-z]/.test(pwd)) {
+      errors.push("One lowercase letter");
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(pwd)) {
+      errors.push("One special character (!@#$%^&*()_+-=[]{}|;:,.<>?)");
+    }
+    return { valid: errors.length === 0, errors };
+  };
+  
   export default function Signup() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -24,11 +43,28 @@ import {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [confirmPasswordError, setConfirmPasswordError] = useState("");
+    const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   
     const navigate = useNavigate();
     const { signup, isLoadingSignup, authError } = useSignupStore();
   
+    const handlePasswordChange = (newPassword: string) => {
+      setPassword(newPassword);
+      if (newPassword.length > 0) {
+        const validation = validatePassword(newPassword);
+        setPasswordErrors(validation.errors);
+      } else {
+        setPasswordErrors([]);
+      }
+    };
+  
     const handleSignup = async () => {
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        setConfirmPasswordError("Please fix password requirements above");
+        return;
+      }
+      
       if (password !== confirmPassword) {
         setConfirmPasswordError("Passwords do not match");
         return;
@@ -92,7 +128,8 @@ import {
               <OutlinedInput
                 type={showPassword ? "text" : "password"}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => handlePasswordChange(e.target.value)}
+                error={passwordErrors.length > 0 && password.length > 0}
                 endAdornment={
                   <InputAdornment position="end">
                     <IconButton
@@ -106,6 +143,27 @@ import {
                 label="Password"
               />
             </FormControl>
+            {password.length > 0 && (
+              <Box sx={{ mt: 1, width: 300 }}>
+                <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mb: 0.5 }}>
+                  Password must contain:
+                </Typography>
+                <Box component="ul" sx={{ m: 0, pl: 2, fontSize: "0.75rem" }}>
+                  <li style={{ color: password.length >= 8 ? "green" : passwordErrors.includes("At least 8 characters") ? "red" : "gray" }}>
+                    At least 8 characters
+                  </li>
+                  <li style={{ color: /[A-Z]/.test(password) ? "green" : passwordErrors.includes("One uppercase letter") ? "red" : "gray" }}>
+                    One uppercase letter
+                  </li>
+                  <li style={{ color: /[a-z]/.test(password) ? "green" : passwordErrors.includes("One lowercase letter") ? "red" : "gray" }}>
+                    One lowercase letter
+                  </li>
+                  <li style={{ color: /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password) ? "green" : passwordErrors.includes("One special character") ? "red" : "gray" }}>
+                    One special character (!@#$%^&*()_+-=[]{}|;:,.<>?)
+                  </li>
+                </Box>
+              </Box>
+            )}
             <FormControl required sx={{ mt: 3, width: 300 }} variant="outlined">
               <InputLabel>Confirm Password</InputLabel>
               <OutlinedInput
