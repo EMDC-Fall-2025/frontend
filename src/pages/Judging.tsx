@@ -93,19 +93,18 @@ export default function Judging() {
           cluster.cluster_name?.toLowerCase().includes('redesign')
         );
         
-        // Check if championship clusters actually have teams
-        let hasTeamsInChampionshipClusters = false;
-        for (const cluster of championshipClusters) {
+        // Check if championship clusters actually have teams - PARALLEL for better performance
+        const championshipCheckPromises = championshipClusters.map(async (cluster: any) => {
           try {
             const teams = await fetchTeamsByClusterId(cluster.id);
-            if (teams && teams.length > 0) {
-              hasTeamsInChampionshipClusters = true;
-              break;
-            }
+            return { cluster, hasTeams: teams && teams.length > 0 };
           } catch (error) {
-            // Silently continue if cluster has no teams
+            return { cluster, hasTeams: false };
           }
-        }
+        });
+        
+        const championshipChecks = await Promise.all(championshipCheckPromises);
+        const hasTeamsInChampionshipClusters = championshipChecks.some(check => check.hasTeams);
         
         let filteredClusters = allClusters;
         
@@ -137,9 +136,9 @@ export default function Judging() {
         const teamResults = await Promise.all(teamPromises);
         const allTeams: Team[] = teamResults.flat();
         
+        // Set teams immediately so they render right away
         setTeams(allTeams);
         setHasLoaded(true);
-        
         
         // Use already fetched data instead of fetching again
         let currentClusterToSet = null;
@@ -153,16 +152,15 @@ export default function Judging() {
         
         setCurrentCluster(currentClusterToSet);
 
-        // If we are in championship or redesign phase, trigger tabulation to ensure
-        // team championship totals are up to date, then refetch teams.
-        try {
-          const contestId = (currentClusterToSet as any)?.contest_id || (allTeams[0] as any)?.contest_id || (allTeams[0] as any)?.contestid;
-          if (contestId && championshipClusters.length > 0) {
-            await api.put(`/api/tabulation/tabulateScores/`, {
-              contestid: contestId,
-            });
-
-            // Refetch teams after tabulation completes
+        // Run tabulation in the background (non-blocking) and update teams when done
+        // This prevents the second "lag" where teams disappear and reappear
+        const contestId = (currentClusterToSet as any)?.contest_id || (allTeams[0] as any)?.contest_id || (allTeams[0] as any)?.contestid;
+        if (contestId && championshipClusters.length > 0) {
+          // Don't await - let it run in background
+          api.put(`/api/tabulation/tabulateScores/`, {
+            contestid: contestId,
+          }).then(() => {
+            // Refetch teams after tabulation completes (silently update)
             const refreshPromises = filteredClusters.map(async (cluster) => {
               try {
                 const t = await fetchTeamsByClusterId(cluster.id, true);
@@ -175,12 +173,17 @@ export default function Judging() {
             }
             });
             
-            const refreshedTeams = (await Promise.all(refreshPromises)).flat();
+            return Promise.all(refreshPromises);
+          }).then((refreshedTeamArrays) => {
+            const refreshedTeams = refreshedTeamArrays.flat();
             if (refreshedTeams.length > 0) {
               setTeams(refreshedTeams);
             }
-          }
-        } catch {}
+          }).catch((error) => {
+            // Silently fail - teams are already displayed
+            console.error('Tabulation or refresh failed:', error);
+          });
+        }
       } else {
         setTeams([]);
         setHasLoaded(true);

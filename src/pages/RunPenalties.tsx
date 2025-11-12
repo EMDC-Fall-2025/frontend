@@ -23,6 +23,7 @@ import AreYouSureModal from "../components/Modals/AreYouSureModal";
 import { runPenaltiesQuestions } from "../data/runPenaltiesQuestions";
 import { ScoreSheet } from "../types";
 import PenaltyCategory from "../components/PenaltyCategory";
+import toast from "react-hot-toast";
 
 export default function Penalties() {
   // Stores & routing
@@ -35,7 +36,6 @@ export default function Penalties() {
     isLoadingScoreSheet,
     updateScores,
     submitScoreSheet,
-    scoreSheetError,
     setScoreSheet,
   } = useScoreSheetStore();
   const navigate = useNavigate();
@@ -368,7 +368,6 @@ export default function Penalties() {
               handleClose={() => setOpenAreYouSure(false)}
               title="Are you sure you want to submit?"
               handleSubmit={() => handleSubmitPenalties()}
-              error={scoreSheetError}
             />
           </Box>
         </Paper>

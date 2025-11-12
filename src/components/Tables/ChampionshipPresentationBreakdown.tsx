@@ -6,7 +6,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { useScoreSheetStore } from "../../store/primary_stores/scoreSheetStore";
-import { ChampionshipScoreSheetFields, ScoreSheetType } from "../../types";
+import { ScoreSheetType } from "../../types";
 import { presentationQuestions } from "../../data/presentationQuestions";
 
 /**

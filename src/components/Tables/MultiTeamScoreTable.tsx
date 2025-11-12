@@ -59,7 +59,6 @@ export default function MultiTeamScoreSheet({
     fetchMultipleScoreSheets,
     updateMultipleScores,
     submitMultipleScoreSheets,
-    scoreSheetError,
   } = useScoreSheetStore();
 
   // Filter teams that have score sheets available

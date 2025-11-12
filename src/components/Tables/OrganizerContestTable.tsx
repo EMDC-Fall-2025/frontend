@@ -61,7 +61,7 @@ export default function OrganizerContestTable(
   const mapContestOrganizerError = useMapContestOrganizerStore((state) => state.mapContestOrganizerError);
   const clearMapContestOrganizerError = useMapContestOrganizerStore((state) => state.clearMapContestOrganizerError);
   const { role } = useAuthStore();
-  const { editContest, contestError } = useContestStore();
+  const { editContest} = useContestStore();
   const {
     allSubmittedForContests,
     clearAllSubmittedForContests,

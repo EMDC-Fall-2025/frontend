@@ -25,7 +25,7 @@ export default function Nav() {
   const [openSetShared, setOpenSetShared] = useState(false);
   const [snackOpen, setSnackOpen] = useState(false);
 
-  const { isAuthenticated, role, token, logout } = useAuthStore();
+  const { isAuthenticated, role, logout } = useAuthStore();
   const [logoUrl, setLogoUrl] = useState("/");
   const navigate = useNavigate();
   const location = useLocation();
