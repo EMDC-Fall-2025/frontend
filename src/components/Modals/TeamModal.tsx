@@ -72,13 +72,11 @@ export default function TeamModal(props: ITeamModalProps) {
         });
 
         if (createdTeam) {
-          // Always add team to "All Teams" cluster in UI
           const allTeamsCluster = clusters?.find((c) => c.cluster_name === "All Teams");
           if (allTeamsCluster) {
             addTeamToCluster(allTeamsCluster.id, createdTeam);
           }
 
-          // If a specific cluster was also selected, add team to that cluster too
           if (cluster !== -1 && cluster !== allTeamsCluster?.id) {
             addTeamToCluster(cluster, createdTeam);
           }
@@ -102,7 +100,7 @@ export default function TeamModal(props: ITeamModalProps) {
         team_name: teamName,
         school_name: schoolName || "NA",
         clusterid: cluster,
-        username: teamData?.username || coachEmail, // Use original username from teamData if available
+        username: teamData?.username || coachEmail,
         first_name: coachFirstName,
         last_name: coachLastName,
         contestid: contestId ?? 0,

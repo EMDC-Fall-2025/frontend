@@ -28,19 +28,46 @@ export default function DeleteTeamDialog({
     clusterId,
     showRemoveFromCluster,
 }: DeleteTeamDialogProps) {
-    const { deleteClusterTeamMapping, deleteTeamCompletely } = useMapClusterTeamStore();
+    const { deleteTeamCompletely } = useMapClusterTeamStore();
 
-    // Deletes only the mapping (keeps the team in all team)
+    // keeps the team in all team
     const handleDeleteFromCluster = async () => {
-        if (mapId && clusterId) {
+        if (mapId != null && clusterId != null) {
             try {
+                const {
+                    teamsByClusterId,
+                    deleteClusterTeamMapping,
+                    addTeamToCluster,
+                    fetchTeamsByClusterId,
+                } = useMapClusterTeamStore.getState();
+
+                const teamToMove = teamsByClusterId[clusterId]?.find(
+                    (team) => (team as any).map_id === mapId
+                );
+
                 await deleteClusterTeamMapping(mapId, clusterId);
-                onClose();
+
+                if (teamToMove) {
+                    addTeamToCluster(0, teamToMove);
+                }
+
+                await Promise.all([
+                    fetchTeamsByClusterId(clusterId, true),
+                    fetchTeamsByClusterId(0, true),
+                ]);
+
+                window.location.reload();
+
             } catch (error) {
                 console.error("Error removing from cluster:", error);
             }
+        } else {
+            console.warn("Missing mapId or clusterId", { mapId, clusterId });
         }
     };
+
+
+
 
     // Permanently deletes the team from the database
     const handleDeleteFromDatabase = async () => {
