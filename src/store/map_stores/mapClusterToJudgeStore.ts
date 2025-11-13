@@ -297,7 +297,7 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
     }),
     {
       name: "map-cluster-judge-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
     }
   )
 );

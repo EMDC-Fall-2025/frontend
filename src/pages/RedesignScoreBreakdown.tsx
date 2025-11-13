@@ -1,4 +1,4 @@
-import { CircularProgress, Link, Typography, Button, Box } from "@mui/material";
+import { CircularProgress, Link, Typography, Button, Box, Skeleton } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../theme";
 import ScoreBreakdownTableStandard from "../components/Tables/ScoreBreakdownTableStandard";
@@ -42,7 +42,18 @@ export default function RedesignScoreBreakdown() {
   }, []);
 
   return isLoadingScoreSheet ? (
-    <CircularProgress />
+    <>
+      <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 }, ml: { xs: 2, sm: 3 } }}>
+        <Skeleton variant="rectangular" width={180} height={36} sx={{ borderRadius: 1 }} />
+      </Box>
+
+      <Skeleton variant="text" sx={{ ml: { xs: 2, sm: 5 }, mt: { xs: 2, sm: 5 }, mr: { xs: 2, sm: 5 } }} width={340} height={48} />
+      
+      <Skeleton variant="text" sx={{ m: { xs: 2, sm: 5 } }} width={240} height={36} />
+      <Box sx={{ mx: { xs: 2, sm: 5 } }}>
+        <Skeleton variant="rectangular" height={160} sx={{ borderRadius: 2 }} />
+      </Box>
+    </>
   ) : (
     <>
       <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 }, ml: { xs: 2, sm: 3 } }}>

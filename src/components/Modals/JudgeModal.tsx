@@ -181,6 +181,11 @@ export default function JudgeModal(props: IJudgeModalProps) {
       return;
     }
 
+    // Remove hover/focus from the submit button to avoid lingering hover styles
+    if (typeof window !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     if (mode === "new") {
       await handleCreateJudge();
     } else {

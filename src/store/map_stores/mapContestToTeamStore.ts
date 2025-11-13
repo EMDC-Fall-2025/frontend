@@ -2,15 +2,15 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "../../lib/api";
 import { Contest, Team } from "../../types";
-import { registerStoreSync } from "../utils/storageSync";
 
 interface MapContestToTeamState {
   contestsForTeams: { [key: number]: Contest | null };
   teamsByContest: Team[];
+  teamsByContestMap?: { [contestId: number]: Team[] };
   isLoadingMapContestToTeam: boolean;
   mapContestToTeamError: string | null;
   fetchContestsByTeams: (teamIds: Team[]) => Promise<void>;
-  fetchTeamsByContest: (contestId: number) => Promise<void>;
+  fetchTeamsByContest: (contestId: number, forceRefresh?: boolean) => Promise<void>;
   updateContestInTeams: (updatedContest: Contest) => void;
   clearContests: () => void;
   clearTeamsByContest: () => void;
@@ -23,6 +23,7 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
       isLoadingMapContestToTeam: false,
       mapContestToTeamError: null,
       teamsByContest: [],
+      teamsByContestMap: {},
 
       clearContests: () => set({ contestsForTeams: {} }),
       clearTeamsByContest: () => set({ teamsByContest: [] }),
@@ -71,28 +72,25 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
         }
       },
 
-      fetchTeamsByContest: async (contestId: number) => {
-        // Check cache first - if we already have teams for this contest, return early
-        // teamsByContest is a single array, so we check if it's already populated
-        const cachedTeams = get().teamsByContest;
-        if (cachedTeams && cachedTeams.length > 0) {
-          // Check if any team belongs to this contest
-          const hasTeamsForContest = cachedTeams.some(team => (team as any).contest_id === contestId);
-          if (hasTeamsForContest) {
-            return; // Use cached data
-          }
+      fetchTeamsByContest: async (contestId: number, forceRefresh: boolean = false) => {
+        // Instant render from cache if available and not forcing refresh
+        const byContestMap = get().teamsByContestMap || {};
+        if (!forceRefresh && byContestMap[contestId] && byContestMap[contestId]!.length > 0) {
+          set({ teamsByContest: byContestMap[contestId]!, mapContestToTeamError: null });
+          return;
         }
-        
+
         set({ isLoadingMapContestToTeam: true });
         try {
           const response = await api.get(
             `/api/mapping/teamToContest/getTeamsByContest/${contestId}/`
           );
 
-          set({
+          set((state) => ({
             teamsByContest: response.data,
+            teamsByContestMap: { ...(state.teamsByContestMap || {}), [contestId]: response.data },
             mapContestToTeamError: null,
-          });
+          }));
         } catch (error: any) {
           const errorMessage = "Failed to fetch teams by contest id";
           set({ mapContestToTeamError: errorMessage });
@@ -104,15 +102,9 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
     }),
     {
       name: "map-contest-to-team-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
     }
   )
 );
 
-// Register for global storage sync
-registerStoreSync('map-contest-to-team-storage', (state) => {
-  useMapContestToTeamStore.setState({
-    contestsForTeams: state.contestsForTeams || {},
-    teamsByContest: state.teamsByContest || [],
-  });
-});
+

@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "../../lib/api";
 import { Contest, Judge, MapContestToJudge } from "../../types";
-import { registerStoreSync } from "../utils/storageSync";
 
 interface MapContestJudgeState {
   judges: Judge[];
@@ -25,9 +24,10 @@ interface MapContestJudgeState {
   clearContestJudges: () => Promise<void>;
   fetchJudgesForMultipleContests: (contestIds: number[]) => Promise<void>;
   removeJudgeFromContestStoreIfNoOtherClusters: (
-    judgeId: number, 
+    judgeId: number,
     contestId: number
   ) => void;
+  updateContestForJudge: (updatedContest: Contest) => void;
 }
 
 export const useMapContestJudgeStore = create<MapContestJudgeState>()(
@@ -246,7 +246,7 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
       },
 
       removeJudgeFromContestStoreIfNoOtherClusters: (
-        judgeId: number, 
+        judgeId: number,
         contestId: number
       ) => {
         // Remove judge from contest's judge list
@@ -258,6 +258,13 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
               (j) => j.id !== judgeId
             ),
           },
+        }));
+      },
+
+      updateContestForJudge: (updatedContest: Contest) => {
+        // Update the cached contest if it matches the updated contest
+        set((state) => ({
+          contest: state.contest && state.contest.id === updatedContest.id ? updatedContest : state.contest,
         }));
       },
 
@@ -314,19 +321,9 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
     }),
     {
       name: "map-contest-judge-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
     }
   )
 );
-
-// Register for global storage sync
-registerStoreSync('map-contest-judge-storage', (state) => {
-  useMapContestJudgeStore.setState({
-    judges: state.judges || [],
-    contest: state.contest || null,
-    mappings: state.mappings || [],
-    contestJudges: state.contestJudges || {},
-  });
-});
 
 export default useMapContestJudgeStore;

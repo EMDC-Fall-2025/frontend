@@ -336,7 +336,6 @@ export default function ChampionshipScoreSheetTable({
         id: scoreSheet.id,
         ...allFields,
       });
-      toast.success("Scores saved successfully!");
     }
   };
 

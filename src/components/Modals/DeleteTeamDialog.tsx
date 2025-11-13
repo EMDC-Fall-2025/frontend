@@ -1,13 +1,13 @@
 import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
     Button,
     Typography,
-    Stack,
+    Container,
+    Box,
 } from "@mui/material";
 import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
+import { extractErrorMessage } from "../../utils/errorHandler";
+import toast from "react-hot-toast";
+import Modal from "./Modal";
 
 interface DeleteTeamDialogProps {
     open: boolean;
@@ -28,38 +28,71 @@ export default function DeleteTeamDialog({
     clusterId,
     showRemoveFromCluster,
 }: DeleteTeamDialogProps) {
-    const { deleteClusterTeamMapping, deleteTeamCompletely } = useMapClusterTeamStore();
+    const { deleteTeamCompletely } = useMapClusterTeamStore();
 
-    // Deletes only the mapping (keeps the team in all team)
+    // Remove from specific cluster; keep the team under "All Teams" and refresh lists without full reload
     const handleDeleteFromCluster = async () => {
-        if (mapId && clusterId) {
+        if (mapId != null && clusterId != null) {
             try {
+                const {
+                    teamsByClusterId,
+                    deleteClusterTeamMapping,
+                    addTeamToCluster,
+                    fetchTeamsByClusterId,
+                    clusters,
+                } = useMapClusterTeamStore.getState();
+
+                const teamToMove = teamsByClusterId[clusterId]?.find(
+                    (team) => (team as any).map_id === mapId
+                );
+
                 await deleteClusterTeamMapping(mapId, clusterId);
+
+                // Determine the real "All Teams" cluster id
+                const allTeamsCluster = clusters.find((c: any) => c.cluster_name === "All Teams");
+                const allTeamsClusterId = allTeamsCluster?.id;
+
+                if (teamToMove && allTeamsClusterId != null) {
+                    addTeamToCluster(allTeamsClusterId, teamToMove as any);
+                }
+
+                await Promise.all([
+                    fetchTeamsByClusterId(clusterId, true),
+                    allTeamsClusterId != null ? fetchTeamsByClusterId(allTeamsClusterId, true) : Promise.resolve(),
+                ]);
+
+                toast.success("Team removed from cluster");
                 onClose();
+
             } catch (error) {
+                toast.error("Failed to remove team from cluster");
                 console.error("Error removing from cluster:", error);
             }
+        } else {
+            console.warn("Missing mapId or clusterId", { mapId, clusterId });
         }
     };
+
+
+
 
     // Permanently deletes the team from the database
     const handleDeleteFromDatabase = async () => {
         try {
             await deleteTeamCompletely(teamId);
+            toast.success("Team deleted successfully");
             onClose();
         } catch (error) {
+            const errorMessage = extractErrorMessage(error);
+            toast.error(`Failed to delete team: ${errorMessage}`);
             console.error("Error deleting team from DB:", error);
         }
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-            <DialogTitle sx={{ textAlign: "center" }}>
-                <strong>Delete Team</strong>
-            </DialogTitle>
-
-            <DialogContent sx={{ textAlign: "center" }}>
-                <Typography sx={{ mb: 2 }}>
+        <Modal open={open} handleClose={onClose} title="Delete Team">
+            <Box sx={{ textAlign: "center", mb: 3 }}>
+                <Typography variant="body1" sx={{ mb: 2 }}>
                     Are you sure you want to delete <strong>{teamName}</strong>?
                 </Typography>
 
@@ -72,46 +105,57 @@ export default function DeleteTeamDialog({
                         This will permanently delete the team from the database.
                     </Typography>
                 )}
-            </DialogContent>
+            </Box>
 
-            <DialogActions sx={{ justifyContent: "space-between", px: 3, pb: 2 }}>
-                <Stack direction="row" spacing={2}>
-                    {showRemoveFromCluster && (
-                        <Button
-                            variant="outlined"
-                            color="warning"
-                            onClick={handleDeleteFromCluster}
-                        >
-                            Remove from Cluster
-                        </Button>
-                    )}
-
+            <Container
+                sx={{
+                    display: "flex",
+                    flexDirection: "row",
+                    gap: 1.25,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    p: 0,
+                    width: "100%",
+                }}
+            >
+                {showRemoveFromCluster && (
                     <Button
-                        variant="contained"
-                        color="error"
-                        onClick={handleDeleteFromDatabase}
+                        variant="outlined"
+                        onClick={handleDeleteFromCluster}
+                        sx={{
+                            textTransform: "none",
+                            borderRadius: 1.5,
+                            py: 1.25,
+                            px: 2.5,
+                            borderColor: "#9e9e9e",
+                            color: "#424242",
+                            minWidth: 0,
+                            flex: 1,
+                            "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
+                        }}
                     >
-                        Delete from DB
+                        Remove from Cluster
                     </Button>
-                </Stack>
+                )}
 
                 <Button
-                    variant="outlined"
-                    onClick={onClose}
+                    variant="contained"
+                    onClick={handleDeleteFromDatabase}
                     sx={{
-                        textTransform: "uppercase",
-                        fontWeight: 600,
-                        borderColor: "#bdbdbd",
-                        color: "#616161",
-                        "&:hover": {
-                            borderColor: "#9e9e9e",
-                            backgroundColor: "#f5f5f5",
-                        },
+                        textTransform: "none",
+                        borderRadius: 1.5,
+                        py: 1.25,
+                        px: 2.5,
+                        bgcolor: "#d32f2f",
+                        color: "#fff",
+                        minWidth: 0,
+                        flex: showRemoveFromCluster ? 1 : "auto",
+                        "&:hover": { bgcolor: "#b71c1c" },
                     }}
                 >
-                    Cancel
+                    Delete from DB
                 </Button>
-            </DialogActions>
-        </Dialog>
+            </Container>
+        </Modal>
     );
 }

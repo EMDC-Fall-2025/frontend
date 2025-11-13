@@ -3,7 +3,6 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "../../lib/api";
 import { EditedJudge, Judge, NewJudge } from "../../types";
 import { extractErrorMessage } from "../../utils/errorHandler";
-import { registerStoreSync } from "../utils/storageSync";
 
 interface JudgeState {
   judge: Judge | null;
@@ -165,15 +164,7 @@ export const useJudgeStore = create<JudgeState>()(
     }),
     {
       name: "judge-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
     }
   )
 );
-
-// Register for global storage sync
-registerStoreSync('judge-storage', (state) => {
-  useJudgeStore.setState({
-    judge: state.judge || null,
-    submissionStatus: state.submissionStatus || null,
-  });
-});

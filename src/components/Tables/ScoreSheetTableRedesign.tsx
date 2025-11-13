@@ -156,7 +156,6 @@ export default function ScoreSheetTableRedesign({
         field7: formData[7],
         field8: formData[8]?.toString(),
       });
-      toast.success("Scores saved successfully!");
     }
   };
 

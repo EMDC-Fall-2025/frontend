@@ -177,7 +177,7 @@ export const useTeamStore = create<TeamState>()(
     }),
     {
       name: "team-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
     }
   )
 );

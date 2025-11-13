@@ -160,7 +160,7 @@ export const useMapCoachToTeamStore = create<MapCoachTeamState>()(
     }),
     {
       name: "map-coach-team-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
     }
   )
 );

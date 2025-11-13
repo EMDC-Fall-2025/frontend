@@ -57,18 +57,20 @@ export const useAuthStore = create<AuthState>()(
         try {
           await api.post(`/api/logout/`, {});
         } finally {
+          // Clear all authentication data
           set({ user: null, role: null, isAuthenticated: false, showPreloader: false });
+          // Clear session storage
+          sessionStorage.clear();
         }
       },
     }),
     {
       name: "auth-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         user: state.user,
         role: state.role,
         isAuthenticated: state.isAuthenticated,
-        // Don't persist showPreloader - it should only show after fresh login
       }),
     }
   )

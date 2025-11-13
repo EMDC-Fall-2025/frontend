@@ -36,7 +36,7 @@ export const useSignupStore = create<SignupState>()(
     }),
     {
       name: "signup-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({ user: state.user }),
     }
   )

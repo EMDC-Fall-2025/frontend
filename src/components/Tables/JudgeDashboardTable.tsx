@@ -22,6 +22,7 @@ import {
   Radio,
   Typography,
   Alert,
+  Skeleton,
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
@@ -50,15 +51,13 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   const navigate = useNavigate();
   
   // Store hooks
-  const { judge, clearJudge } = useJudgeStore();
-  const {
-    mappings,
-    fetchScoreSheetsByJudge,
-    clearMappings,
-  } = useMapScoreSheetStore();
-  const { contest, getContestByJudgeId } = useMapContestJudgeStore();
+  const { judge } = useJudgeStore();
+  const { mappings, fetchScoreSheetsByJudge } = useMapScoreSheetStore();
+  const { contest } = useMapContestJudgeStore();
+  const { contestsForTeams } = useMapContestToTeamStore();
   const { editScoreSheetField, multipleScoreSheets } = useScoreSheetStore();
-  const { contestsForTeams, fetchContestsByTeams } = useMapContestToTeamStore();
+
+  // Judge is expected to be provided by the store (set in parent Judging.tsx).
 
   // Function to determine if a scoresheet is from preliminary round (should be greyed out)
   const isPreliminaryScoresheet = (_teamId: number, sheetType: number) => {
@@ -204,8 +203,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
     return role?.user_type === 1 || role?.user_type === 2;
   };
 
-  // Use store's cached contest data instead of local state for persistence
-  // teamContestMap is now derived from the store
+
   
 
   const [openRows, setOpenRows] = React.useState<{ [key: number]: boolean }>(
@@ -246,12 +244,6 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
       try {
         // Fetch all scoresheets for this judge across all contests
         fetchScoreSheetsByJudge(judge.id);
-        // Note: getContestByJudgeId only returns one contest, but teams come from all contests
-        // This is only used for the "Score Multiple Teams" button enable/disable check
-        // Teams are fetched from all clusters/contests in the parent component (Judging.tsx)
-        getContestByJudgeId(judge.id, true).catch(error => {
-          console.warn('Contest info not available for judge:', error);
-        });
       } catch (error) {
         console.error('Error fetching judge data:', error);
       }
@@ -271,38 +263,9 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
 
   }, [teams, judge]);
 
-  // This uses cached data if available, otherwise fetches all at once
-  const fetchContestForTeams = useCallback(async (teamsToFetch: Team[]) => {
-    // Get current contestsForTeams from store to check cache
-    const currentContestsForTeams = useMapContestToTeamStore.getState().contestsForTeams;
-    // Check which teams don't have cached contest data
-    const teamsToFetchInfo = teamsToFetch.filter(team => !currentContestsForTeams[team.id]);
-    
-    if (teamsToFetchInfo.length === 0) return; // All contests already cached
-    
-    // Fetch all contests in parallel (one API call instead of N calls)
-    try {
-      await fetchContestsByTeams(teamsToFetchInfo);
-    } catch (error) {
-      console.error('Error fetching contests for teams:', error);
-    }
-  }, [fetchContestsByTeams]);
 
-  useEffect(() => {
-    if (teams && teams.length > 0) {
-      fetchContestForTeams(teams);
-    }
-  }, [teams, fetchContestForTeams]);
 
-  useEffect(() => {
-    const handlePageHide = () => {
-      clearMappings();
-      clearJudge();
-    };
 
-    window.addEventListener("pagehide", handlePageHide);
-    return () => window.removeEventListener("pagehide", handlePageHide);
-  }, [clearMappings, clearJudge]);
 
 
   const getTotal = useCallback((judgeId: number, teamId: number, sheetType: number) => {
@@ -320,6 +283,8 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
     const data = mappings[key] || null;
     return data?.scoresheet?.id;
   }, [mappings]);
+
+  
 
   // open/close multi-team dialog
   const handleMultiTeamScore = async () => {
@@ -447,6 +412,17 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   }) {
     const { team, type, url, buttonText } = props;
 
+    // Hide championship button unless team advanced or we're explicitly in a championship cluster
+    if (type === 7) {
+      const inChampionshipCluster =
+        currentCluster &&
+        (currentCluster.cluster_type === 'championship' ||
+          currentCluster.cluster_name?.toLowerCase().includes('championship'));
+      if (team.advanced_to_championship !== true && !inChampionshipCluster) {
+      return null;
+      }
+    }
+ 
     // Only render if scoresheet exists for this judge, team, and type
     // Note: Teams are displayed regardless of whether they have scoresheets
     // This component only renders the button if a scoresheet exists
@@ -594,10 +570,8 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
               fontSize: { xs: "0.9rem", sm: "1rem" },
               fontWeight: 600,
             }}
-            // Disable button if no contest is available OR if we have teams but no open contests
-            // Note: contest here is only one contest, but judge may be in multiple contests
-            // The button will work for any contest the judge is in (handled in handleMultiTeamScore)
-            disabled={!contest?.id || (!contest?.is_open && teams.length > 0)} 
+            // Allow opening dialog once judge context is available; dialog enforces contest state
+            disabled={!judge?.id} 
           >
             Score Multiple Teams
           </Button>
@@ -709,26 +683,26 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                         >
                           ({team.school_name || 'N/A'})
                         </Typography>
-                        {contestsForTeams[team.id] && (
-                          <Box sx={{ 
-                            display: "flex", 
-                            alignItems: "center", 
-                            gap: { xs: 0.25, sm: 0.5 }, 
-                            ml: { xs: 0.5, sm: 1 }, 
+                        {contestsForTeams[team.id] ? (
+                          <Box sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: { xs: 0.25, sm: 0.5 },
+                            ml: { xs: 0.5, sm: 1 },
                             flexShrink: 0,
                             minWidth: 0,
                             flex: { xs: "1 1 100%", sm: "0 0 auto" }
                           }}>
-                            <EmojiEventsIcon 
-                              sx={{ 
-                                fontSize: { xs: 14, sm: 16 }, 
+                            <EmojiEventsIcon
+                              sx={{
+                                fontSize: { xs: 14, sm: 16 },
                                 color: theme.palette.success.main,
-                                opacity: 0.8 
-                              }} 
+                                opacity: 0.8
+                              }}
                             />
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
+                            <Typography
+                              variant="body2"
+                              sx={{
                                 color: theme.palette.success.main,
                                 fontWeight: 500,
                                 opacity: 0.8,
@@ -740,10 +714,22 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                                 flex: 1,
                                 textAlign: "left"
                               }}
-                              title={contestsForTeams[team.id]?.name} // Show full name on hover
+                                title={contestsForTeams[team.id]?.name}
                             >
                               {contestsForTeams[team.id]?.name}
                             </Typography>
+                            </Box>
+                        ) : (
+                          <Box sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: { xs: 0.5, sm: 1 },
+                            ml: { xs: 0.5, sm: 1 },
+                            flexShrink: 0,
+                            minWidth: 0,
+                            flex: { xs: "1 1 100%", sm: "0 0 auto" },
+                          }}>
+                            <Skeleton variant="text" width={120} height={16} sx={{ my: 0.5 }} />
                           </Box>
                         )}
                       </Box>
@@ -786,17 +772,17 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                             alignItems: { xs: "center", sm: "flex-start" }
                           }}>
                             {(() => {
+                              // Use the contest associated with this team (judges can belong to multiple contests)
                               const teamContest = contestsForTeams[team.id];
-
                               if (!teamContest) {
                                 return (
                                   <Box sx={{ width: "100%", mb: 1 }}>
-                                    <Alert severity="info">Loading contest information...</Alert>
+                                    <Alert severity="info">No contest information available.</Alert>
                                   </Box>
                                 );
                               }
 
-                              if (teamContest.is_open !== true) {
+                              if (!hasContestStarted(teamContest)) {
                                 return (
                                   <Box sx={{ width: "100%", mb: 1 }}>
                                     <Alert severity="info">Contest has not started yet.</Alert>

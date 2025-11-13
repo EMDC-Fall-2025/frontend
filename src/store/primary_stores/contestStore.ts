@@ -4,7 +4,7 @@ import { api } from "../../lib/api";
 import { Contest, NewContest } from "../../types";
 import useMapContestOrganizerStore from "../map_stores/mapContestToOrganizerStore";
 import { useMapContestToTeamStore } from "../map_stores/mapContestToTeamStore";
-import { registerStoreSync } from "../utils/storageSync";
+import useMapContestJudgeStore from "../map_stores/mapContestToJudgeStore";
 
 interface ContestState {
   allContests: Contest[];
@@ -119,10 +119,14 @@ export const useContestStore = create<ContestState>()(
           // Update contest in all mappings (contestsByOrganizers, etc.)
           const { updateContestInMappings } = useMapContestOrganizerStore.getState();
           updateContestInMappings(updatedContest.id, updatedContest);
-          
+
           // Update contest in mapContestToTeamStore so judge dashboard shows updated name
           const { updateContestInTeams } = useMapContestToTeamStore.getState();
           updateContestInTeams(updatedContest);
+
+          // Update contest in mapContestToJudgeStore so judge dashboard shows updated name
+          const { updateContestForJudge } = useMapContestJudgeStore.getState();
+          updateContestForJudge(updatedContest);
         } catch (contestError) {
           set({ contestError: "Error editing contest: " + contestError });
           throw Error("Error editing contest: " + contestError);
@@ -153,17 +157,9 @@ export const useContestStore = create<ContestState>()(
     }),
     {
       name: "contest-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
     }
   )
 );
-
-// Register for global storage sync
-registerStoreSync('contest-storage', (state) => {
-  useContestStore.setState({
-    allContests: state.allContests || [],
-    contest: state.contest || null,
-  });
-});
 
 export default useContestStore;

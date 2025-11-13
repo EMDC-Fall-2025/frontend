@@ -37,7 +37,7 @@ export const useTabulateStore = create<TabulateState>()(
     }),
     {
       name: "tabulate-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
     }
   )
 );

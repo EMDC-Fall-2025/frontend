@@ -9,6 +9,7 @@ import {
   Stack,
   Divider,
   Button,
+  Skeleton,
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import { useJudgeStore } from "../store/primary_stores/judgeStore";
@@ -21,14 +22,15 @@ import theme from "../theme";
 import { Team } from "../types";
 import { api } from "../lib/api";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
 
 export default function Judging() {
   const { judgeId } = useParams();
   const judgeIdNumber = judgeId ? parseInt(judgeId, 10) : null;
   const navigate = useNavigate();
   const { role } = useAuthStore();
-  const { judge, fetchJudgeById, clearJudge } = useJudgeStore();
-  const { fetchAllClustersByJudgeId, clearCluster } = useMapClusterJudgeStore();
+  const { judge, fetchJudgeById } = useJudgeStore();
+  const { fetchAllClustersByJudgeId } = useMapClusterJudgeStore();
   // Use selectors to subscribe to team updates
   const mapClusterToTeamError = useClusterTeamStore((state) => state.mapClusterToTeamError);
   const fetchTeamsByJudgeId = useClusterTeamStore((state) => state.fetchTeamsByJudgeId);
@@ -39,6 +41,9 @@ export default function Judging() {
   const [hasLoaded, setHasLoaded] = useState(false);
   const isInitialLoadRef = useRef(true);
 
+  // Contests per team mapping
+  const fetchContestsByTeams = useMapContestToTeamStore((state) => state.fetchContestsByTeams);
+  const clearContests = useMapContestToTeamStore((state) => state.clearContests);
 
   useEffect(() => {
     if (judgeIdNumber) {
@@ -46,12 +51,23 @@ export default function Judging() {
       setTeams([]);
       setHasLoaded(false);
       isInitialLoadRef.current = true;
+
+
       fetchJudgeById(judgeIdNumber);
       fetchAllClustersForJudge(judgeIdNumber);
     }
-  }, [judgeIdNumber]);
+  }, [judgeIdNumber]); // Only runs when judgeIdNumber changes
 
-  // Simplified: Fetch teams directly for judge, then fetch clusters only for filtering logic
+  // Populate contestsForTeams whenever teams are available/updated
+  useEffect(() => {
+    if (teams && teams.length > 0) {
+      fetchContestsByTeams(teams);
+    }
+    return () => {
+      clearContests();
+    };
+  }, [teams, fetchContestsByTeams, clearContests]);
+
   const fetchAllClustersForJudge = async (judgeId: number) => {
     try {
       const [allTeamsForJudge, allClusters] = await Promise.all([
@@ -139,8 +155,16 @@ export default function Judging() {
       
       
         isInitialLoadRef.current = false;
-        setTeams(processedTeams);
+        setTeams((prev) => {
+          if (!prev || prev.length === 0) return processedTeams as unknown as Team[];
+          const byId = new Map<number, Team>();
+          for (const t of prev) byId.set(t.id, t);
+          for (const t of processedTeams as unknown as Team[]) byId.set(t.id, t);
+          return Array.from(byId.values());
+        });
 
+        // Kick off contests fetch in background; don't block initial reveal
+        fetchContestsByTeams(processedTeams as unknown as Team[]).catch(() => {});
         setHasLoaded(true);
 
         const currentClusterToSet = clustersToShow[0] || null;
@@ -154,14 +178,20 @@ export default function Judging() {
             contestid: contestId,
           }).then(() => {
             // Refetch teams after tabulation
-            return fetchTeamsByJudgeId(judgeId, true);
+            return fetchTeamsByJudgeId(judgeId);
           }).then((refreshedTeams) => {
             if (refreshedTeams && refreshedTeams.length > 0) {
               const processed = refreshedTeams.map((t: any) => ({
                 ...t,
                 advanced_to_championship: t.advanced_to_championship ?? false
               }));
-              setTeams(processed);
+              setTeams((prev) => {
+                if (!prev || prev.length === 0) return processed as unknown as Team[];
+                const byId = new Map<number, Team>();
+                for (const t of prev) byId.set(t.id, t);
+                for (const t of processed as unknown as Team[]) byId.set(t.id, t);
+                return Array.from(byId.values());
+              });
             }
           }).catch((error) => {
             console.error('Tabulation or refresh failed:', error);
@@ -170,11 +200,16 @@ export default function Judging() {
       } else {
         // No clusters, but still set teams if we got them
         if (allTeamsForJudge && allTeamsForJudge.length > 0) {
-          const processedTeams = allTeamsForJudge.map((t: any) => ({
-            ...t,
-            advanced_to_championship: t.advanced_to_championship ?? false
-          }));
-          setTeams(processedTeams);
+          setTeams((prev) => {
+            if (!prev || prev.length === 0) return allTeamsForJudge as unknown as Team[];
+            const byId = new Map<number, Team>();
+            for (const t of prev) byId.set(t.id, t);
+            for (const t of allTeamsForJudge as unknown as Team[]) byId.set(t.id, t);
+            return Array.from(byId.values());
+          });
+
+          // Kick off contests fetch in background; don't block initial reveal
+          fetchContestsByTeams(allTeamsForJudge as unknown as Team[]).catch(() => {});
       } else {
         setTeams([]);
         }
@@ -189,15 +224,7 @@ export default function Judging() {
     }
   };
 
-  useEffect(() => {
-    const handlePageHide = () => {
-      clearCluster();
-      clearJudge();
-    };
 
-    window.addEventListener("pagehide", handlePageHide);
-    return () => window.removeEventListener("pagehide", handlePageHide);
-  }, [clearCluster, clearJudge]);
 
 
   const StatCard = ({ value, label }: { value: number | string; label: string }) => (
@@ -333,6 +360,31 @@ export default function Judging() {
               <Box sx={{ px: 3, pb: 2 }}>
                 {teams.length > 0 ? (
                   <JudgeDashboardTable teams={teams} currentCluster={currentCluster} />
+                ) : !hasLoaded ? (
+                  <Box sx={{ py: 2 }}>
+                    {/* Skeleton placeholders to avoid flicker while loading teams */}
+                    {Array.from({ length: 5 }).map((_, idx) => (
+                      <Box
+                        key={idx}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.5,
+                          borderBottom: `1px solid ${theme.palette.grey[200]}`,
+                          py: 1.25,
+                        }}
+                      >
+                        <Skeleton variant="circular" width={28} height={28} />
+                        <Skeleton variant="text" width="30%" height={24} />
+                        <Skeleton variant="text" width="20%" height={20} />
+                        <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+                          <Skeleton variant="rounded" width={120} height={32} />
+                          <Skeleton variant="rounded" width={120} height={32} />
+                          <Skeleton variant="rounded" width={120} height={32} />
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
                 ) : (
                   <Box sx={{ textAlign: 'center', py: 4 }}>
                     {(role?.user_type === 1 || role?.user_type === 2) && (

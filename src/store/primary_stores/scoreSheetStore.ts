@@ -11,13 +11,16 @@ interface ScoreSheetState {
   scoreSheetError: string | null;
   scoreSheetBreakdown: ScoreSheetDetails;
   multipleScoreSheets: ScoreSheet[] | null;
+  // Lightweight cache for breakdowns to speed up page loads
+  scoreSheetBreakdownByTeam?: { [teamId: number]: ScoreSheetDetails };
+  scoreBreakdownCacheTsByTeam?: { [teamId: number]: number };
   
   // Existing methods
   fetchScoreSheetById: (scoresId: number) => Promise<void>;
   createScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>;
   editScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>;
   updateScores: (data: Partial<ScoreSheet>) => Promise<void>;
-  submitScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>; // New optimized submission method
+  submitScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>; 
   editScoreSheetField: (
     id: number,
     field: string | number,
@@ -53,6 +56,8 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
       scoreSheetError: null,
       scoreSheetBreakdown: null,
       multipleScoreSheets: null,
+      scoreSheetBreakdownByTeam: {},
+      scoreBreakdownCacheTsByTeam: {},
 
       clearScoreSheet: async () => {
         try {
@@ -128,13 +133,35 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
       },
 
       getScoreSheetBreakdown: async (teamId: number) => {
-        set({ isLoadingScoreSheet: true });
+        const now = Date.now();
+        const cache = get().scoreSheetBreakdownByTeam || {};
+        const cacheTs = get().scoreBreakdownCacheTsByTeam || {};
+        const cached = cache[teamId];
+        const cachedTs = cacheTs[teamId] || 0;
+        const FRESH_MS = 30_000; // consider fresh for 30s
+
+        // If we have fresh cache, use it immediately with no spinner
+        if (cached && (now - cachedTs) < FRESH_MS) {
+          set({ scoreSheetBreakdown: cached, scoreSheetError: null });
+          return;
+        }
+
+        // If we have stale cache, show it immediately and refresh in background
+        if (cached) {
+          set({ scoreSheetBreakdown: cached, scoreSheetError: null });
+        } else {
+          set({ isLoadingScoreSheet: true });
+        }
+
         try {
-          const response = await api.get(
-            `/api/scoreSheet/getDetails/${teamId}/`
-          );
-          set({ scoreSheetBreakdown: response.data as ScoreSheetDetails });
-          set({ scoreSheetError: null });
+          const response = await api.get(`/api/scoreSheet/getDetails/${teamId}/`);
+          const data = response.data as ScoreSheetDetails;
+          set((state) => ({
+            scoreSheetBreakdown: data,
+            scoreSheetError: null,
+            scoreSheetBreakdownByTeam: { ...(state.scoreSheetBreakdownByTeam || {}), [teamId]: data },
+            scoreBreakdownCacheTsByTeam: { ...(state.scoreBreakdownCacheTsByTeam || {}), [teamId]: now },
+          }));
         } catch (scoreSheetError: any) {
           set({ scoreSheetError: "Failed to fetch score sheet breakdown" });
           throw new Error("Failed to fetch score sheet breakdown");
@@ -440,7 +467,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
     
     {
       name: "score-sheet-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
     }
   )
 

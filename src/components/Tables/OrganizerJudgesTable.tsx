@@ -23,6 +23,7 @@ import toast from "react-hot-toast";
 import ClusterModal from "../Modals/ClusterModal";
 import { Cluster, Judge, JudgeData } from "../../types";
 import AreYouSureModal from "../Modals/AreYouSureModal";
+import Modal from "../Modals/Modal";
 
 interface IJudgesTableProps {
   judges: any[];
@@ -153,8 +154,11 @@ function JudgesTable(props: IJudgesTableProps) {
   const navigate = useNavigate();
   const [openJudgeModal, setOpenJudgeModal] = useState(false);
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
+  const [openDeleteOptions, setOpenDeleteOptions] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState<string>("");
+  const [onConfirm, setOnConfirm] = useState<(() => void) | null>(null);
   const [judgeData, setJudgeData] = useState<JudgeData | undefined>(undefined);
-  const { submissionStatus, checkAllScoreSheetsSubmitted } = useJudgeStore();
+  const { submissionStatus, checkAllScoreSheetsSubmitted, deleteJudge } = useJudgeStore();
   
   // Check submission status for this specific cluster
   React.useEffect(() => {
@@ -164,7 +168,7 @@ function JudgesTable(props: IJudgesTableProps) {
   }, [currentCluster?.id, judges, checkAllScoreSheetsSubmitted]);
   const [judgeId, setJudgeId] = useState(0);
   const { fetchJudgesByClusterId, removeJudgeFromCluster, fetchClustersForJudges, judgesByClusterId } = useMapClusterJudgeStore();
-  const { removeJudgeFromContestStoreIfNoOtherClusters } = useContestJudgeStore();
+  const { removeJudgeFromContestStoreIfNoOtherClusters, getAllJudgesByContestId } = useContestJudgeStore();
 
   const { judgeClusters } = useMapClusterJudgeStore();
 
@@ -184,10 +188,10 @@ function JudgesTable(props: IJudgesTableProps) {
     setOpenJudgeModal(true);
   }, []);
 
-  // Memoize the handler to prevent unnecessary re-renders
-  const handleOpenAreYouSure = useCallback((judgeId: number) => {
+  // Open delete options (choose between cluster-only vs complete delete)
+  const handleOpenDeleteOptions = useCallback((judgeId: number) => {
     setJudgeId(judgeId);
-    setOpenAreYouSure(true);
+    setOpenDeleteOptions(true);
   }, []);
 
   // Memoize navigate handler
@@ -248,6 +252,30 @@ function JudgesTable(props: IJudgesTableProps) {
         errorMessage = `Failed to remove judge: ${error.message}`;
       }
       toast.error(errorMessage);
+    }
+  };
+
+  // Permanently delete judge (system-wide)
+  const handleDeleteCompletely = async (judgeId: number) => {
+    try {
+      await deleteJudge(judgeId);
+
+      // Refresh all clusters in this contest to remove the judge visually
+      if (clusters && clusters.length > 0) {
+        await Promise.all(clusters.map((cluster) => fetchJudgesByClusterId(cluster.id, true)));
+      }
+      // Refresh contest judges list
+      if (contestid) {
+        await getAllJudgesByContestId(contestid, true);
+      }
+
+      toast.success("Judge deleted from system successfully.");
+    } catch (error: any) {
+      const msg = error?.response?.data?.detail || error?.message || "Failed to delete judge.";
+      toast.error(msg);
+    } finally {
+      setOpenAreYouSure(false);
+      setOpenDeleteOptions(false);
     }
   };
 
@@ -405,14 +433,14 @@ function JudgesTable(props: IJudgesTableProps) {
         }}
         onClick={(e) => {
           e.stopPropagation();
-          handleOpenAreYouSure(judge.id);
+          handleOpenDeleteOptions(judge.id);
         }}
       >
         Delete
       </Button>,
       isSubmitted
     );
-  }), [judges, submissionStatus, currentCluster?.id, isChampionshipOrRedesignCluster, handleOpenJudgeModal, handleOpenAreYouSure, handleNavigateToJudging, currentCluster, judgeClusters, navigate]);
+  }), [judges, submissionStatus, currentCluster?.id, isChampionshipOrRedesignCluster, handleOpenJudgeModal, handleOpenDeleteOptions, handleNavigateToJudging, currentCluster, judgeClusters, navigate]);
 
   return (
     <TableContainer component={Box}>
@@ -452,11 +480,78 @@ function JudgesTable(props: IJudgesTableProps) {
           handleCloseJudgeModal();
         }}
       />
+      {/* Delete Options Modal */}
+      <Modal
+        open={openDeleteOptions}
+        handleClose={() => setOpenDeleteOptions(false)}
+        title="Delete Judge"
+      >
+        <Container
+          sx={{
+            display: "flex",
+            flexDirection: "row",
+            gap: 1.25,
+            alignItems: "center",
+            justifyContent: "center",
+            p: 0,
+            width: "100%",
+          }}
+        >
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setConfirmTitle("Remove judge from this cluster?");
+              setOnConfirm(() => () => handleDelete(judgeId));
+              setOpenDeleteOptions(false);
+              setOpenAreYouSure(true);
+            }}
+            sx={{
+              textTransform: "none",
+              borderRadius: 1.5,
+              py: 1.25,
+              px: 2.5,
+              borderColor: "#9e9e9e",
+              color: "#424242",
+              minWidth: 0,
+              flex: 1,
+              "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
+            }}
+          >
+            Delete from cluster
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              setConfirmTitle("Delete judge completely? This will remove all mappings and data.");
+              setOnConfirm(() => () => handleDeleteCompletely(judgeId));
+              setOpenDeleteOptions(false);
+              setOpenAreYouSure(true);
+            }}
+            sx={{
+              textTransform: "none",
+              borderRadius: 1.5,
+              py: 1.25,
+              px: 2.5,
+              bgcolor: "#d32f2f",
+              color: "#fff",
+              minWidth: 0,
+              flex: 1,
+              "&:hover": { bgcolor: "#b71c1c" },
+            }}
+          >
+            Delete completely
+          </Button>
+        </Container>
+      </Modal>
+
+      {/* Confirm Modal */}
       <AreYouSureModal
         open={openAreYouSure}
         handleClose={() => setOpenAreYouSure(false)}
-        title="Are you sure you want to delete this judge?"
-        handleSubmit={() => handleDelete(judgeId)}
+        title={confirmTitle || "Are you sure?"}
+        handleSubmit={() => {
+          if (onConfirm) onConfirm();
+        }}
       />
     </TableContainer>
   );

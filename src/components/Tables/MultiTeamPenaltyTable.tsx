@@ -72,16 +72,59 @@ export default function MultiTeamPenaltyTable({
   // Mapping store to refresh judge dashboard after updates
   const { fetchScoreSheetsByJudge } = useMapScoreSheetStore();
 
-  // Only render teams that have a sheet record
+  // Preserve stable column order across updates to avoid visual "refresh"
+  const teamOrderRef = React.useRef<number[]>([]);
+
+  // Initialize or reconcile team order when sheets change (keep previous order, append new ids)
+  React.useEffect(() => {
+    if (!multipleScoreSheets || multipleScoreSheets.length === 0) return;
+    const ids = multipleScoreSheets
+      .map((s) => s.teamId)
+      .filter((id): id is number => id !== undefined);
+
+    if (teamOrderRef.current.length === 0) {
+      teamOrderRef.current = ids;
+      return;
+    }
+
+    const currentSet = new Set(teamOrderRef.current);
+    const incomingSet = new Set(ids);
+
+    // Keep existing order for ids that still exist, then append any new ids at the end
+    const reconciled = teamOrderRef.current.filter((id) => incomingSet.has(id)).concat(
+      ids.filter((id) => !currentSet.has(id))
+    );
+
+    // Only update ref if order actually changed
+    if (
+      reconciled.length !== teamOrderRef.current.length ||
+      reconciled.some((id, idx) => id !== teamOrderRef.current[idx])
+    ) {
+      teamOrderRef.current = reconciled;
+    }
+  }, [multipleScoreSheets]);
+
+  // Only render teams that have a sheet record, using stable order
   const filteredTeams = React.useMemo(() => {
-  if (!multipleScoreSheets || multipleScoreSheets.length === 0) return [];
-  
-  // Build teams list directly from multipleScoreSheets
-  return multipleScoreSheets.map((sheet) => ({
-    id: sheet.teamId,
-    name: (sheet as any).teamName || `Team ${sheet.teamId}`
-  }));
-}, [multipleScoreSheets]);
+    if (!multipleScoreSheets || multipleScoreSheets.length === 0) return [];
+
+    const byId = new Map<number, { id: number; name: string }>();
+    multipleScoreSheets.forEach((sheet) => {
+      if (sheet.teamId !== undefined) {
+        byId.set(sheet.teamId, {
+          id: sheet.teamId,
+          name: (sheet as any).teamName || `Team ${sheet.teamId}`,
+        });
+      }
+    });
+
+    const ordered = teamOrderRef.current
+      .map((id) => byId.get(id))
+      .filter((t): t is { id: number; name: string } => !!t);
+
+    // Fallback if ref not initialized yet
+    return ordered.length > 0 ? ordered : Array.from(byId.values());
+  }, [multipleScoreSheets]);
 
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
   const navigate = useNavigate();

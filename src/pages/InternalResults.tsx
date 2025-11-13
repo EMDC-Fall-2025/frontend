@@ -46,14 +46,16 @@ const InternalResults: React.FC = () => {
   
     const load = async () => {
       try {
-        // Tabulate scores to ensure they're calculated
-        await api.put(
-          "/api/tabulation/tabulateScores/",
-          { contestid: parsedContestId },
-        );
-        
-        // Fetch the updated teams with calculated scores
-        await fetchTeamsByContest(parsedContestId);
+        // Fetch immediately to render fast, then tabulate in background and refresh when done
+        const initialFetch = fetchTeamsByContest(parsedContestId);
+
+        api.put("/api/tabulation/tabulateScores/", { contestid: parsedContestId })
+          .then(() => fetchTeamsByContest(parsedContestId))
+          .catch(() => {
+
+          });
+
+        await initialFetch;
       } catch (error) {
         // Still try to fetch teams even if tabulation fails
         await fetchTeamsByContest(parsedContestId);
@@ -108,15 +110,7 @@ const InternalResults: React.FC = () => {
   // and includes teams that are not in the championship
   const hasRedesignAdvanced = hasChampionshipAdvanced;
 
-  useEffect(() => {
-    const idNum = contestId ? Number(contestId) : NaN;
-    if (!Number.isNaN(idNum) && typeof fetchTeamsByContest === "function") {
-      fetchTeamsByContest(idNum);
-    }
-    return () => {
-      if (typeof clearTeamsByContest === "function") clearTeamsByContest();
-    };
-  }, [contestId, fetchTeamsByContest, clearTeamsByContest]);
+  // Removed duplicate fetch effect to avoid redundant network calls
 
   const handleDownloadPDF = () => {
     const doc = new jsPDF();

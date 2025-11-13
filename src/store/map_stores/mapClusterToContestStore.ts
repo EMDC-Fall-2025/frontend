@@ -173,7 +173,7 @@ export const useMapClusterToContestStore = create<MapClusterContestState>()(
     }),
     {
       name: "map-cluster-contest-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
     }
   )
 );

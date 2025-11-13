@@ -185,7 +185,6 @@ export default function ScoreSheetTable({
       
       // Save score sheet data
       updateScores(scoreData);
-      toast.success("Scores saved successfully!");
     }
   }, [scoreSheet, formData, updateScores]);
 

@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { useMapContestToTeamStore } from "../../store/map_stores/mapContestToTeamStore";
 import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
 import { useEffect, useMemo } from "react";
+import { Skeleton, Box } from "@mui/material";
 
 const COLS = [
   { key: "rank", label: "Rank", width: "6%", align: "center" as const },
@@ -42,9 +43,7 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
   const { teamsByContest } = useMapContestToTeamStore();
   // Use selectors to subscribe to team updates
   const clusters = useMapClusterTeamStore((state) => state.clusters);
-  const teamsByClusterId = useMapClusterTeamStore((state) => state.teamsByClusterId);
   const fetchClustersByContestId = useMapClusterTeamStore((state) => state.fetchClustersByContestId);
-  const fetchTeamsByClusterId = useMapClusterTeamStore((state) => state.fetchTeamsByClusterId);
   const navigate = useNavigate();
   
 
@@ -57,36 +56,23 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
     }
   }, [contestId, fetchClustersByContestId]);
 
-  // Fetch teams for each cluster when clusters are available
-  useEffect(() => {
-    if (clusters && clusters.length > 0 && contestId) {
-      clusters.forEach((cluster: any) => {
-        // Only fetch if we don't already have teams for this cluster
-        if (!teamsByClusterId[cluster.id]) {
-          fetchTeamsByClusterId(cluster.id);
-        }
-      });
-    }
-  }, [clusters, contestId, fetchTeamsByClusterId, teamsByClusterId]);
+  // Removed per-cluster team fetch to avoid N requests; rely on teamsByContest + cluster metadata only
 
-  // Create a mapping from team ID to cluster name (only for preliminary clusters)
+  // Create a mapping from team ID to cluster name using team.judge_cluster (no extra network calls)
   const clusterNameByTeamId = useMemo(() => {
     const mapping: { [teamId: number]: string } = {};
-    
-    // Iterate through each cluster, but only include preliminary type clusters
-    clusters.forEach((cluster: any) => {
-      // Only process clusters with type 'preliminary'
-      if (cluster.cluster_type === 'preliminary') {
-        const teams = teamsByClusterId[cluster.id] || [];
-        // For each team in this cluster, map its ID to the cluster name
-        teams.forEach((team: any) => {
-          mapping[team.id] = cluster.cluster_name;
-        });
+    const clusterIdToName: { [id: number]: string } = {};
+    (clusters || []).forEach((c: any) => {
+      clusterIdToName[c.id] = c.cluster_name;
+    });
+    rows.forEach((team: any) => {
+      const cid = team.judge_cluster ?? team.clusterid;
+      if (cid && clusterIdToName[cid]) {
+        mapping[team.id] = clusterIdToName[cid];
       }
     });
-    
     return mapping;
-  }, [clusters, teamsByClusterId]);
+  }, [clusters, rows]);
 
   // For redesign, only show rank, team, school, total, details
   const visibleCols = useMemo(() => {
@@ -97,7 +83,7 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
   
   
   // Filter and sort rows based on result type
-  const filteredRows = (() => {
+  const filteredRows = useMemo(() => {
     if (resultType === 'preliminary') {
       // Preliminary: ALL teams in the contest, sorted by preliminary_total_score descending
       const sorted = rows.sort((a, b) => (b.preliminary_total_score || 0) - (a.preliminary_total_score || 0));
@@ -114,13 +100,19 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
         .sort((a, b) => (b.total_score || 0) - (a.total_score || 0));
     }
     return rows;
-  })();
+  }, [rows, resultType]);
  
 
 
 
   return (
     <Container maxWidth={false} sx={{ px: 0, py: 0 }}>
+      {rows.length === 0 && (
+        <Box sx={{ px: 2, py: 1 }}>
+          <Skeleton variant="text" width={180} height={28} />
+          <Skeleton variant="rectangular" height={160} sx={{ borderRadius: 1, mt: 1 }} />
+        </Box>
+      )}
       {/* Wrapper that enables smooth horizontal scroll on small screens */}
       <TableContainer
         component={Paper}
@@ -329,3 +321,4 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
     </Container>
   );
 }
+

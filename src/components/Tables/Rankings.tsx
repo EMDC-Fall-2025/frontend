@@ -101,12 +101,12 @@ const Ranking = () => {
   // Load clusters and teams for selected contest
   useEffect(() => {
     fetchClusters()
-    
+
     // Auto-refresh every 20 seconds
     const interval = setInterval(() => {
       fetchClusters(true) // Force refresh 
-    }, 20000); 
-    
+    }, 20000);
+
     return () => {
       clearInterval(interval);
     };

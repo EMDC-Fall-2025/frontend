@@ -42,16 +42,12 @@ import ContestPage from "./pages/ContestsPage";
 
 import { Toaster } from "react-hot-toast";
 import Ranking from "./components/Tables/Rankings";
-import { initStorageSync } from "./store/utils/storageSync";
 
 function App() {
   const currentLink = useLocation().pathname;
   const { isAuthenticated, role, showPreloader, setShowPreloader } = useAuthStore();
 
-  // Initialize global storage sync for cross-tab synchronization
-  useEffect(() => {
-    initStorageSync();
-  }, []);
+
 
   // Hide preloader after it completes its animation
   useEffect(() => {
@@ -62,6 +58,8 @@ function App() {
       return () => clearTimeout(timer);
     }
   }, [showPreloader, setShowPreloader]);
+
+
 
   return (
     <>

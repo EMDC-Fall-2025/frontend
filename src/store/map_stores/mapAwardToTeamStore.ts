@@ -132,7 +132,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
     }),
     {
       name: "special-award-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
     }
   )
 );
