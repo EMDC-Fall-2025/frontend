@@ -137,7 +137,6 @@ export default function Organizer() {
             pointerEvents: hasLoaded ? 'auto' : 'none',
           }}
         >
-          {/* Heading */}
           <Stack spacing={1} sx={{ mt: 2, mb: 2 }}>
           <Typography
             variant="h4"
@@ -161,7 +160,6 @@ export default function Organizer() {
           </Typography>
         </Stack>
 
-        {/* Stat Cards */}
         <Grid container spacing={2} sx={{ mb: 2 }}>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard value={safeContests.length} label="Total Contests" />

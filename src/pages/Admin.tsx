@@ -56,9 +56,6 @@ useEffect(() => {
     setValue(newValue);
   };
 
-  //display cards at the top for contests and organizers
-
-  
   const StatCard = ({ value, label }: { value: number | string; label: string }) => (
     <Card
       elevation={0}
@@ -109,7 +106,6 @@ useEffect(() => {
             pointerEvents: hasLoaded ? 'auto' : 'none',
           }}
         >
-          {/* Title in green */}
           <Stack spacing={1} sx={{ mb: 2, mt: 2 }}>
           <Typography 
             variant="h4" 

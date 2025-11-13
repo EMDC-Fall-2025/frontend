@@ -47,7 +47,6 @@ export default function Judging() {
       setHasLoaded(false);
       isInitialLoadRef.current = true;
       fetchJudgeById(judgeIdNumber);
-      // Fetch all clusters for this judge across all contests
       fetchAllClustersForJudge(judgeIdNumber);
     }
   }, [judgeIdNumber]);
@@ -55,14 +54,12 @@ export default function Judging() {
   // Simplified: Fetch teams directly for judge, then fetch clusters only for filtering logic
   const fetchAllClustersForJudge = async (judgeId: number) => {
     try {
-      // Fetch teams and clusters in parallel
       const [allTeamsForJudge, allClusters] = await Promise.all([
         fetchTeamsByJudgeId(judgeId),
         fetchAllClustersByJudgeId(judgeId)
       ]);
       
       if (allClusters && allClusters.length > 0) {
-        // Check if we have any championship/redesign clusters
         const championshipClusters = allClusters.filter((cluster: any) => 
           cluster.cluster_type === 'championship' || 
           cluster.cluster_type === 'redesign' ||
@@ -135,8 +132,6 @@ export default function Judging() {
         clustersToShow.push(...clustersWithoutContest);
         
         // Process teams from direct fetch
-        // Note: allTeamsForJudge already contains only teams from judge's clusters
-        // (fetched via the backend endpoint that filters by judge's clusters)
         const processedTeams = allTeamsForJudge.map((t: any) => ({
                 ...t,
                 advanced_to_championship: t.advanced_to_championship ?? false
@@ -147,8 +142,7 @@ export default function Judging() {
         setTeams(processedTeams);
 
         setHasLoaded(true);
-        
-        // Set current cluster 
+
         const currentClusterToSet = clustersToShow[0] || null;
         
         setCurrentCluster(currentClusterToSet);
@@ -317,15 +311,12 @@ export default function Judging() {
               </Typography>
             </Stack>
 
-
-            {/* Stat Cards */}
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={12} sm={6} md={3}>
                 <StatCard value={teams.length} label="Teams Assigned" />
               </Grid>
             </Grid>
 
-            {/* Table Section */}
             <Box
               sx={{
                 border: `1px solid ${theme.palette.grey[300]}`,
@@ -344,7 +335,6 @@ export default function Judging() {
                   <JudgeDashboardTable teams={teams} currentCluster={currentCluster} />
                 ) : (
                   <Box sx={{ textAlign: 'center', py: 4 }}>
-                    {/* Only show back button for admin (user_type 1) or organizer (user_type 2) */}
                     {(role?.user_type === 1 || role?.user_type === 2) && (
                       <Button
                         onClick={() => navigate(-1)}
