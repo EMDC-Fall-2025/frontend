@@ -19,7 +19,7 @@ import {
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import { useMapCoachToTeamStore } from "../store/map_stores/mapCoachToTeamStore";
 import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
@@ -31,10 +31,15 @@ export default function Coach() {
   const { teams, fetchTeamsByCoachId, clearTeams } = useMapCoachToTeamStore();
   const { contestsForTeams, fetchContestsByTeams, clearContests } =
     useMapContestToTeamStore();
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
     if (role?.user.id) {
-      fetchTeamsByCoachId(role.user.id);
+      fetchTeamsByCoachId(role.user.id).then(() => {
+        setHasLoaded(true);
+        isInitialLoadRef.current = false;
+      });
     }
     return () => {
       clearTeams();
@@ -129,19 +134,35 @@ export default function Coach() {
     <Card
       elevation={0}
       sx={{
-        borderRadius: 3,
-        border: `1px solid ${theme.palette.grey[300]}`,
-        backgroundColor: "#fff",
+        borderRadius: 2,
+        border: `1px solid ${theme.palette.grey[200]}`,
+        background: `linear-gradient(135deg, #ffffff 0%, #fafafa 100%)`,
+        boxShadow: `0 2px 8px rgba(76, 175, 80, 0.08)`,
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+          boxShadow: `0 4px 16px rgba(76, 175, 80, 0.12)`,
+          transform: 'translateY(-1px)',
+        },
       }}
     >
-      <CardContent sx={{ py: 3, px: 4 }}>
+      <CardContent sx={{ py: 1.5, px: 2, position: 'relative' }}>
+        <Box sx={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          width: 20,
+          height: 20,
+          borderRadius: '50%',
+          backgroundColor: theme.palette.success.light,
+          opacity: 0.1,
+        }} />
         <Typography
           variant="h4"
           sx={{ fontWeight: 700, color: theme.palette.success.dark, lineHeight: 1, mb: 0.5 }}
         >
           {value}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
           {label}
         </Typography>
       </CardContent>
@@ -151,7 +172,14 @@ export default function Coach() {
   return (
     <Box sx={{ pb: 8, backgroundColor: "#fafafa", minHeight: "100vh" }}>
       <Container maxWidth="lg">
-        <Stack spacing={1} sx={{ mb: 3, mt: 3 }}>
+        <Box
+          sx={{
+            opacity: hasLoaded ? 1 : 0,
+            transition: hasLoaded ? `opacity ${isInitialLoadRef.current ? '0.6s' : '0.1s'} ease-in` : 'none',
+            pointerEvents: hasLoaded ? 'auto' : 'none',
+          }}
+        >
+          <Stack spacing={1} sx={{ mb: 2, mt: 2 }}>
           <Typography 
             variant="h4" 
             sx={{ 
@@ -171,7 +199,7 @@ export default function Coach() {
         </Stack>
 
         {/* Stat Card */}
-        <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid container spacing={2} sx={{ mb: 2 }}>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard value={teams.length} label="Teams Coached" />
           </Grid>
@@ -206,6 +234,7 @@ export default function Coach() {
               <Typography>No teams assigned yet.</Typography>
             )}
           </Box>
+        </Box>
         </Box>
       </Container>
     </Box>

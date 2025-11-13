@@ -106,7 +106,7 @@ export const useClusterStore = create<ClusterState>()(
     }),
     {
       name: "cluster-storage",
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );

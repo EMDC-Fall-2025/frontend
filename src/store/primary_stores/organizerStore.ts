@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "../../lib/api";
 import useMapContestOrganizerStore from "../map_stores/mapContestToOrganizerStore";
+import { registerStoreSync } from "../utils/storageSync";
 
 interface Organizer {
   id: number;
@@ -237,9 +238,17 @@ export const useOrganizerStore = create<OrganizerState>()(
     }),
     {
       name: "organizer-storage",
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );
+
+// Register for global storage sync
+registerStoreSync('organizer-storage', (state) => {
+  useOrganizerStore.setState({
+    allOrganizers: state.allOrganizers || [],
+    organizer: state.organizer || null,
+  });
+});
 
 export default useOrganizerStore;

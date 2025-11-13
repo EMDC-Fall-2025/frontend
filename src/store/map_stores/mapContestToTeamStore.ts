@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "../../lib/api";
 import { Contest, Team } from "../../types";
+import { registerStoreSync } from "../utils/storageSync";
 
 interface MapContestToTeamState {
   contestsForTeams: { [key: number]: Contest | null };
@@ -10,6 +11,7 @@ interface MapContestToTeamState {
   mapContestToTeamError: string | null;
   fetchContestsByTeams: (teamIds: Team[]) => Promise<void>;
   fetchTeamsByContest: (contestId: number) => Promise<void>;
+  updateContestInTeams: (updatedContest: Contest) => void;
   clearContests: () => void;
   clearTeamsByContest: () => void;
 }
@@ -25,18 +27,41 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
       clearContests: () => set({ contestsForTeams: {} }),
       clearTeamsByContest: () => set({ teamsByContest: [] }),
 
+      updateContestInTeams: (updatedContest: Contest) => {
+        set((state) => {
+          const updatedContestsForTeams = { ...state.contestsForTeams };
+          // Update contest data for all teams that have this contest
+          Object.keys(updatedContestsForTeams).forEach((teamIdStr) => {
+            const teamId = parseInt(teamIdStr, 10);
+            const contest = updatedContestsForTeams[teamId];
+            if (contest && contest.id === updatedContest.id) {
+              updatedContestsForTeams[teamId] = updatedContest;
+            }
+          });
+          return { contestsForTeams: updatedContestsForTeams };
+        });
+      },
+
       fetchContestsByTeams: async (teams: Team[]) => {
+        // Check cache first - if we already have contest data for all teams, return early
+        const state = get();
+        const teamsNeedingData = teams.filter(team => !state.contestsForTeams[team.id]);
+        
+        if (teamsNeedingData.length === 0) {
+          return; // All teams already have cached contest data
+        }
+        
         set({ isLoadingMapContestToTeam: true });
         try {
           const response = await api.post(
             "/api/mapping/contestToTeam/contestsByTeams/",
-            teams
+            teamsNeedingData
           );
 
-          set({
-            contestsForTeams: response.data,
+          set((currentState) => ({
+            contestsForTeams: { ...currentState.contestsForTeams, ...response.data },
             mapContestToTeamError: null,
-          });
+          }));
         } catch (error: any) {
           const errorMessage = "Failed to fetch contests by team IDs";
           set({ mapContestToTeamError: errorMessage });
@@ -79,7 +104,15 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
     }),
     {
       name: "map-contest-to-team-storage",
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );
+
+// Register for global storage sync
+registerStoreSync('map-contest-to-team-storage', (state) => {
+  useMapContestToTeamStore.setState({
+    contestsForTeams: state.contestsForTeams || {},
+    teamsByContest: state.teamsByContest || [],
+  });
+});

@@ -13,16 +13,17 @@ import {
   Typography,
   TextField,
   Button,
-  Link,
+  
   Divider, // optional separator for a cleaner card look
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../../theme";
 import { useNavigate } from "react-router-dom";
 import { useMapScoreSheetStore } from "../../store/map_stores/mapScoreSheetStore";
 import { useScoreSheetStore } from "../../store/primary_stores/scoreSheetStore";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import CircularProgress from "@mui/material/CircularProgress";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckIcon from "@mui/icons-material/Check";
@@ -72,13 +73,14 @@ export default function ScoreSheetTable({
 
   /**
    * Toggle a question row open/closed
+   * Memoized to prevent recreation on every render
    */
-  const handleToggle = (id: number) => {
+  const handleToggle = useCallback((id: number) => {
     setOpenRows((prevState) => ({
       ...prevState,
       [id]: !prevState[id],
     }));
-  };
+  }, []);
 
   /**
    * On mount / when team/judge change:
@@ -149,8 +151,9 @@ export default function ScoreSheetTable({
 
   /**
    * Update a single question's value in local form state
+   * Memoized to prevent recreation on every render
    */
-  const handleScoreChange = (
+  const handleScoreChange = useCallback((
     questionId: number,
     value: number | string | undefined
   ) => {
@@ -158,12 +161,13 @@ export default function ScoreSheetTable({
       ...prevState,
       [questionId]: value,
     }));
-  };
+  }, []);
 
   /**
    * Save current formData (draft) without submitting
+   * Memoized to prevent recreation on every render
    */
-  const handleSaveScoreSheet = () => {
+  const handleSaveScoreSheet = useCallback(() => {
     if (scoreSheet) {
       // Prepare data with proper handling of undefined/null values
       const scoreData = {
@@ -181,8 +185,9 @@ export default function ScoreSheetTable({
       
       // Save score sheet data
       updateScores(scoreData);
+      toast.success("Scores saved successfully!");
     }
-  };
+  }, [scoreSheet, formData, updateScores]);
 
   /**
    * Check if all required score fields (1..8) are filled.
@@ -283,40 +288,55 @@ export default function ScoreSheetTable({
     </Box>
   ) : (
     <>
-      {/* Back link to the judging dashboard */}
-      <Link
-        onClick={() => navigate(-1)}
+      {/* Navigation back to judging dashboard  */}
+      <Container
+        maxWidth="lg"
         sx={{
-          textDecoration: "none",
-          cursor: "pointer",
-          display: "inline-flex",
-          alignItems: "center",
-          ml: "2%",
-          mt: 2,
-          color: theme.palette.success.main,
-          "&:hover": { color: theme.palette.success.dark },
+          px: { xs: 1, sm: 2 },
+          mt: { xs: 1, sm: 2 },
+          mb: 1,
         }}
       >
-        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-          {"<"} Back to Judging Dashboard{" "}
-        </Typography>
-      </Link>
+        <Button
+          onClick={() => navigate(-1)}
+          startIcon={<ArrowBackIcon />}
+          sx={{
+            textTransform: "none",
+            color: theme.palette.success.dark,
+            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+            fontWeight: 500,
+            px: { xs: 1.5, sm: 2 },
+            py: { xs: 0.75, sm: 1 },
+            borderRadius: "8px",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              backgroundColor: "rgba(76, 175, 80, 0.08)",
+              transform: "translateX(-2px)",
+            },
+          }}
+        >
+          Back to Judging Dashboard
+        </Button>
+      </Container>
 
       {/* Page title + team name (subtitle) */}
       <Typography
         variant="h4"
         sx={{
-          ml: "2%",
-          mr: 5,
           mt: 3,
           mb: 0.5,
           fontWeight: 800,
           color: theme.palette.success.main,
+          textAlign: "center",
         }}
       >
         {title}
       </Typography>
-      <Typography variant="subtitle2" color="text.secondary" sx={{ ml: "2%", mr: 5, mb: 2 }}>
+      <Typography
+        variant="subtitle2"
+        color="text.secondary"
+        sx={{ mb: 2, textAlign: "center" }}
+      >
         {teamName}
       </Typography>
 
@@ -324,18 +344,26 @@ export default function ScoreSheetTable({
       <Container
         component="form"
         sx={{
-          width: "auto",
+          width: "100%",
+          maxWidth: { xs: "100%", sm: "720px", md: "900px" },
+          mx: "auto",
           p: { xs: 2, sm: 3 },
-          bgcolor: "#fff", 
+          bgcolor: "#fff",
           borderRadius: 3,
           border: `1px solid ${theme.palette.grey[300]}`,
-          ml: { xs: "1%", sm: "2%" },
-          mr: { xs: 1, sm: 1 },
           mb: 3,
         }}
       >
         {/* Actions: save, expand incomplete, collapse all */}
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: { xs: 1, sm: 1.5 }, mb: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            gap: { xs: 1, sm: 1.5 },
+            mb: 2,
+          }}
+        >
           <Button
             variant="contained"
             onClick={handleSaveScoreSheet}
@@ -347,7 +375,7 @@ export default function ScoreSheetTable({
               height: { xs: 36, sm: 44 },
               textTransform: "none",
               borderRadius: 2,
-              fontSize: { xs: "0.75rem", sm: "0.875rem" }
+              fontSize: { xs: "0.75rem", sm: "0.9375rem" }
             }}
           >
             Save
@@ -366,7 +394,7 @@ export default function ScoreSheetTable({
               height: { xs: 36, sm: 44 },
               textTransform: "none",
               borderRadius: 2,
-              fontSize: { xs: "0.75rem", sm: "0.875rem" }
+              fontSize: { xs: "0.75rem", sm: "0.9375rem" }
             }}
           >
             Expand Incomplete Rows
@@ -382,7 +410,7 @@ export default function ScoreSheetTable({
               height: { xs: 36, sm: 44 },
               textTransform: "none",
               borderRadius: 2,
-              fontSize: { xs: "0.75rem", sm: "0.875rem" }
+              fontSize: { xs: "0.75rem", sm: "0.9375rem" }
             }}
           >
             Collapse All
@@ -403,9 +431,6 @@ export default function ScoreSheetTable({
           <Table
             sx={{
               "& .MuiTableRow-root": { transition: "background-color 120ms ease" },
-              "& tr:hover td": {
-                backgroundColor: "rgba(46,125,50,0.04)",
-              },
               "& td, & th": { borderColor: theme.palette.grey[200] },
             }}
           >
@@ -431,7 +456,8 @@ export default function ScoreSheetTable({
                         textAlign: "left", 
                         pr: { xs: 1, sm: 2 }, 
                         fontWeight: 600,
-                        fontSize: { xs: "0.8rem", sm: "0.875rem" }
+                        fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+                        cursor: "pointer"
                       }}
                     >
                       {question.questionText}
@@ -478,19 +504,31 @@ export default function ScoreSheetTable({
                               >
                                 {seperateJrAndSr && question.id == 4 ? (
                                   <>
-                                    <Typography sx={{ fontSize: { xs: 9, sm: 10 }, fontWeight: 800, mb: 0.5 }}>
+                                    <Typography sx={{ 
+                                      fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
+                                      fontWeight: 600, 
+                                      mb: { xs: 0.5, sm: 1 } 
+                                    }}>
                                       Jr. Div.
                                     </Typography>
-                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>{question.criteria1Junior}</Typography>
-                                    <Typography sx={{ fontSize: { xs: 9, sm: 10 }, fontWeight: 800, my: 0.5 }}>
+                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria1Junior}</Typography>
+                                    <Typography sx={{ 
+                                      fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
+                                      fontWeight: 600, 
+                                      my: { xs: 0.5, sm: 1 } 
+                                    }}>
                                       Sr. Div.
                                     </Typography>
-                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>{question.criteria1Senior}</Typography>
+                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria1Senior}</Typography>
                                   </>
                                 ) : (
-                                  <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>{question.criteria1}</Typography>
+                                  <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria1}</Typography>
                                 )}
-                                <Typography sx={{ mt: 1, fontWeight: 800, fontSize: { xs: 10, sm: 12 } }}>
+                                <Typography sx={{ 
+                                  mt: { xs: 0.5, sm: 1 }, 
+                                  fontWeight: 600, 
+                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" } 
+                                }}>
                                   {question.criteria1Points}
                                 </Typography>
                               </Box>
@@ -507,19 +545,31 @@ export default function ScoreSheetTable({
                               >
                                 {seperateJrAndSr && question.id == 4 ? (
                                   <>
-                                    <Typography sx={{ fontSize: { xs: 9, sm: 10 }, fontWeight: 800, mb: 0.5 }}>
+                                    <Typography sx={{ 
+                                      fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
+                                      fontWeight: 600, 
+                                      mb: { xs: 0.5, sm: 1 } 
+                                    }}>
                                       Jr. Div.
                                     </Typography>
-                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>{question.criteria2Junior}</Typography>
-                                    <Typography sx={{ fontSize: { xs: 9, sm: 10 }, fontWeight: 800, my: 0.5 }}>
+                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria2Junior}</Typography>
+                                    <Typography sx={{ 
+                                      fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
+                                      fontWeight: 600, 
+                                      my: { xs: 0.5, sm: 1 } 
+                                    }}>
                                       Sr. Div.
                                     </Typography>
-                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>{question.criteria2Senior}</Typography>
+                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria2Senior}</Typography>
                                   </>
                                 ) : (
-                                  <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>{question.criteria2}</Typography>
+                                  <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria2}</Typography>
                                 )}
-                                <Typography sx={{ mt: 1, fontWeight: 800, fontSize: { xs: 10, sm: 12 } }}>
+                                <Typography sx={{ 
+                                  mt: { xs: 0.5, sm: 1 }, 
+                                  fontWeight: 600, 
+                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" } 
+                                }}>
                                   {question.criteria2Points}
                                 </Typography>
                               </Box>
@@ -536,19 +586,31 @@ export default function ScoreSheetTable({
                               >
                                 {seperateJrAndSr && question.id == 4 ? (
                                   <>
-                                    <Typography sx={{ fontSize: { xs: 9, sm: 10 }, fontWeight: 800, mb: 0.5 }}>
+                                    <Typography sx={{ 
+                                      fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
+                                      fontWeight: 600, 
+                                      mb: { xs: 0.5, sm: 1 } 
+                                    }}>
                                       Jr. Div.
                                     </Typography>
-                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>{question.criteria3Junior}</Typography>
-                                    <Typography sx={{ fontSize: { xs: 9, sm: 10 }, fontWeight: 800, my: 0.5 }}>
+                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria3Junior}</Typography>
+                                    <Typography sx={{ 
+                                      fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
+                                      fontWeight: 600, 
+                                      my: { xs: 0.5, sm: 1 } 
+                                    }}>
                                       Sr. Div.
                                     </Typography>
-                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>{question.criteria3Senior}</Typography>
+                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria3Senior}</Typography>
                                   </>
                                 ) : (
-                                  <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>{question.criteria3}</Typography>
+                                  <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria3}</Typography>
                                 )}
-                                <Typography sx={{ mt: 1, fontWeight: 800, fontSize: { xs: 10, sm: 12 } }}>
+                                <Typography sx={{ 
+                                  mt: { xs: 0.5, sm: 1 }, 
+                                  fontWeight: 600, 
+                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" } 
+                                }}>
                                   {question.criteria3Points}
                                 </Typography>
                               </Box>
@@ -635,10 +697,10 @@ export default function ScoreSheetTable({
                                       mx: 0
                                     },
                                     "& .MuiInputLabel-root": {
-                                      fontSize: { xs: "0.75rem", sm: "0.875rem" }
+                                      fontSize: { xs: "0.75rem", sm: "0.9375rem" }
                                     },
                                     "& .MuiOutlinedInput-input": {
-                                      fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                                      fontSize: { xs: "0.75rem", sm: "0.9375rem" },
                                       py: { xs: 1, sm: 1.5 }
                                     }
                                   }}
@@ -674,10 +736,10 @@ export default function ScoreSheetTable({
                                   color: theme.palette.success.main,
                                 },
                                 "& .MuiInputLabel-root": {
-                                  fontSize: { xs: "0.75rem", sm: "0.875rem" }
+                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" }
                                 },
                                 "& .MuiOutlinedInput-input": {
-                                  fontSize: { xs: "0.75rem", sm: "0.875rem" }
+                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" }
                                 }
                               }}
                             />
@@ -706,7 +768,7 @@ export default function ScoreSheetTable({
             height: { xs: 36, sm: 44 },
             textTransform: "none",
             borderRadius: 2,
-            fontSize: { xs: "0.75rem", sm: "0.875rem" }
+            fontSize: { xs: "0.75rem", sm: "0.9375rem" }
           }}
         >
           Submit

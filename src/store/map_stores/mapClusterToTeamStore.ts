@@ -12,6 +12,7 @@ interface MapClusterTeamState {
 
   fetchClustersByContestId: (contestId: number) => Promise<void>;
   fetchTeamsByClusterId: (clusterId: number, forceRefresh?: boolean) => Promise<Team[]>;
+  fetchTeamsByJudgeId: (judgeId: number, forceRefresh?: boolean) => Promise<Team[]>;
   createClusterTeamMapping: (data: ClusterTeamMapping) => Promise<void>;
   deleteClusterTeamMapping: (mapId: number, clusterId?: number) => Promise<void>;
   deleteTeamCompletely: (teamId: number) => Promise<void>;
@@ -77,6 +78,22 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
           return teams;
         } catch (error) {
           const errorMessage = "Error fetching teams by cluster";
+          set({ mapClusterToTeamError: errorMessage, isLoadingMapClusterToTeam: false });
+          throw new Error(errorMessage);
+        }
+      },
+
+      fetchTeamsByJudgeId: async (judgeId: number, forceRefresh: boolean = false) => {
+        set({ isLoadingMapClusterToTeam: true, mapClusterToTeamError: null });
+        try {
+          const response = await api.get(
+            `/api/mapping/clusterToTeam/getTeamsByJudge/${judgeId}/`
+          );
+          const teams = response.data?.Teams || [];
+          set({ isLoadingMapClusterToTeam: false, mapClusterToTeamError: null });
+          return teams;
+        } catch (error) {
+          const errorMessage = "Error fetching teams by judge";
           set({ mapClusterToTeamError: errorMessage, isLoadingMapClusterToTeam: false });
           throw new Error(errorMessage);
         }
@@ -204,7 +221,7 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
     }),
     {
       name: "map-cluster-team-storage",
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );

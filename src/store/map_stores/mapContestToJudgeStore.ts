@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "../../lib/api";
 import { Contest, Judge, MapContestToJudge } from "../../types";
+import { registerStoreSync } from "../utils/storageSync";
 
 interface MapContestJudgeState {
   judges: Judge[];
@@ -313,9 +314,19 @@ export const useMapContestJudgeStore = create<MapContestJudgeState>()(
     }),
     {
       name: "map-contest-judge-storage",
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );
+
+// Register for global storage sync
+registerStoreSync('map-contest-judge-storage', (state) => {
+  useMapContestJudgeStore.setState({
+    judges: state.judges || [],
+    contest: state.contest || null,
+    mappings: state.mappings || [],
+    contestJudges: state.contestJudges || {},
+  });
+});
 
 export default useMapContestJudgeStore;

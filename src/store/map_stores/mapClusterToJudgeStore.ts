@@ -184,14 +184,18 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
         }
       },
 
-      fetchAllClustersByJudgeId: async (judgeId: number) => {
+      fetchAllClustersByJudgeId: async (judgeId: number, forceRefresh: boolean = false) => {
+        // If not forcing refresh, check if we have cached data
+        // Note: We don't cache clusters because they can change when judge is assigned to new contests
+        // Always fetch fresh data to ensure we get all clusters
         set({ isLoadingMapClusterJudge: true });
         try {
           const response = await api.get(
             `/api/mapping/clusterToJudge/getAllClustersByJudge/${judgeId}/`
           );
+          const clusters = response.data?.Clusters || [];
           set({ mapClusterJudgeError: null });
-          return response.data?.Clusters || [];
+          return clusters;
         } catch (error) {
           const errorMessage = "Error fetching all clusters for judge";
           set({ mapClusterJudgeError: errorMessage });
@@ -293,7 +297,7 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
     }),
     {
       name: "map-cluster-judge-storage",
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );

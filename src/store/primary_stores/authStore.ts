@@ -9,8 +9,10 @@ interface AuthState {
   authError: string | null;
   isAuthenticated: boolean;
   isLoadingAuth: boolean;
+  showPreloader: boolean; // Track if we should show preloader after login
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  setShowPreloader: (show: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -21,6 +23,11 @@ export const useAuthStore = create<AuthState>()(
       authError: null,
       isAuthenticated: false,
       isLoadingAuth: false,
+      showPreloader: false,
+
+      setShowPreloader: (show: boolean) => {
+        set({ showPreloader: show });
+      },
 
       login: async (username, password) => {
         set({ isLoadingAuth: true });
@@ -36,6 +43,7 @@ export const useAuthStore = create<AuthState>()(
             role: data.role ?? null,
             isAuthenticated: true,
             isLoadingAuth: false,
+            showPreloader: true, // Show preloader after successful login
           });
           set({ authError: null });
         } catch (authError: any) {
@@ -49,17 +57,18 @@ export const useAuthStore = create<AuthState>()(
         try {
           await api.post(`/api/logout/`, {});
         } finally {
-          set({ user: null, role: null, isAuthenticated: false });
+          set({ user: null, role: null, isAuthenticated: false, showPreloader: false });
         }
       },
     }),
     {
       name: "auth-storage",
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         user: state.user,
         role: state.role,
         isAuthenticated: state.isAuthenticated,
+        // Don't persist showPreloader - it should only show after fresh login
       }),
     }
   )

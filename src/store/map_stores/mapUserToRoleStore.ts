@@ -68,7 +68,7 @@ const useUserRoleStore = create<MapUserRoleState>()(
     }),
     {
       name: "map-user-role-storage",
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );

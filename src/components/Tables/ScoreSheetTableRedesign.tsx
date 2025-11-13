@@ -13,11 +13,11 @@ import {
   Typography,
   TextField,
   Button,
-  Link,
   Divider,
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../../theme";
 import { useNavigate } from "react-router-dom";
 import { useMapScoreSheetStore } from "../../store/map_stores/mapScoreSheetStore";
@@ -156,6 +156,7 @@ export default function ScoreSheetTableRedesign({
         field7: formData[7],
         field8: formData[8]?.toString(),
       });
+      toast.success("Scores saved successfully!");
     }
   };
 
@@ -243,57 +244,90 @@ export default function ScoreSheetTableRedesign({
     </Box>
   ) : (
     <>
-      {/* Back link to the judging dashboard */}
-      <Link
-        onClick={() => navigate(-1)}
+      {/* Navigation back to judging dashboard - aligned with navbar */}
+      <Container
+        maxWidth="lg"
         sx={{
-          textDecoration: "none",
-          cursor: "pointer",
-          display: "inline-flex",
-          alignItems: "center",
-          ml: "4%",
-          mt: 2,
-          color: theme.palette.success.main,
-          "&:hover": { color: theme.palette.success.dark },
+          px: { xs: 1, sm: 2 },
+          mt: { xs: 1, sm: 2 },
+          mb: 1,
         }}
       >
-        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-          {"<"} Back to Judging Dashboard{" "}
-        </Typography>
-      </Link>
+        <Button
+          onClick={() => navigate(-1)}
+          startIcon={<ArrowBackIcon />}
+          sx={{
+            textTransform: "none",
+            color: theme.palette.success.dark,
+            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+            fontWeight: 500,
+            px: { xs: 1.5, sm: 2 },
+            py: { xs: 0.75, sm: 1 },
+            borderRadius: "8px",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              backgroundColor: "rgba(76, 175, 80, 0.08)",
+              transform: "translateX(-2px)",
+            },
+          }}
+        >
+          Back to Judging Dashboard
+        </Button>
+      </Container>
 
       {/* Page title + team name (subtitle) */}
-      <Typography
-        variant="h4"
-        sx={{
-          ml: "2%",
-          mr: 5,
-          mt: 3,
-          mb: 0.5,
-          fontWeight: 800,
-          color: theme.palette.success.main,
-        }}
-      >
-        {title}
-      </Typography>
-      <Typography variant="subtitle2" color="text.secondary" sx={{ ml: "2%", mr: 5, mb: 2 }}>
-        {teamName}
-      </Typography>
+      <Box sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        width: "100%"
+      }}>
+        <Typography
+          variant="h4"
+          sx={{
+            mt: 3,
+            mb: 0.5,
+            fontWeight: 800,
+            color: theme.palette.success.main,
+            textAlign: "center",
+          }}
+        >
+          {title}
+        </Typography>
+        <Typography
+          variant="subtitle2"
+          color="text.secondary"
+          sx={{ mb: 2, textAlign: "center" }}
+        >
+          {teamName}
+        </Typography>
+      </Box>
       <Container
         component="form"
         sx={{
-          width: "auto",
-          p: 2,
-          bgcolor: "#fff", 
+          width: "100%",
+          maxWidth: { xs: "100%", sm: "720px", md: "900px" },
+          mx: "auto",
+          p: { xs: 2, sm: 3 },
+          bgcolor: "#fff",
           borderRadius: 3,
           border: `1px solid ${theme.palette.grey[300]}`,
-          ml: "2%",
-          mr: 1,
           mb: 3,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
         {/* Actions: save, expand incomplete, collapse all */}
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2 }}>
+        <Box sx={{
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "center",
+          gap: { xs: 1, sm: 1.5 },
+          mb: 2,
+          width: "100%"
+        }}>
           <Button
             variant="contained"
             onClick={handleSaveScoreSheet}
@@ -367,9 +401,6 @@ export default function ScoreSheetTableRedesign({
           <Table
             sx={{
               "& .MuiTableRow-root": { transition: "background-color 120ms ease" },
-              "& tr:hover td": {
-                backgroundColor: "rgba(46,125,50,0.04)",
-              },
               "& td, & th": { borderColor: theme.palette.grey[200] },
             }}
           >
@@ -390,7 +421,13 @@ export default function ScoreSheetTableRedesign({
                     <TableCell
                       component="th"
                       scope="row"
-                      sx={{ pl: 2, textAlign: "left", pr: 2, fontWeight: 600 }}
+                      sx={{ 
+                        pl: 2, 
+                        textAlign: "left", 
+                        pr: 2, 
+                        fontWeight: 600,
+                        cursor: "pointer"
+                      }}
                     >
                       {question.questionText}
                     </TableCell>

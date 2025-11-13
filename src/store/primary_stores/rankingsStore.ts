@@ -231,7 +231,7 @@ export const useRankingsStore = create<RankingsState>()(
     }),
     {
       name: "rankings-storage",
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );

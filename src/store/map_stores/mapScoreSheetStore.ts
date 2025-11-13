@@ -271,7 +271,7 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
     }),
     {
       name: "map-score-sheet-storage",
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );

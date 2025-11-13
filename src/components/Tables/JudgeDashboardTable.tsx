@@ -34,6 +34,7 @@ import AreYouSureModal from "../Modals/AreYouSureModal";
 import { useScoreSheetStore } from "../../store/primary_stores/scoreSheetStore";
 import theme from "../../theme";
 import useMapContestJudgeStore from "../../store/map_stores/mapContestToJudgeStore";
+import { useMapContestToTeamStore } from "../../store/map_stores/mapContestToTeamStore";
 import { useAuthStore } from "../../store/primary_stores/authStore";
 import { Team, Contest } from "../../types";
 import { api } from "../../lib/api";
@@ -57,6 +58,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   } = useMapScoreSheetStore();
   const { contest, getContestByJudgeId } = useMapContestJudgeStore();
   const { editScoreSheetField, multipleScoreSheets } = useScoreSheetStore();
+  const { contestsForTeams, fetchContestsByTeams } = useMapContestToTeamStore();
 
   // Function to determine if a scoresheet is from preliminary round (should be greyed out)
   const isPreliminaryScoresheet = (_teamId: number, sheetType: number) => {
@@ -64,7 +66,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
     const isInChampionshipOrRedesignCluster = currentCluster && (
       currentCluster.cluster_type === 'championship' || 
       currentCluster.cluster_type === 'redesign' ||
-      // Fallback: check by name for existing clusters (transition period)
+      // Fallback: check by name for existing clusters 
       currentCluster.cluster_name?.toLowerCase().includes('championship') ||
       currentCluster.cluster_name?.toLowerCase().includes('redesign')
     );
@@ -202,7 +204,8 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
     return role?.user_type === 1 || role?.user_type === 2;
   };
 
-  const [teamContestMap, setTeamContestMap] = React.useState<{[teamId: number]: Contest | null}>({});
+  // Use store's cached contest data instead of local state for persistence
+  // teamContestMap is now derived from the store
   
 
   const [openRows, setOpenRows] = React.useState<{ [key: number]: boolean }>(
@@ -214,11 +217,14 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   const [currentTeam, setCurrentTeam] = useState(-1);
   const [currentSheetType, setCurrentSheetType] = useState(-1);
 
-  // NEW: multi-team scoring dialog state
-  const [openMultiDialog, setOpenMultiDialog] = useState(false);
+  // multi-team scoring dialog state
+  const [openContestDialog, setOpenContestDialog] = useState(false);
+  const [openSheetTypeDialog, setOpenSheetTypeDialog] = useState(false);
   const [multiType, setMultiType] = useState<
-    "presentation" | "journal" | "machine-design"
+    "presentation" | "journal" | "machine-design" | "general-penalties" | "run-penalties"
   >("presentation");
+  const [allContests, setAllContests] = useState<Contest[]>([]);
+  const [selectedContest, setSelectedContest] = useState<Contest | null>(null);
 
   const handleToggle = (teamId: number) => {
     setOpenRows((prevState) => ({
@@ -238,7 +244,11 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   useEffect(() => {
     if (judge && judge.id) {
       try {
+        // Fetch all scoresheets for this judge across all contests
         fetchScoreSheetsByJudge(judge.id);
+        // Note: getContestByJudgeId only returns one contest, but teams come from all contests
+        // This is only used for the "Score Multiple Teams" button enable/disable check
+        // Teams are fetched from all clusters/contests in the parent component (Judging.tsx)
         getContestByJudgeId(judge.id, true).catch(error => {
           console.warn('Contest info not available for judge:', error);
         });
@@ -251,38 +261,32 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   useEffect(() => {
     if (judge && judge.id && teams && teams.length > 0) {
       try {
+        // Refresh scoresheets when teams change to ensure we have scoresheets for all teams
+        // This fetches ALL scoresheets for the judge across ALL contests
         fetchScoreSheetsByJudge(judge.id);
       } catch (error) {
         console.error('Error refreshing scoresheets:', error);
       }
     }
 
-  }, [teams]);
+  }, [teams, judge]);
 
+  // This uses cached data if available, otherwise fetches all at once
   const fetchContestForTeams = useCallback(async (teamsToFetch: Team[]) => {
-    const contestMap: {[teamId: number]: Contest | null} = {};
-    const teamsToFetchInfo = teamsToFetch.filter(team => !teamContestMap[team.id]);
+    // Get current contestsForTeams from store to check cache
+    const currentContestsForTeams = useMapContestToTeamStore.getState().contestsForTeams;
+    // Check which teams don't have cached contest data
+    const teamsToFetchInfo = teamsToFetch.filter(team => !currentContestsForTeams[team.id]);
     
-    if (teamsToFetchInfo.length === 0) return;
+    if (teamsToFetchInfo.length === 0) return; // All contests already cached
     
-    for (const team of teamsToFetchInfo) {
-      try {
-        const response = await api.get(`/api/mapping/contestToTeam/getContestByTeam/${team.id}/`);
-        if (response.data?.Contest) {
-          contestMap[team.id] = response.data.Contest;
-        } else {
-          contestMap[team.id] = null;
-        }
-      } catch (error) {
-        console.error(`Error fetching contest for team ${team.id}:`, error);
-        contestMap[team.id] = null;
-      }
+    // Fetch all contests in parallel (one API call instead of N calls)
+    try {
+      await fetchContestsByTeams(teamsToFetchInfo);
+    } catch (error) {
+      console.error('Error fetching contests for teams:', error);
     }
-    
-    if (Object.keys(contestMap).length > 0) {
-      setTeamContestMap(prev => ({ ...prev, ...contestMap }));
-    }
-  }, [teamContestMap]);
+  }, [fetchContestsByTeams]);
 
   useEffect(() => {
     if (teams && teams.length > 0) {
@@ -318,23 +322,73 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   }, [mappings]);
 
   // open/close multi-team dialog
-  const handleMultiTeamScore = () => {
-    // Handle multi-team scoring
-    setOpenMultiDialog(true);
+  const handleMultiTeamScore = async () => {
+    // Fetch all contests for this judge when opening dialog
+    if (judge?.id) {
+      try {
+        const response = await api.get(`/api/mapping/contestToJudge/judge-contests/${judge.id}/`);
+        const contests = response.data?.contests || [];
+        setAllContests(contests);
+      } catch (error) {
+        console.error('Error fetching contests for judge:', error);
+        setAllContests([]);
+      }
+    }
+    setOpenContestDialog(true);
   };
-  const handleCancelMulti = () => setOpenMultiDialog(false);
+  
+  const handleCancelContestDialog = () => {
+    setOpenContestDialog(false);
+    setSelectedContest(null);
+  };
+  
+  const handleSelectContest = (contest: Contest) => {
+    if (!hasContestStarted(contest)) return; // Only allow selection of started contests
+    setSelectedContest(contest);
+    setOpenContestDialog(false);
+    setOpenSheetTypeDialog(true);
+  };
+  
+  const handleCancelSheetTypeDialog = () => {
+    setOpenSheetTypeDialog(false);
+    setSelectedContest(null);
+  };
 
   // confirm multi-team selection → route
-  const handleConfirmMulti = () => {
-    if (!judge || !contest?.id) return;
+  const handleConfirmSheetType = () => {
+    if (!judge || !selectedContest?.id) return;
 
-    
-    const typePath = multiType === "machine-design" ? "machinedesign" : multiType;
-    const route = `/multi-team-${typePath}-score/${judge.id}/${contest.id}/`;
+    //Handle routing based on selection
+    let route = "";
+    switch (multiType) {
+      case "presentation":
+        route = `/multi-team-presentation-score/${judge.id}/${selectedContest.id}/`;
+        break;
+      case "journal":
+        route = `/multi-team-journal-score/${judge.id}/${selectedContest.id}/`;
+        break;
+      case "machine-design":
+        route = `/multi-team-machinedesign-score/${judge.id}/${selectedContest.id}/`;
+        break;
+      case "general-penalties":
+        route = `/multi-team-general-penalties/${judge.id}/${selectedContest.id}/`;
+        break;
+      case "run-penalties":
+        route = `/multi-team-run-penalties/${judge.id}/${selectedContest.id}/`;
+        break;
+      default:
+        return; 
+    }
     
     // Navigate to scoring page
     navigate(route);
-    setOpenMultiDialog(false);
+    setOpenSheetTypeDialog(false);
+    setSelectedContest(null);
+  };
+
+  // Check if contest has started (is open)
+  const hasContestStarted = (contest: Contest): boolean => {
+    return contest.is_open === true;
   };
 
   const handleUnsubmitSheet = async () => {
@@ -394,6 +448,8 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
     const { team, type, url, buttonText } = props;
 
     // Only render if scoresheet exists for this judge, team, and type
+    // Note: Teams are displayed regardless of whether they have scoresheets
+    // This component only renders the button if a scoresheet exists
     if (!judge || !hasScoresheet(judge.id, team.id, type)) {
       return null;
     }
@@ -401,10 +457,12 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
     // Check if this is a preliminary scoresheet (should be greyed out)
     const isPreliminary = isPreliminaryScoresheet(team.id, type);
     const isEditable = isScoresheetEditable(team.id, type);
+    const isSubmitted = getIsSubmitted(judge?.id, team.id, type);
+
 
     return (
       <>
-        {!getIsSubmitted(judge?.id, team.id, type) ? (
+        {!isSubmitted ? (
           <Button
             variant="contained"
             onClick={() => isEditable ? navigate(`/${url}/${judge.id}/${team.id}/`) : null}
@@ -432,7 +490,8 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
               opacity: isPreliminary ? 0.6 : 1,
             }}
           >
-            {isPreliminary ? `${buttonText} (Preliminary)` : buttonText}
+            {isPreliminary ? `${buttonText} (Preliminary)` : buttonText} {getTotal(judge?.id, team.id, type)}
+
           </Button>
         ) : (
           <Button
@@ -535,7 +594,10 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
               fontSize: { xs: "0.9rem", sm: "1rem" },
               fontWeight: 600,
             }}
-            disabled={!contest?.id} 
+            // Disable button if no contest is available OR if we have teams but no open contests
+            // Note: contest here is only one contest, but judge may be in multiple contests
+            // The button will work for any contest the judge is in (handled in handleMultiTeamScore)
+            disabled={!contest?.id || (!contest?.is_open && teams.length > 0)} 
           >
             Score Multiple Teams
           </Button>
@@ -647,7 +709,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                         >
                           ({team.school_name || 'N/A'})
                         </Typography>
-                        {teamContestMap[team.id] && (
+                        {contestsForTeams[team.id] && (
                           <Box sx={{ 
                             display: "flex", 
                             alignItems: "center", 
@@ -678,9 +740,9 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                                 flex: 1,
                                 textAlign: "left"
                               }}
-                              title={teamContestMap[team.id]?.name} // Show full name on hover
+                              title={contestsForTeams[team.id]?.name} // Show full name on hover
                             >
-                              {teamContestMap[team.id]?.name}
+                              {contestsForTeams[team.id]?.name}
                             </Typography>
                           </Box>
                         )}
@@ -724,7 +786,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                             alignItems: { xs: "center", sm: "flex-start" }
                           }}>
                             {(() => {
-                              const teamContest = teamContestMap[team.id];
+                              const teamContest = contestsForTeams[team.id];
 
                               if (!teamContest) {
                                 return (
@@ -810,11 +872,92 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
         handleSubmit={handleUnsubmitSheet}
       />
 
-      {/*  multi-team dialog  */}
-      <Dialog open={openMultiDialog} onClose={handleCancelMulti}>
-        <DialogTitle>Score Multiple Teams</DialogTitle>
+      {/* Contest Selection Dialog */}
+      <Dialog open={openContestDialog} onClose={handleCancelContestDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Select Contest</DialogTitle>
         <DialogContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-          <FormControl component="fieldset" sx={{ mt: { xs: 0.5, sm: 1 } }}>
+          {allContests.length > 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
+              {allContests.map((contest) => {
+                const hasStarted = hasContestStarted(contest);
+                return (
+                  <Button
+                    key={contest.id}
+                    variant={hasStarted ? "outlined" : "outlined"}
+                    onClick={() => handleSelectContest(contest)}
+                    disabled={!hasStarted}
+                    sx={{
+                      bgcolor: hasStarted ? 'transparent' : 'transparent',
+                      color: hasStarted 
+                        ? theme.palette.success.main 
+                        : theme.palette.grey[500],
+                      borderColor: hasStarted 
+                        ? theme.palette.success.main 
+                        : theme.palette.grey[400],
+                      '&:hover': {
+                        bgcolor: hasStarted 
+                          ? theme.palette.success.light
+                          : 'transparent',
+                        color: hasStarted ? 'white' : theme.palette.grey[500],
+                      },
+                      '&:disabled': {
+                        borderColor: theme.palette.grey[400],
+                        color: theme.palette.grey[500],
+                      },
+                      textTransform: 'none',
+                      borderRadius: 2,
+                      px: { xs: 2, sm: 3 },
+                      py: { xs: 1.5, sm: 2 },
+                      fontSize: { xs: "0.875rem", sm: "1rem" },
+                      justifyContent: 'flex-start',
+                      textAlign: 'left',
+                    }}
+                  >
+                    {contest.name || `Contest ${contest.id}`}
+                    {!hasStarted && (
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          ml: 1, 
+                          fontSize: "0.75rem",
+                          opacity: 0.7
+                        }}
+                      >
+                        (Not Started)
+                      </Typography>
+                    )}
+                  </Button>
+                );
+              })}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              No contests available for this judge.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ 
+          p: { xs: 1.5, sm: 2 },
+        }}>
+          <Button 
+            onClick={handleCancelContestDialog} 
+            sx={{ 
+              textTransform: "none",
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              px: { xs: 2, sm: 3 },
+              py: { xs: 1, sm: 1.25 }
+            }}
+          >
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Sheet Type Selection Dialog */}
+      <Dialog open={openSheetTypeDialog} onClose={handleCancelSheetTypeDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Select Sheet Type</DialogTitle>
+        <DialogContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+          <FormControl component="fieldset" sx={{ mt: { xs: 0.5, sm: 1 }, width: "100%" }}>
             <FormLabel 
               component="legend" 
               sx={{ 
@@ -860,6 +1003,26 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                   } 
                 }}
               />
+              <FormControlLabel 
+                value="general-penalties"
+                control={<Radio />} 
+                label="General Penalties" 
+                sx={{ 
+                  "& .MuiFormControlLabel-label": { 
+                    fontSize: { xs: "0.9rem", sm: "1rem" } 
+                  } 
+                }}
+              />
+              <FormControlLabel 
+                value="run-penalties" 
+                control={<Radio />} 
+                label="Run Penalties" 
+                sx={{ 
+                  "& .MuiFormControlLabel-label": { 
+                    fontSize: { xs: "0.9rem", sm: "1rem" } 
+                  } 
+                }}
+              />
             </RadioGroup>
           </FormControl>
         </DialogContent>
@@ -869,7 +1032,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
           gap: { xs: 1, sm: 1.5 }
         }}>
           <Button 
-            onClick={handleCancelMulti} 
+            onClick={handleCancelSheetTypeDialog} 
             sx={{ 
               textTransform: "none",
               fontSize: { xs: "0.9rem", sm: "1rem" },
@@ -880,7 +1043,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
             Cancel
           </Button>
           <Button
-            onClick={handleConfirmMulti}
+            onClick={handleConfirmSheetType}
             variant="contained"
             sx={{
               textTransform: "none",
@@ -891,7 +1054,6 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
               "&:hover": { bgcolor: theme.palette.success.dark },
               fontSize: { xs: "0.9rem", sm: "1rem" },
             }}
-            disabled={!contest?.id}
           >
             Go
           </Button>

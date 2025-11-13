@@ -6,7 +6,7 @@ import {
   Typography,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useParams, Link as RouterLink } from "react-router-dom";
 import theme from "../theme";
 import TabContext from "@mui/lab/TabContext";
@@ -53,6 +53,8 @@ export default function ManageContest() {
   const parsedContestId = contestId ? parseInt(contestId, 10) : 0;
 
   const [value, setValue] = useState(() => getCookie(ACTIVE_TAB_COOKIE) || "1");
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const isInitialLoadRef = useRef(true);
   // Modal state management for different creation/editing operations
   const [openJudgeModal, setOpenJudgeModal] = useState(false);
   const [openClusterModal, setOpenClusterModal] = useState(false);
@@ -81,14 +83,26 @@ export default function ManageContest() {
   );
 
   useEffect(() => {
-    if (!parsedContestId) return;
+    if (!parsedContestId) {
+      setHasLoaded(true);
+      isInitialLoadRef.current = false;
+      return;
+    }
 
+    setHasLoaded(false);
     Promise.all([
       fetchContestById(parsedContestId),
       getAllJudgesByContestId(parsedContestId),
       fetchClustersByContestId(parsedContestId)
-    ]).catch(console.error);
-  }, [parsedContestId]);
+    ]).then(() => {
+      setHasLoaded(true);
+      isInitialLoadRef.current = false;
+    }).catch((error) => {
+      console.error(error);
+      setHasLoaded(true);
+      isInitialLoadRef.current = false;
+    });
+  }, [parsedContestId, fetchContestById, getAllJudgesByContestId, fetchClustersByContestId]);
 
   useEffect(() => {
     if (!clusters.length) return;
@@ -229,6 +243,13 @@ export default function ManageContest() {
         isolation: "isolate",
       }}
     >
+      <Box
+        sx={{
+          opacity: hasLoaded ? 1 : 0,
+          transition: hasLoaded ? `opacity ${isInitialLoadRef.current ? '0.6s' : '0.1s'} ease-in` : 'none',
+          pointerEvents: hasLoaded ? 'auto' : 'none',
+        }}
+      >
       {/* Action Buttons */}
 {!contest?.is_open && (
   <Box sx={{ mb: 3, display: "flex", flexWrap: "wrap", gap: 1.5 }}>
@@ -417,6 +438,7 @@ export default function ManageContest() {
           )}
         </TabPanel>
       </TabContext>
+      </Box>
     </Container>
 
     {/* Modals */}

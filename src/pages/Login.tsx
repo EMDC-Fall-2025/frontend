@@ -10,8 +10,6 @@ import {
   Typography,
   Link,
   Alert,
-  CircularProgress,
-  Backdrop,
 } from "@mui/material";
 import TriangleBackground from "../components/TriangleBackground";
 import { useEffect, useState } from "react";
@@ -82,12 +80,6 @@ export default function Login() {
           alignItems: "center",
         }}
       >
-        <Backdrop
-          sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-          open={isLoadingAuth}
-        >
-          <CircularProgress color="inherit" />
-        </Backdrop>
         <Typography 
           variant="h1"
           sx={{

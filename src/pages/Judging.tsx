@@ -10,242 +10,235 @@ import {
   Divider,
   Button,
 } from "@mui/material";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useJudgeStore } from "../store/primary_stores/judgeStore";
-import { useRankingsStore } from "../store/primary_stores/rankingsStore";
-import { useEffect, useState } from "react";
+import { useAuthStore } from "../store/primary_stores/authStore";
+import { useEffect, useState, useRef } from "react";
 import { useMapClusterJudgeStore } from "../store/map_stores/mapClusterToJudgeStore";
 import useClusterTeamStore from "../store/map_stores/mapClusterToTeamStore";
 import JudgeDashboardTable from "../components/Tables/JudgeDashboardTable";
 import theme from "../theme";
 import { Team } from "../types";
 import { api } from "../lib/api";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 export default function Judging() {
   const { judgeId } = useParams();
   const judgeIdNumber = judgeId ? parseInt(judgeId, 10) : null;
+  const navigate = useNavigate();
+  const { role } = useAuthStore();
   const { judge, fetchJudgeById, clearJudge } = useJudgeStore();
-  const { listAdvancers } = useRankingsStore();
-  const { fetchClusterByJudgeId, fetchAllClustersByJudgeId, clearCluster } = useMapClusterJudgeStore();
+  const { fetchAllClustersByJudgeId, clearCluster } = useMapClusterJudgeStore();
   // Use selectors to subscribe to team updates
   const mapClusterToTeamError = useClusterTeamStore((state) => state.mapClusterToTeamError);
-  const clearClusterTeamMappings = useClusterTeamStore((state) => state.clearClusterTeamMappings);
-  const clearTeamsByClusterId = useClusterTeamStore((state) => state.clearTeamsByClusterId);
+  const fetchTeamsByJudgeId = useClusterTeamStore((state) => state.fetchTeamsByJudgeId);
   const fetchTeamsByClusterId = useClusterTeamStore((state) => state.fetchTeamsByClusterId);
   const teamsByClusterId = useClusterTeamStore((state) => state.teamsByClusterId);
   const [teams, setTeams] = useState<Team[]>([]);
   const [currentCluster, setCurrentCluster] = useState<any>(null);
-  const [advancers, setAdvancers] = useState<any[]>([]);
-  const [showAdvancers, setShowAdvancers] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const isInitialLoadRef = useRef(true);
 
-  const handleListAdvancers = async () => {
-    // Get contest ID from the current cluster or the first cluster
-    let contestId = null;
-    
-    
-    if (currentCluster?.contest_id) {
-      contestId = currentCluster.contest_id;
-    } else if (teams.length > 0 && (teams[0] as any).contestid) {
-      contestId = (teams[0] as any).contestid;
-    } else if (teams.length > 0 && (teams[0] as any).contest_id) {
-      contestId = (teams[0] as any).contest_id;
-    }
-    
-    if (!contestId) {
-      console.error('No contest ID found in cluster or team data');
-      return;
-    }
-
-    try {
-      const result = await listAdvancers(contestId);
-      setAdvancers(result.advanced || []);
-      setShowAdvancers(true);
-    } catch (error) {
-      console.error('Error fetching advancers:', error);
-      setAdvancers([]);
-      setShowAdvancers(false);
-    }
-  };
 
   useEffect(() => {
     if (judgeIdNumber) {
+      // Clear teams on initial load to prevent showing stale data
+      setTeams([]);
+      setHasLoaded(false);
+      isInitialLoadRef.current = true;
       fetchJudgeById(judgeIdNumber);
       // Fetch all clusters for this judge across all contests
       fetchAllClustersForJudge(judgeIdNumber);
     }
   }, [judgeIdNumber]);
 
-
-  // to fetch all clusters for a judge using stores
+  // Simplified: Fetch teams directly for judge, then fetch clusters only for filtering logic
   const fetchAllClustersForJudge = async (judgeId: number) => {
     try {
-      //  fetch all clusters for the judge
-      const allClusters = await fetchAllClustersByJudgeId(judgeId);
+      // Fetch teams and clusters in parallel
+      const [allTeamsForJudge, allClusters] = await Promise.all([
+        fetchTeamsByJudgeId(judgeId),
+        fetchAllClustersByJudgeId(judgeId)
+      ]);
       
       if (allClusters && allClusters.length > 0) {
-        // Check if we have any championship/redesign clusters that are active
+        // Check if we have any championship/redesign clusters
         const championshipClusters = allClusters.filter((cluster: any) => 
           cluster.cluster_type === 'championship' || 
           cluster.cluster_type === 'redesign' ||
-          // Fallback: check by name for existing clusters (transition period)
           cluster.cluster_name?.toLowerCase().includes('championship') ||
           cluster.cluster_name?.toLowerCase().includes('redesign')
         );
         
-        // Check if championship clusters actually have teams - PARALLEL for better performance
+        // Group clusters by contest_id
+        const clustersByContest: {[contestId: number | string]: any[]} = {};
+        const clustersWithoutContest: any[] = [];
+        
+        allClusters.forEach((cluster: any) => {
+          const contestId = cluster.contest_id;
+          if (contestId) {
+            const key = contestId.toString();
+            if (!clustersByContest[key]) {
+              clustersByContest[key] = [];
+            }
+            clustersByContest[key].push(cluster);
+          } else {
+            clustersWithoutContest.push(cluster);
+          }
+        });
+        
+        // Check if championship clusters have teams by checking store cache only
+        // Avoid API calls during initial load to prevent flash and store updates
         const championshipCheckPromises = championshipClusters.map(async (cluster: any) => {
+          // For initial load, only check store cache (no API calls to prevent flash)
+          if (isInitialLoadRef.current) {
+            const cachedTeams = teamsByClusterId[cluster.id];
+            return { 
+              cluster, 
+              hasTeams: cachedTeams && cachedTeams.length > 0, 
+              contestId: cluster.contest_id 
+            };
+          }
+          // For subsequent loads, we can fetch if needed
           try {
             const teams = await fetchTeamsByClusterId(cluster.id);
-            return { cluster, hasTeams: teams && teams.length > 0 };
+            return { cluster, hasTeams: teams && teams.length > 0, contestId: cluster.contest_id };
           } catch (error) {
-            return { cluster, hasTeams: false };
+            return { cluster, hasTeams: false, contestId: cluster.contest_id };
           }
         });
         
         const championshipChecks = await Promise.all(championshipCheckPromises);
-        const hasTeamsInChampionshipClusters = championshipChecks.some(check => check.hasTeams);
         
-        let filteredClusters = allClusters;
+        // Determine which clusters to show per contest
+        const clustersToShow: any[] = [];
+        const contestIds = Object.keys(clustersByContest);
         
-        if (hasTeamsInChampionshipClusters) {
-          // Only show championship and redesign clusters after advancement
-          filteredClusters = championshipClusters;
+        for (const contestIdKey of contestIds) {
+          const contestId = parseInt(contestIdKey, 10);
+          const contestClusters = clustersByContest[contestIdKey];
+          const contestChampionshipClusters = contestClusters.filter((c: any) => 
+            championshipClusters.some((cc: any) => cc.id === c.id)
+          );
+          
+          const hasTeamsInThisContestChampionship = championshipChecks.some(check => 
+            check.contestId === contestId && check.hasTeams
+          );
+          
+          if (hasTeamsInThisContestChampionship) {
+            clustersToShow.push(...contestChampionshipClusters);
         } else {
-          // Show all clusters (preliminary clusters) when no teams in championship clusters
-          filteredClusters = allClusters;
+            clustersToShow.push(...contestClusters);
+          }
         }
         
-        // Fetch teams from filtered clusters in parallel for better performance
-        const teamPromises = filteredClusters.map(async (cluster) => {
-          try {
-            const teams = await fetchTeamsByClusterId(cluster.id);
-            if (teams && teams.length > 0) {
-              return teams.map((t: any) => ({
+        clustersToShow.push(...clustersWithoutContest);
+        
+        // Process teams from direct fetch
+        // Note: allTeamsForJudge already contains only teams from judge's clusters
+        // (fetched via the backend endpoint that filters by judge's clusters)
+        const processedTeams = allTeamsForJudge.map((t: any) => ({
                 ...t,
                 advanced_to_championship: t.advanced_to_championship ?? false
               }));
-            }
-            return [];
-          } catch (error: any) {
-            console.error(`Error fetching teams for cluster ${cluster.id}:`, error);
-            return [];
-          }
-        });
-        
-        const teamResults = await Promise.all(teamPromises);
-        const allTeams: Team[] = teamResults.flat();
-        
-        // Set teams immediately so they render right away
-        setTeams(allTeams);
+      
+      
+        isInitialLoadRef.current = false;
+        setTeams(processedTeams);
+
         setHasLoaded(true);
         
-        // Use already fetched data instead of fetching again
-        let currentClusterToSet = null;
-        for (const cluster of filteredClusters) {
-          const teams = teamsByClusterId[cluster.id];
-            if (teams && teams.length > 0) {
-              currentClusterToSet = cluster;
-              break;
-          }
-        }
+        // Set current cluster 
+        const currentClusterToSet = clustersToShow[0] || null;
         
         setCurrentCluster(currentClusterToSet);
 
-        // Run tabulation in the background (non-blocking) and update teams when done
-        // This prevents the second "lag" where teams disappear and reappear
-        const contestId = (currentClusterToSet as any)?.contest_id || (allTeams[0] as any)?.contest_id || (allTeams[0] as any)?.contestid;
+        // Run tabulation in background if needed
+        const contestId = (currentClusterToSet as any)?.contest_id || (processedTeams[0] as any)?.contest_id || (processedTeams[0] as any)?.contestid;
         if (contestId && championshipClusters.length > 0) {
-          // Don't await - let it run in background
           api.put(`/api/tabulation/tabulateScores/`, {
             contestid: contestId,
           }).then(() => {
-            // Refetch teams after tabulation completes (silently update)
-            const refreshPromises = filteredClusters.map(async (cluster) => {
-              try {
-                const t = await fetchTeamsByClusterId(cluster.id, true);
-                if (t && t.length > 0) {
-                  return t.map((x: any) => ({ ...x, advanced_to_championship: x.advanced_to_championship ?? false }));
-                }
-                return [];
-              } catch {
-                return [];
-            }
-            });
-            
-            return Promise.all(refreshPromises);
-          }).then((refreshedTeamArrays) => {
-            const refreshedTeams = refreshedTeamArrays.flat();
-            if (refreshedTeams.length > 0) {
-              setTeams(refreshedTeams);
+            // Refetch teams after tabulation
+            return fetchTeamsByJudgeId(judgeId, true);
+          }).then((refreshedTeams) => {
+            if (refreshedTeams && refreshedTeams.length > 0) {
+              const processed = refreshedTeams.map((t: any) => ({
+                ...t,
+                advanced_to_championship: t.advanced_to_championship ?? false
+              }));
+              setTeams(processed);
             }
           }).catch((error) => {
-            // Silently fail - teams are already displayed
             console.error('Tabulation or refresh failed:', error);
           });
         }
       } else {
+        // No clusters, but still set teams if we got them
+        if (allTeamsForJudge && allTeamsForJudge.length > 0) {
+          const processedTeams = allTeamsForJudge.map((t: any) => ({
+            ...t,
+            advanced_to_championship: t.advanced_to_championship ?? false
+          }));
+          setTeams(processedTeams);
+      } else {
         setTeams([]);
+        }
+        isInitialLoadRef.current = false;
         setHasLoaded(true);
       }
     } catch (error: any) {
-      console.error('Error fetching all clusters for judge:', error);
+      console.error('Error fetching teams/clusters for judge:', error);
+      setTeams([]);
+      isInitialLoadRef.current = false;
       setHasLoaded(true);
-      fetchClusterByJudgeId(judgeId);
     }
   };
 
   useEffect(() => {
     const handlePageHide = () => {
       clearCluster();
-      clearClusterTeamMappings();
-      clearTeamsByClusterId();
       clearJudge();
     };
 
     window.addEventListener("pagehide", handlePageHide);
     return () => window.removeEventListener("pagehide", handlePageHide);
-  }, []);
+  }, [clearCluster, clearJudge]);
 
-  // Sync local teams with store when teamsByClusterId changes
-  useEffect(() => {
-    if (currentCluster && teamsByClusterId[currentCluster.id]) {
-      const storeTeams = teamsByClusterId[currentCluster.id];
-      // Map teams to include advanced_to_championship field
-      const mappedTeams = storeTeams.map((t: any) => ({
-        ...t,
-        advanced_to_championship: t.advanced_to_championship ?? false
-      }));
-      // Only update if teams have actually changed (by comparing team names)
-      const hasChanges = teams.length !== mappedTeams.length || 
-        teams.some((t) => {
-          const storeTeam = mappedTeams.find(st => st.id === t.id);
-          return !storeTeam || storeTeam.team_name !== t.team_name;
-        });
-      
-      if (hasChanges) {
-        setTeams(mappedTeams);
-      }
-    }
-  }, [teamsByClusterId, currentCluster?.id]);
 
   const StatCard = ({ value, label }: { value: number | string; label: string }) => (
     <Card
       elevation={0}
       sx={{
-        borderRadius: 3,
-        border: `1px solid ${theme.palette.grey[300]}`,
-        backgroundColor: "#fff",
+        borderRadius: 2,
+        border: `1px solid ${theme.palette.grey[200]}`,
+        background: `linear-gradient(135deg, #ffffff 0%, #fafafa 100%)`,
+        boxShadow: `0 2px 8px rgba(76, 175, 80, 0.08)`,
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+          boxShadow: `0 4px 16px rgba(76, 175, 80, 0.12)`,
+          transform: 'translateY(-1px)',
+        },
       }}
     >
-      <CardContent sx={{ py: 3, px: 4 }}>
+      <CardContent sx={{ py: 1.5, px: 2, position: 'relative' }}>
+        <Box sx={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          width: 20,
+          height: 20,
+          borderRadius: '50%',
+          backgroundColor: theme.palette.success.light,
+          opacity: 0.1,
+        }} />
         <Typography
           variant="h4"
           sx={{ fontWeight: 700, color: theme.palette.success.dark, lineHeight: 1, mb: 0.5 }}
         >
           {value}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
           {label}
         </Typography>
       </CardContent>
@@ -256,6 +249,36 @@ export default function Judging() {
   try {
     return (
       <Box sx={{ pb: 8, backgroundColor: "#fafafa", minHeight: "100vh" }}>
+        {(role?.user_type === 1 || role?.user_type === 2) && (
+          <Container
+            maxWidth="lg"
+            sx={{
+              px: { xs: 1, sm: 2 },
+              mt: { xs: 1, sm: 2 },
+            }}
+          >
+            <Button
+              onClick={() => navigate(-1)}
+              startIcon={<ArrowBackIcon />}
+              sx={{
+                textTransform: "none",
+                color: theme.palette.success.dark,
+                fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+                fontWeight: 500,
+                px: { xs: 1.5, sm: 2 },
+                py: { xs: 0.75, sm: 1 },
+                borderRadius: "8px",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  backgroundColor: "rgba(76, 175, 80, 0.08)",
+                  transform: "translateX(-2px)",
+                },
+              }}
+            >
+              Back to Admin Dashboard
+            </Button>
+          </Container>
+        )}
         <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 } }}>
         {mapClusterToTeamError ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
@@ -264,8 +287,14 @@ export default function Judging() {
             </Typography>
           </Box>
         ) : (
-          <>
-            <Stack spacing={1} sx={{ mb: 3, mt: 3 }}>
+          <Box
+            sx={{
+              opacity: hasLoaded ? 1 : 0,
+              transition: hasLoaded ? `opacity ${isInitialLoadRef.current ? '0.6s' : '0.1s'} ease-in` : 'none',
+              pointerEvents: hasLoaded ? 'auto' : 'none',
+            }}
+          >
+            <Stack spacing={1} sx={{ mb: 2, mt: 2 }}>
               <Typography 
                 variant="h4" 
                 sx={{ 
@@ -290,69 +319,11 @@ export default function Judging() {
 
 
             {/* Stat Cards */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={12} sm={6} md={3}>
                 <StatCard value={teams.length} label="Teams Assigned" />
               </Grid>
-          
             </Grid>
-
-            {/* List Advancers Button */}
-            <Box sx={{ mb: 3 }}>
-              <Button
-                variant="outlined"
-                onClick={handleListAdvancers}
-                sx={{
-                  borderColor: theme.palette.primary.main,
-                  color: theme.palette.primary.main,
-                  "&:hover": {
-                    borderColor: theme.palette.primary.dark,
-                    bgcolor: theme.palette.primary.light,
-                  },
-                  textTransform: "none",
-                  borderRadius: 2,
-                }}
-              >
-                List Championship Advancers
-              </Button>
-            </Box>
-
-            {/* Advancers Display */}
-            {showAdvancers && (
-              <Box sx={{ mb: 3, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-                  Championship Advancers
-                </Typography>
-                {advancers.length > 0 ? (
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      Total advanced teams: {advancers.length}
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {advancers.map((team) => (
-                        <Box
-                          key={team.id}
-                          sx={{
-                            p: 1,
-                            backgroundColor: theme.palette.success.light,
-                            borderRadius: 1,
-                            border: `1px solid ${theme.palette.success.main}`,
-                          }}
-                        >
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                            {team.team_name}
-                          </Typography>
-                        </Box>
-                      ))}
-                    </Box>
-                  </Box>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No teams have advanced to championship yet.
-                  </Typography>
-                )}
-              </Box>
-            )}
 
             {/* Table Section */}
             <Box
@@ -362,17 +333,41 @@ export default function Judging() {
                 backgroundColor: "#fff",
               }}
             >
-              <Box sx={{ px: 3, py: 2 , backgroundColor:" rgba(46, 125, 50, 0.06)"}}>
+              <Box sx={{ px: 3, py: 1.5 , backgroundColor:" rgba(46, 125, 50, 0.06)"}}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                   Team Overview
                 </Typography>
               </Box>
               <Divider />
-              <Box sx={{ px: 3, pb: 3 }}>
+              <Box sx={{ px: 3, pb: 2 }}>
                 {teams.length > 0 ? (
                   <JudgeDashboardTable teams={teams} currentCluster={currentCluster} />
-                ) : hasLoaded ? (
+                ) : (
                   <Box sx={{ textAlign: 'center', py: 4 }}>
+                    {/* Only show back button for admin (user_type 1) or organizer (user_type 2) */}
+                    {(role?.user_type === 1 || role?.user_type === 2) && (
+                      <Button
+                        onClick={() => navigate(-1)}
+                        startIcon={<ArrowBackIcon />}
+                        sx={{
+                          textTransform: "none",
+                          color: theme.palette.success.dark,
+                          fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+                          fontWeight: 500,
+                          px: { xs: 1.5, sm: 2 },
+                          py: { xs: 0.75, sm: 1 },
+                          borderRadius: "8px",
+                          mb: 3,
+                          transition: "all 0.2s ease",
+                          "&:hover": {
+                            backgroundColor: "rgba(76, 175, 80, 0.08)",
+                            transform: "translateX(-2px)",
+                          },
+                        }}
+                      >
+                        Back
+                      </Button>
+                    )}
                     <Typography variant="h6" color="text.secondary">
                       No teams available for this judge.
                     </Typography>
@@ -380,10 +375,10 @@ export default function Judging() {
                       Please contact the organizer if you believe this is an error.
                     </Typography>
                   </Box>
-                ) : null}
+                )}
+              </Box>
               </Box>
             </Box>
-          </>
         )}
       </Container>
     </Box>

@@ -4,6 +4,7 @@ import { api } from "../../lib/api";
 import { Contest, Organizer } from "../../types";
 import useContestStore from "../primary_stores/contestStore";
 import useOrganizerStore from "../primary_stores/organizerStore";
+import { registerStoreSync } from "../utils/storageSync";
 
 interface MapContestOrganizerState {
   contests: Contest[];
@@ -476,9 +477,19 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
     }),
     {
       name: "contest-organizer-storage",
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );
+
+// Register for global storage sync
+registerStoreSync('contest-organizer-storage', (state) => {
+  useMapContestOrganizerStore.setState({
+    contests: state.contests || [],
+    organizers: state.organizers || [],
+    contestsByOrganizers: state.contestsByOrganizers || {},
+    organizerNamesByContests: state.organizerNamesByContests || {},
+  });
+});
 
 export default useMapContestOrganizerStore;

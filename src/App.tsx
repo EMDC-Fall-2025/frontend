@@ -10,6 +10,8 @@ import theme from "./theme";
 import Navbar from "./components/Navbar";
 import { useAuthStore } from "./store/primary_stores/authStore";
 import Logout from "./pages/Logout";
+import Preloader from "./components/Preloader";
+import { useEffect } from "react";
 import ManageContest from "./pages/ManageContest";
 import Coach from "./pages/Coach";
 import JournalScore from "./pages/JournalScore";
@@ -29,6 +31,8 @@ import MultiTeamPresentationScore from "./pages/PresentationMultiTeamScore";
 import MultiTeamJournalScore from "./pages/JournalMultiTeamScore";
 import MultiTeamMachineDesignScore from "./pages/MachineDesignMultiTeamScore";
 import ChampionshipScore from "./pages/ChampionshipScore";
+import GeneralPenaltiesMultiTeam from "./pages/GeneralPenaltiesMultiTeam";
+import RunPenaltiesMultiTeam from "./pages/RunPenaltiesMultiTeam";
 import ChampionshipScoreBreakdown from "./pages/ChampionshipScoreBreakdown";
 import RedesignScoreBreakdown from "./pages/RedesignScoreBreakdown";
 import ContestScores from "./pages/ContestScores";
@@ -38,14 +42,32 @@ import ContestPage from "./pages/ContestsPage";
 
 import { Toaster } from "react-hot-toast";
 import Ranking from "./components/Tables/Rankings";
+import { initStorageSync } from "./store/utils/storageSync";
 
 function App() {
   const currentLink = useLocation().pathname;
-  const { isAuthenticated, role } = useAuthStore();
+  const { isAuthenticated, role, showPreloader, setShowPreloader } = useAuthStore();
+
+  // Initialize global storage sync for cross-tab synchronization
+  useEffect(() => {
+    initStorageSync();
+  }, []);
+
+  // Hide preloader after it completes its animation
+  useEffect(() => {
+    if (showPreloader) {
+      const timer = setTimeout(() => {
+        setShowPreloader(false);
+      }, 1500); // Match preloader duration
+      return () => clearTimeout(timer);
+    }
+  }, [showPreloader, setShowPreloader]);
 
   return (
     <>
       <ThemeProvider theme={theme}>
+        {/* Show preloader only after login, not on reload */}
+        {showPreloader && <Preloader />}
         {currentLink !== "/set-password/" &&
           currentLink !== "/forgot-password/" &&
           currentLink !== "/login/" &&
@@ -108,6 +130,18 @@ function App() {
             <Route
               path="/multi-team-presentation-score/:judgeId/:contestId/"
               element={<MultiTeamPresentationScore />}
+            />
+          )}
+          {isAuthenticated && role?.user_type != 4 && (
+            <Route
+              path="/multi-team-general-penalties/:judgeId/:contestId/"
+              element={<GeneralPenaltiesMultiTeam />}
+            />
+          )}
+          {isAuthenticated && role?.user_type != 4 && (
+            <Route
+              path="/multi-team-run-penalties/:judgeId/:contestId/"
+              element={<RunPenaltiesMultiTeam />}
             />
           )}
 
