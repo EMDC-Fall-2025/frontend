@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "../../lib/api";
 import useMapContestOrganizerStore from "../map_stores/mapContestToOrganizerStore";
+import { dispatchDataChange } from "../../utils/dataChangeEvents";
 
 interface Organizer {
   id: number;
@@ -89,6 +90,10 @@ export const useOrganizerStore = create<OrganizerState>()(
             allOrganizers: [...state.allOrganizers, createdOrganizer],
             organizerError: null,
           }));
+          // Dispatch event to notify other components
+          if (createdOrganizer?.id) {
+            dispatchDataChange({ type: 'organizer', action: 'create', id: createdOrganizer.id });
+          }
         } catch (error: any) {
           // Convert error to string to prevent React rendering issues
           let errorMessage = "Error creating organizer";
@@ -155,6 +160,10 @@ export const useOrganizerStore = create<OrganizerState>()(
             const { updateOrganizerNameInContests } = useMapContestOrganizerStore.getState();
             updateOrganizerNameInContests(editedOrganizer.id, oldName, newName);
           }
+          // Dispatch event to notify other components
+          if (finalOrganizer?.id) {
+            dispatchDataChange({ type: 'organizer', action: 'update', id: finalOrganizer.id });
+          }
         } catch (error: any) {
           // Convert error to string to prevent React rendering issues
           let errorMessage = "Error editing organizer";
@@ -190,6 +199,8 @@ export const useOrganizerStore = create<OrganizerState>()(
             ),
             organizerError: null,
           }));
+          // Dispatch event to notify other components
+          dispatchDataChange({ type: 'organizer', action: 'delete', id: organizerId });
         } catch (error: any) {
           // Extract error message from backend response
           let errorMessage = "Error deleting organizer";

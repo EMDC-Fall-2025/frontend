@@ -118,10 +118,10 @@ export default function DeleteTeamDialog({
                     width: "100%",
                 }}
             >
-                {showRemoveFromCluster && (
-                    <Button
-                        variant="outlined"
-                        onClick={handleDeleteFromCluster}
+                    {showRemoveFromCluster && (
+                        <Button
+                            variant="outlined"
+                            onClick={handleDeleteFromCluster}
                         sx={{
                             textTransform: "none",
                             borderRadius: 1.5,
@@ -133,14 +133,14 @@ export default function DeleteTeamDialog({
                             flex: 1,
                             "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
                         }}
-                    >
-                        Remove from Cluster
-                    </Button>
-                )}
+                        >
+                            Remove from Cluster
+                        </Button>
+                    )}
 
-                <Button
-                    variant="contained"
-                    onClick={handleDeleteFromDatabase}
+                    <Button
+                        variant="contained"
+                        onClick={handleDeleteFromDatabase}
                     sx={{
                         textTransform: "none",
                         borderRadius: 1.5,
@@ -152,9 +152,9 @@ export default function DeleteTeamDialog({
                         flex: showRemoveFromCluster ? 1 : "auto",
                         "&:hover": { bgcolor: "#b71c1c" },
                     }}
-                >
-                    Delete from DB
-                </Button>
+                    >
+                        Delete from DB
+                    </Button>
             </Container>
         </Modal>
     );

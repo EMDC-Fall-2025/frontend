@@ -27,6 +27,7 @@ export default function Preloader() {
         bgcolor: "#fff",
         opacity: isLoading ? 1 : 0,
         transition: "opacity 0.6s ease-out",
+        px: { xs: 2, sm: 3 },
       }}
     >
       <Box
@@ -34,12 +35,15 @@ export default function Preloader() {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: 4,
+          gap: { xs: 2, sm: 3, md: 4 },
+          px: { xs: 2, sm: 3 },
         }}
       >
         {/* Rotating gear icon */}
         <Box
           sx={{
+            width: { xs: 60, sm: 80 },
+            height: { xs: 60, sm: 80 },
             animation: "rotate 2s linear infinite",
             "@keyframes rotate": {
               "0%": { transform: "rotate(0deg)" },
@@ -48,8 +52,8 @@ export default function Preloader() {
           }}
         >
           <svg
-            width="80"
-            height="80"
+            width="100%"
+            height="100%"
             viewBox="0 0 80 80"
             style={{ color: theme.palette.success.main }}
           >
@@ -98,6 +102,10 @@ export default function Preloader() {
             fontWeight: 600,
             letterSpacing: "0.02em",
             color: "text.primary",
+            fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.875rem" },
+            textAlign: "center",
+            lineHeight: 1.3,
+            px: { xs: 2, sm: 0 },
             animation: "fadeInUp 0.6s ease-out 0.2s both",
             "@keyframes fadeInUp": {
               "0%": { opacity: 0, transform: "translateY(10px)" },
@@ -121,20 +129,20 @@ export default function Preloader() {
           }}
         >
           {[0, 1, 2].map((i) => (
-            <Box
-              key={i}
-              sx={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                bgcolor: theme.palette.success.main,
-                animation: `pulse 1.2s ease-in-out infinite ${i * 0.2}s`,
-                "@keyframes pulse": {
-                  "0%, 100%": { transform: "scale(1)", opacity: 0.5 },
-                  "50%": { transform: "scale(1.3)", opacity: 1 },
-                },
-              }}
-            />
+              <Box
+                key={i}
+                sx={{
+                  width: { xs: 6, sm: 8 },
+                  height: { xs: 6, sm: 8 },
+                  borderRadius: "50%",
+                  bgcolor: theme.palette.success.main,
+                  animation: `pulse 1.2s ease-in-out infinite ${i * 0.2}s`,
+                  "@keyframes pulse": {
+                    "0%, 100%": { transform: "scale(1)", opacity: 0.5 },
+                    "50%": { transform: "scale(1.3)", opacity: 1 },
+                  },
+                }}
+              />
           ))}
         </Box>
       </Box>

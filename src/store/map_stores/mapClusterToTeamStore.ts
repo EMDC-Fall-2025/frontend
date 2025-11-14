@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "../../lib/api";
 import { Cluster, Team, ClusterTeamMapping } from "../../types";
+import { dispatchDataChange } from "../../utils/dataChangeEvents";
 
 interface MapClusterTeamState {
   clusters: Cluster[];
@@ -154,6 +155,8 @@ const useMapClusterTeamStore = create<MapClusterTeamState>()(
               mapClusterToTeamError: null,
             };
           });
+          // Dispatch event to notify other components
+          dispatchDataChange({ type: 'team', action: 'delete', id: teamId });
         } catch (error) {
           handleError(error, set, "Error deleting team completely");
           throw error; // Re-throw so the component can catch it

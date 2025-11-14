@@ -39,7 +39,7 @@ export default function Organizer() {
   const isInitialLoadRef = useRef(true);
   const { fetchContestsByOrganizerId, contests } = useMapContestOrganizerStore();
   const { allSheetsSubmittedForContests } = useMapScoreSheetStore();
-  const { role } = useAuthStore();
+  const { role, isAuthenticated } = useAuthStore();
   // Use selector to subscribe to allOrganizers changes
   const allOrganizers = useOrganizerStore((state) => state.allOrganizers);
   const fetchAllOrganizers = useOrganizerStore((state) => state.fetchAllOrganizers);
@@ -59,22 +59,33 @@ export default function Organizer() {
   const organizerLastName = currentOrganizer?.last_name || role?.user?.last_name || "";
 
   useEffect(() => {
-    if (organizerId) {
+    // Only fetch if user is authenticated and has organizer role
+    if (!isAuthenticated || !organizerId || role?.user_type !== 2) {
+      setHasLoaded(true);
+      isInitialLoadRef.current = false;
+      return;
+    }
+
+    // Check if we already have contests cached - if so, show immediately
+    const hasCachedContests = contests && contests.length > 0;
+    if (hasCachedContests) {
+      setHasLoaded(true);
+      isInitialLoadRef.current = false;
+    }
+
+    // Fetch data (will use cache if available and refresh in background)
       Promise.all([
         fetchContestsByOrganizerId(organizerId),
         fetchAllOrganizers()
       ]).then(() => {
         setHasLoaded(true);
         isInitialLoadRef.current = false;
-      }).catch(() => {
+    }).catch((error) => {
+      console.error('Error loading organizer data:', error);
         setHasLoaded(true);
         isInitialLoadRef.current = false;
       });
-    } else {
-      setHasLoaded(true);
-      isInitialLoadRef.current = false;
-    }
-  }, [organizerId, fetchContestsByOrganizerId, fetchAllOrganizers]);
+  }, [organizerId, isAuthenticated, role?.user_type, fetchContestsByOrganizerId, fetchAllOrganizers, contests]);
 
   const safeContests = contests ?? [];
 

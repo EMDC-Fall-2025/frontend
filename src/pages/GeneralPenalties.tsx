@@ -306,7 +306,7 @@ export default function GeneralPenalties() {
 
           {/* Main content: categories table + disqualification section + submit */}
           <Box sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 3 } }}>
-            {/* Bordered, rounded table container for categories */}
+        
             <TableContainer
               component={Paper}
               sx={{

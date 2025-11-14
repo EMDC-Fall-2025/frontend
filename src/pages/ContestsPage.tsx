@@ -46,9 +46,12 @@ export default function Contests() {
     if (contest && contest.is_open == false && contest.is_tabulated == true) {
       navigate(`/contestresults/${contestId}`);
     } else {
+      // Use a fixed toast id so repeated clicks update a single toast
+      // instead of stacking many toasts and filling the page.
       toast.success(
         "🎉 Stay tuned! Results will be available once the contest ends and scores are finalized!",
         {
+          id: "contest-results-stay-tuned",
           duration: 4000,
           style: {
             background: '#4caf50',

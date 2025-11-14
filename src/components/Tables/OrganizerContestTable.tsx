@@ -75,9 +75,17 @@ export default function OrganizerContestTable(
 
   useEffect(() => {
     if (organizerId) {
-      fetchContestsByOrganizerId(organizerId);
+      // Only fetch if user is an organizer (user_type === 2) or admin
+      if (role?.user_type === 2 || role?.user_type === 1) {
+        // Only fetch if we don't already have contests (avoid duplicate fetch)
+        if (!contests || contests.length === 0) {
+          fetchContestsByOrganizerId(organizerId).catch((error) => {
+            console.error('Error fetching contests:', error);
+          });
+        }
+      }
     }
-  }, [organizerId]);
+  }, [organizerId, role?.user_type, fetchContestsByOrganizerId, contests]);
 
   useEffect(() => {
     const handlePageHide = () => {
@@ -241,6 +249,10 @@ if (type === "current" && contests) {
           <Link
             component="button"
             onClick={() => {
+              // Mark that we're navigating into Internal Results so the preloader shows.
+              // InternalResults reads this flag from sessionStorage and only uses it
+              // for the first load, then clears it.
+              sessionStorage.setItem("fromRankings", "true");
               navigate(`/results/${contest.id}/`);
             }}
             sx={{ textDecoration: "none" }}

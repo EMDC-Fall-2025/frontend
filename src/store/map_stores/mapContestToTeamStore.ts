@@ -26,7 +26,7 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
       teamsByContestMap: {},
 
       clearContests: () => set({ contestsForTeams: {} }),
-      clearTeamsByContest: () => set({ teamsByContest: [] }),
+      clearTeamsByContest: () => set({ teamsByContest: [], teamsByContestMap: {} }),
 
       updateContestInTeams: (updatedContest: Contest) => {
         set((state) => {
