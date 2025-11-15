@@ -18,6 +18,7 @@ import useContestStore from "../../store/primary_stores/contestStore";
 import { useNavigate } from "react-router-dom";
 import AreYouSureModal from "../Modals/AreYouSureModal";
 import ContestModal from "../Modals/ContestModal";
+import { onDataChange, DataChangeEvent } from "../../utils/dataChangeEvents";
 import dayjs from "dayjs";
 import useMapContestOrganizerStore from "../../store/map_stores/mapContestToOrganizerStore";
 import CampaignIcon from "@mui/icons-material/Campaign";
@@ -85,8 +86,27 @@ export default function AdminContestTable() {
     if (allContests.length > 0 && Object.keys(organizerNamesByContests || {}).length === 0) {
       fetchOrganizerNamesByContests();
     }
-  
+
   }, [allContests.length]);
+
+  // Listen for contest changes to refresh data
+  useEffect(() => {
+    const handleDataChange = (event: DataChangeEvent) => {
+      if (event.type === 'contest' && (event.action === 'create' || event.action === 'update' || event.action === 'delete')) {
+        // Refresh contest and organizer data
+        fetchAllContests();
+        if (allContests.length > 0) {
+          fetchOrganizerNamesByContests();
+        }
+      }
+    };
+
+    const unsubscribeDataChange = onDataChange(handleDataChange);
+
+    return () => {
+      unsubscribeDataChange();
+    };
+  }, [fetchAllContests, fetchOrganizerNamesByContests, allContests.length]);
 
   // Transform contest data for table display
   const rows = useMemo(() => allContests.map((contest) =>

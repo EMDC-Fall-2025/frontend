@@ -5,6 +5,8 @@ import { Contest, NewContest } from "../../types";
 import useMapContestOrganizerStore from "../map_stores/mapContestToOrganizerStore";
 import { useMapContestToTeamStore } from "../map_stores/mapContestToTeamStore";
 import useMapContestJudgeStore from "../map_stores/mapContestToJudgeStore";
+import { useMapClusterToContestStore } from "../map_stores/mapClusterToContestStore";
+import { dispatchDataChange } from "../../utils/dataChangeEvents";
 
 interface ContestState {
   allContests: Contest[];
@@ -141,12 +143,28 @@ export const useContestStore = create<ContestState>()(
           await api.delete(`/api/contest/delete/${contestId}/`);
           set((state) => ({
             allContests: state.allContests.filter((c) => c.id !== contestId),
+            contest: state.contest && state.contest.id === contestId ? null : state.contest,
             contestError: null,
           }));
-          
+
           // Remove contest from all organizers' assigned contests
           const { removeContestFromAllOrganizers } = useMapContestOrganizerStore.getState();
           removeContestFromAllOrganizers(contestId);
+
+          // Remove contest from teams mapping
+          const { removeContestFromTeams } = useMapContestToTeamStore.getState();
+          removeContestFromTeams(contestId);
+
+          // Remove contest from judges mapping
+          const { removeContestFromJudges } = useMapContestJudgeStore.getState();
+          removeContestFromJudges(contestId);
+
+          // Remove contest from clusters mapping
+          const { removeContestFromClusters } = useMapClusterToContestStore.getState();
+          removeContestFromClusters(contestId);
+
+          // Dispatch event to notify all components that contest was deleted
+          dispatchDataChange({ type: 'contest', action: 'delete', id: contestId });
         } catch (contestError) {
           set({ contestError: "Error deleting contest: " + contestError });
           throw Error("Error deleting contest: " + contestError);

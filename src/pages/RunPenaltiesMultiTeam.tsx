@@ -5,6 +5,10 @@ import { useScoreSheetStore } from "../store/primary_stores/scoreSheetStore";
 import { runPenaltiesQuestions } from "../data/runPenaltiesQuestions";
 import MultiTeamPenaltyTable from "../components/Tables/MultiTeamPenaltyTable";
 
+/**
+ * Page component for multi-team run penalties.
+ * Allows judges to score run penalties for multiple teams simultaneously.
+ */
 export default function RunPenaltiesMultiTeam() {
   const { role } = useAuthStore();
   const { judgeId, contestId } = useParams();
@@ -12,13 +16,19 @@ export default function RunPenaltiesMultiTeam() {
   const parsedJudgeId = judgeId ? parseInt(judgeId, 10) : null;
   const { fetchMultiTeamPenalties } = useScoreSheetStore();
 
-  // Security: ensure judges can only access their own penalty sheets
+  /**
+   * Ensures judges can only access their own penalty sheets.
+   * Redirects to correct URL if judge ID doesn't match authenticated user.
+   */
   useEffect(() => {
     if (role?.user_type === 3 && parsedJudgeId !== role.user.id) {
       navigate(`/multi-team-run-penalties/${role.user.id}/${contestId}/`);
     }
   }, [judgeId, role, contestId, navigate, parsedJudgeId]);
 
+  /**
+   * Fetches run penalties data for all teams assigned to the judge.
+   */
   useEffect(() => {
     if (parsedJudgeId && contestId) {
       fetchMultiTeamPenalties(parsedJudgeId, parseInt(contestId), 4);

@@ -85,7 +85,7 @@ export default function OrganizerContestTable(
         }
       }
     }
-  }, [organizerId, role?.user_type, fetchContestsByOrganizerId, contests]);
+  }, [organizerId, role?.user_type]); 
 
   useEffect(() => {
     const handlePageHide = () => {

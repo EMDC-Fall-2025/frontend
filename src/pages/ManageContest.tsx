@@ -104,6 +104,10 @@ export default function ManageContest() {
     });
   }, [parsedContestId, fetchContestById, getAllJudgesByContestId, fetchClustersByContestId]);
 
+  /**
+   * Fetches teams and judges for clusters that don't have cached data.
+   * Only fetches for clusters that haven't been loaded yet to avoid unnecessary API calls.
+   */
   useEffect(() => {
     if (!clusters.length) return;
 
@@ -116,19 +120,26 @@ export default function ManageContest() {
       ...clustersToFetchTeams.map(c => fetchTeamsByClusterId(c.id)),
       ...clustersToFetchJudges.map(c => fetchJudgesByClusterId(c.id))
     ]).catch(console.error);
-  }, [clusterIds]);
+  }, [clusterIds, clusters, teamsByClusterId, judgesByClusterId, fetchTeamsByClusterId, fetchJudgesByClusterId]);
 
-  // Load coaches when teams become available 
+  /**
+   * Aggregates all teams from all clusters into a single array.
+   * Used for loading coach data when teams tab is active.
+   */
   const allTeams = useMemo(() => {
     return clusters.flatMap(c => teamsByClusterId[c.id] ?? []);
-  }, [clusterIds, teamsByClusterId]);
+  }, [clusterIds, teamsByClusterId, clusters]);
 
   const isTeamsTab = value === "2";
 
+  /**
+   * Loads coach data when teams tab is active and teams are available.
+   * Only fetches coaches when needed to optimize performance.
+   */
   useEffect(() => {
     if (!isTeamsTab || allTeams.length === 0) return;
     fetchCoachesByTeams(allTeams).catch(console.error);
-  }, [isTeamsTab, allTeams.length]);
+  }, [isTeamsTab, allTeams.length, allTeams, fetchCoachesByTeams]);
 
 
 

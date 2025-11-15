@@ -39,17 +39,21 @@ export default function Admin() {
   const navigate = useNavigate();
 
   const { allContests, fetchAllContests, isLoadingContest } = useContestStore();
-const { allOrganizers, fetchAllOrganizers, isLoadingOrganizer } = useOrganizerStore();
+  const { allOrganizers, fetchAllOrganizers, isLoadingOrganizer } = useOrganizerStore();
 
-useEffect(() => {
-  Promise.all([
-    allContests.length === 0 ? fetchAllContests() : Promise.resolve(),
-    allOrganizers.length === 0 ? fetchAllOrganizers() : Promise.resolve()
-  ]).then(() => {
-    setHasLoaded(true);
-    isInitialLoadRef.current = false;
-  });
-}, []);
+  /**
+   * Loads contests and organizers data on component mount.
+   * Only fetches if data is not already available in store.
+   */
+  useEffect(() => {
+    Promise.all([
+      allContests.length === 0 ? fetchAllContests() : Promise.resolve(),
+      allOrganizers.length === 0 ? fetchAllOrganizers() : Promise.resolve()
+    ]).then(() => {
+      setHasLoaded(true);
+      isInitialLoadRef.current = false;
+    });
+  }, [allContests.length, allOrganizers.length, fetchAllContests, fetchAllOrganizers]);
 
 
   const handleChange = (_e: React.SyntheticEvent, newValue: string) => {

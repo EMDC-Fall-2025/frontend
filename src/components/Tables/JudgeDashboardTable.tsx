@@ -39,9 +39,14 @@ import { useAuthStore } from "../../store/primary_stores/authStore";
 import { Team, Contest } from "../../types";
 import { api } from "../../lib/api";
 
+import { ClusterWithContest } from "../../types";
+
 interface IJudgeDashboardProps {
   teams: Team[];
-  currentCluster?: any;
+  currentCluster?: (ClusterWithContest & {
+    judgeHasChampionshipByContest?: { [key: number]: boolean };
+    hasAnyTeamAdvancedByContest?: { [key: number]: boolean };
+  }) | null;
 }
 
 const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudgeDashboardProps) {
@@ -49,58 +54,108 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
 
   const navigate = useNavigate();
 
-  // Store hooks
   const { judge } = useJudgeStore();
-  const { mappings, fetchScoreSheetsByJudge } = useMapScoreSheetStore();
+  const { mappings, fetchScoreSheetsByJudge, isLoadingMapScoreSheet } = useMapScoreSheetStore();
   const { contestsForTeams } = useMapContestToTeamStore();
   const { editScoreSheetField, multipleScoreSheets } = useScoreSheetStore();
   const { role } = useAuthStore();
 
-  // Role helpers
   const isOrganizerOrAdmin = role?.user_type === 1 || role?.user_type === 2;
   const isJudge = role?.user_type === 3;
 
-  // Judge is expected to be provided by the store (set in parent Judging.tsx).
-
   const isPreliminarySheet = (sheetType: number) => sheetType >= 1 && sheetType <= 5;
 
-  const hasTeamAdvancedToChampionship = (team: Team | undefined) =>
-    team?.advanced_to_championship === true;
+  /**
+   * Maps contest IDs to whether the judge has championship assignment in that contest.
+   * Used to determine if preliminary scoresheets should be disabled.
+   */
+  const judgeHasChampionshipByContest = useMemo(() => {
+    const map = new Map<number, boolean>();
+    if (currentCluster) {
+      const championshipObj = (currentCluster as any).judgeHasChampionshipByContest;
+      if (championshipObj && typeof championshipObj === 'object') {
+        Object.keys(championshipObj).forEach((key) => {
+          const contestId = parseInt(key, 10);
+          map.set(contestId, championshipObj[key] === true);
+        });
+      }
+    }
+    return map;
+  }, [currentCluster]);
 
-  const isPreliminaryScoresheet = (team: Team, sheetType: number) => {
-  return (
-    isJudge &&
-    isPreliminarySheet(sheetType) &&
-    hasTeamAdvancedToChampionship(team)
-  );
-};
+  /**
+   * Maps contest IDs to whether any team has advanced to championship in that contest.
+   * If any team in a contest has advanced, all preliminary scoresheets for all teams
+   * in that contest should be disabled.
+   */
+  const hasAnyTeamAdvancedByContest = useMemo(() => {
+    const map = new Map<number, boolean>();
+    if (currentCluster) {
+      const hasAdvancedObj = (currentCluster as any).hasAnyTeamAdvancedByContest;
+      if (hasAdvancedObj && typeof hasAdvancedObj === 'object') {
+        Object.keys(hasAdvancedObj).forEach((key) => {
+          const contestId = parseInt(key, 10);
+          map.set(contestId, hasAdvancedObj[key] === true);
+        });
+      }
+    }
+    return map;
+  }, [currentCluster]);
 
-const isScoresheetEditable = (team: Team, sheetType: number) => {
-    // Admin / organizer → full access
+  /**
+   * Determines if a preliminary scoresheet should be disabled for judges.
+   * Disables if:
+   * 1. Judge has championship assignment in the team's contest, OR
+   * 2. Any team in the team's contest has advanced to championship
+   */
+  const isPreliminaryScoresheet = (_team: Team, sheetType: number) => {
+    const teamContest = contestsForTeams[_team.id];
+    const judgeHasChampionship = teamContest ? judgeHasChampionshipByContest.get(teamContest.id) || false : false;
+    const anyTeamInContestAdvanced = teamContest ? hasAnyTeamAdvancedByContest.get(teamContest.id) || false : false;
+    
+    return (
+      isJudge &&
+      isPreliminarySheet(sheetType) &&
+      (judgeHasChampionship || anyTeamInContestAdvanced)
+    );
+  };
+
+  /**
+   * Determines if a scoresheet is editable based on user role and contest state.
+   * Admins/organizers have full access. Judges cannot edit preliminary sheets if:
+   * - Judge has championship assignment in the team's contest, OR
+   * - Any team in the team's contest has advanced to championship
+   */
+  const isScoresheetEditable = (_team: Team, sheetType: number) => {
     if (isOrganizerOrAdmin) {
       return true;
     }
 
-    // Judges: lock preliminary sheets once the team has advanced to championship
-    if (isJudge && isPreliminarySheet(sheetType) && hasTeamAdvancedToChampionship(team)) {
-      return false;
+    if (isJudge && isPreliminarySheet(sheetType)) {
+      const teamContest = contestsForTeams[_team.id];
+      const judgeHasChampionship = teamContest ? judgeHasChampionshipByContest.get(teamContest.id) || false : false;
+      const anyTeamInContestAdvanced = teamContest ? hasAnyTeamAdvancedByContest.get(teamContest.id) || false : false;
+      
+      if (judgeHasChampionship || anyTeamInContestAdvanced) {
+        return false;
+      }
     }
 
-    // Otherwise editable
     return true;
   };
 
-  // Hide teams whose contest has ended (closed & tabulated) for all roles on the judge dashboard.
+  /**
+   * Filters teams to only show those from active contests.
+   * Hides teams whose contest has ended (closed & tabulated) for all roles.
+   */
   const visibleTeams: Team[] = useMemo(() => {
     if (!teams || teams.length === 0) return [];
 
     return teams.filter((team) => {
       const contestForTeam = contestsForTeams[team.id] as Contest | undefined;
 
-      // If we don't yet know the contest for this team, keep it visible
       if (!contestForTeam) return true;
 
-      // Hide teams for contests that have ended (closed & tabulated)
       if (contestForTeam.is_open === false && contestForTeam.is_tabulated === true) {
         return false;
       }
@@ -119,7 +174,9 @@ const isScoresheetEditable = (team: Team, sheetType: number) => {
     return !!data?.scoresheet?.isSubmitted;
   }, [mappings]);
 
-  // Check if a scoresheet exists for the given judge, team, and sheet type
+  /**
+   * Checks if a scoresheet exists for the given judge, team, and sheet type.
+   */
   const hasScoresheet = useCallback((
     judgeId: number,
     teamId: number,
@@ -129,17 +186,18 @@ const isScoresheetEditable = (team: Team, sheetType: number) => {
     return !!mappings[key];
   }, [mappings]);
 
+  /**
+   * Checks if all preliminary scoresheets (types 1-5) are completed for a team.
+   * Returns true only if all existing preliminary scoresheets have been submitted.
+   */
   const checkAllPreliminaryScoresheetsCompleted = (teamId: number) => {
     if (!judge) return false;
     
-    
-    // Check if all preliminary scoresheets (1-5) are completed
-    const preliminaryTypes = [1, 2, 3, 4, 5]; // runpenalties, otherpenalties, presentation, journal, mdo
+    const preliminaryTypes = [1, 2, 3, 4, 5];
     let allCompleted = true;
     
     for (const sheetType of preliminaryTypes) {
       if (hasScoresheet(judge.id, teamId, sheetType)) {
-        // Check if this scoresheet is completed (has been submitted)
         const scoresheet = multipleScoreSheets?.find(sheet => 
           sheet.teamId === teamId && 
           sheet.judgeId === judge.id && 
@@ -156,6 +214,13 @@ const isScoresheetEditable = (team: Team, sheetType: number) => {
     return allCompleted;
   };
 
+  /**
+   * Determines if a team should have grey styling applied.
+   * Only applies in championship/redesign clusters when:
+   * - Team has advanced to championship AND
+   * - All preliminary scoresheets are completed (if no championship sheets exist) OR
+   * - All championship scoresheets are completed (if they exist)
+   */
   const hasOnlyPreliminaryScoresheets = useCallback((teamId: number) => {
     const isInChampionshipOrRedesignCluster = currentCluster && (
       currentCluster.cluster_type === 'championship' ||
@@ -164,9 +229,8 @@ const isScoresheetEditable = (team: Team, sheetType: number) => {
       currentCluster.cluster_name?.toLowerCase().includes('redesign')
     );
     
-    // Only apply grey styling if we're in a championship/redesign cluster
     if (!isInChampionshipOrRedesignCluster) {
-      return false; // No grey styling in preliminary clusters
+      return false;
     }
 
     const teamInChampionshipCluster = teams.some(team =>
@@ -187,13 +251,12 @@ const isScoresheetEditable = (team: Team, sheetType: number) => {
 
         return !hasIncompleteChampionshipScoresheets;
       } else {
-        // No championship scoresheets yet, check if all preliminary are completed
         const allPreliminaryCompleted = checkAllPreliminaryScoresheetsCompleted(teamId);
-        return allPreliminaryCompleted; // Grey if all preliminary are completed
+        return allPreliminaryCompleted;
       }
     }
     
-    return false; // Default: no grey styling
+    return false;
   }, [currentCluster, teams, judge, hasScoresheet, getIsSubmitted]);
 
   const [openRows, setOpenRows] = React.useState<{ [key: number]: boolean }>(
@@ -205,7 +268,6 @@ const isScoresheetEditable = (team: Team, sheetType: number) => {
   const [currentTeam, setCurrentTeam] = useState(-1);
   const [currentSheetType, setCurrentSheetType] = useState(-1);
 
-  // multi-team scoring dialog state
   const [openContestDialog, setOpenContestDialog] = useState(false);
   const [openSheetTypeDialog, setOpenSheetTypeDialog] = useState(false);
   const [multiType, setMultiType] = useState<
@@ -229,29 +291,62 @@ const isScoresheetEditable = (team: Team, sheetType: number) => {
     setOpenRows(allExpanded);
   };
 
+  /**
+   * Checks if mappings already exist for the current judge.
+   * Mapping keys follow the format: "teamId-judgeId-sheetType"
+   */
+  const hasMappingsForJudge = React.useMemo(() => {
+    if (!judge?.id || Object.keys(mappings).length === 0) return false;
+    const judgeIdStr = `-${judge.id}-`;
+    return Object.keys(mappings).some(key => key.includes(judgeIdStr));
+  }, [mappings, judge?.id]);
+
+  const lastFetchedJudgeIdRef = React.useRef<number | null>(null);
+  const skipFetchRef = React.useRef(false);
+
+  /**
+   * Fetches score sheet mappings for the judge, but only if they don't already exist.
+   * This prevents unnecessary refetches when navigating back from multi-scoring pages.
+   */
   useEffect(() => {
-    if (judge && judge.id) {
+    if (!judge?.id) return;
+    
+    if (isLoadingMapScoreSheet) {
+      return;
+    }
+
+    if (hasMappingsForJudge) {
+      lastFetchedJudgeIdRef.current = judge.id;
+      skipFetchRef.current = true;
+      return;
+    }
+
+    if (skipFetchRef.current && lastFetchedJudgeIdRef.current === judge.id) {
+      return;
+    }
+
+    const judgeIdChanged = lastFetchedJudgeIdRef.current !== judge.id;
+    
+    if (judgeIdChanged) {
+      skipFetchRef.current = false;
       try {
-        // Fetch all scoresheets for this judge across all contests
         fetchScoreSheetsByJudge(judge.id);
+        lastFetchedJudgeIdRef.current = judge.id;
       } catch (error) {
         console.error('Error fetching judge data:', error);
       }
-    }
-  }, [judge]);
-
-  useEffect(() => {
-    if (judge && judge.id && teams && teams.length > 0) {
+    } else if (!hasMappingsForJudge) {
+      if (!skipFetchRef.current) {
       try {
-        // Refresh scoresheets when teams change to ensure we have scoresheets for all teams
-        // This fetches ALL scoresheets for the judge across ALL contests
         fetchScoreSheetsByJudge(judge.id);
+          lastFetchedJudgeIdRef.current = judge.id;
+          skipFetchRef.current = true;
       } catch (error) {
-        console.error('Error refreshing scoresheets:', error);
+          console.error('Error fetching judge data:', error);
       }
     }
-
-  }, [teams, judge]);
+    }
+  }, [judge?.id, fetchScoreSheetsByJudge, hasMappingsForJudge, isLoadingMapScoreSheet]);
 
 
 
@@ -276,13 +371,17 @@ const isScoresheetEditable = (team: Team, sheetType: number) => {
 
   
 
+  /**
+   * Opens the multi-team scoring dialog and fetches open contests for the judge.
+   * Only shows contests where is_open === true.
+   */
   const handleMultiTeamScore = async () => {
-    // Fetch all contests for this judge when opening dialog
     if (judge?.id) {
       try {
         const response = await api.get(`/api/mapping/contestToJudge/judge-contests/${judge.id}/`);
         const contests = response.data?.contests || [];
-        setAllContests(contests);
+        const openContests = contests.filter((contest: Contest) => contest.is_open === true);
+        setAllContests(openContests);
       } catch (error) {
         console.error('Error fetching contests for judge:', error);
         setAllContests([]);
@@ -296,8 +395,12 @@ const isScoresheetEditable = (team: Team, sheetType: number) => {
     setSelectedContest(null);
   };
   
+  /**
+   * Handles contest selection in multi-team scoring dialog.
+   * Prevents selection if contest is disabled.
+   */
   const handleSelectContest = (contest: Contest) => {
-    if (!hasContestStarted(contest)) return; // Only allow selection of started contests
+    if (isContestDisabledForMultiScoring(contest)) return;
     setSelectedContest(contest);
     setOpenContestDialog(false);
     setOpenSheetTypeDialog(true);
@@ -339,6 +442,27 @@ const isScoresheetEditable = (team: Team, sheetType: number) => {
 
   const hasContestStarted = (contest: Contest): boolean => {
     return contest.is_open === true;
+  };
+
+  // Check if a contest should be disabled for multi-scoring
+  // Disabled if: contest hasn't started, OR any team has advanced, OR judge has championship assignment
+  //  When championship advancement is undone, this will automatically re-enable contests
+  // because hasAnyTeamAdvancedByContest and judgeHasChampionshipByContest are recalculated
+  // when currentCluster is updated (via championshipUndone event in Judging.tsx)
+  const isContestDisabledForMultiScoring = (contest: Contest): boolean => {
+    if (!hasContestStarted(contest)) {
+      return true; // Contest hasn't started
+    }
+    
+    // Check if any team in this contest has advanced
+    const anyTeamAdvanced = hasAnyTeamAdvancedByContest.get(contest.id) || false;
+    
+    // Check if judge has championship assignment in this contest
+    const judgeHasChampionship = judgeHasChampionshipByContest.get(contest.id) || false;
+    
+    // Disable if any team has advanced OR judge has championship assignment
+    // When undone, these values will be false, automatically re-enabling the contest
+    return anyTeamAdvanced || judgeHasChampionship;
   };
 
   const handleUnsubmitSheet = async () => {
@@ -428,21 +552,25 @@ const isScoresheetEditable = (team: Team, sheetType: number) => {
               borderRadius: 2,
               px: { xs: 0.75, sm: 2.25 },
               py: { xs: 0.4, sm: 0.75 },
-              bgcolor: isPreliminary ? theme.palette.grey[400] : theme.palette.success.main,
-              color: isPreliminary ? theme.palette.grey[600] : "white",
+              bgcolor: isPreliminary ? theme.palette.grey[600] : theme.palette.success.main,
+              color: isPreliminary ? theme.palette.grey[300] : "white",
               "&:hover": { 
-                bgcolor: isPreliminary ? theme.palette.grey[400] : theme.palette.success.dark 
+                bgcolor: isPreliminary ? theme.palette.grey[600] : theme.palette.success.dark,
+                cursor: isPreliminary ? "not-allowed" : "pointer",
               },
               "&:disabled": {
-                bgcolor: theme.palette.grey[400],
-                color: theme.palette.grey[600],
+                bgcolor: `${theme.palette.grey[600]} !important`,
+                color: `${theme.palette.grey[300]} !important`,
+                opacity: 0.7,
+                cursor: "not-allowed",
               },
               fontSize: { xs: "0.65rem", sm: "0.875rem" },
               fontWeight: 600,
               minWidth: { xs: "100px", sm: "auto" },
               maxWidth: { xs: "150px", sm: "none" },
               width: { xs: "100%", sm: "auto" },
-              opacity: isPreliminary ? 0.6 : 1,
+              opacity: isPreliminary ? 0.7 : 1,
+              pointerEvents: isPreliminary ? "none" : "auto",
             }}
           >
             {isPreliminary ? `${buttonText} (Preliminary)` : buttonText} {getTotal(judge?.id, team.id, type)}
@@ -458,14 +586,16 @@ const isScoresheetEditable = (team: Team, sheetType: number) => {
               borderRadius: 2,
               px: { xs: 0.75, sm: 2.25 },
               py: { xs: 0.4, sm: 0.75 },
-              bgcolor: isPreliminary ? theme.palette.grey[400] : theme.palette.grey[500],
-              color: isPreliminary ? theme.palette.grey[600] : "white",
+              bgcolor: isPreliminary ? theme.palette.grey[600] : theme.palette.grey[500],
+              color: isPreliminary ? theme.palette.grey[300] : "white",
               "&:hover": { 
-                bgcolor: isPreliminary ? theme.palette.grey[400] : theme.palette.grey[600] 
+                bgcolor: isPreliminary ? theme.palette.grey[600] : theme.palette.grey[600],
+                cursor: isPreliminary ? "not-allowed" : "pointer",
               },
               "&:disabled": {
-                bgcolor: theme.palette.grey[400],
-                color: theme.palette.grey[600],
+                bgcolor: `${theme.palette.grey[600]} !important`,
+                color: `${theme.palette.grey[300]} !important`,
+                opacity: 0.7,
                 cursor: "not-allowed",
               },
               fontSize: { xs: "0.65rem", sm: "0.875rem" },
@@ -473,7 +603,8 @@ const isScoresheetEditable = (team: Team, sheetType: number) => {
               minWidth: { xs: "100px", sm: "auto" },
               maxWidth: { xs: "150px", sm: "none" },
               width: { xs: "100%", sm: "auto" },
-              opacity: isPreliminary ? 0.6 : 1,
+              opacity: isPreliminary ? 0.7 : 1,
+              pointerEvents: isPreliminary ? "none" : "auto",
             }}
             onClick={(e) => {
               e.preventDefault();
@@ -925,29 +1056,35 @@ const isScoresheetEditable = (team: Team, sheetType: number) => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1, width: '100%', maxWidth: '400px' }}>
               {allContests.map((contest) => {
                 const hasStarted = hasContestStarted(contest);
+                const isDisabled = isContestDisabledForMultiScoring(contest);
+                const anyTeamAdvanced = hasAnyTeamAdvancedByContest.get(contest.id) || false;
+                const judgeHasChampionship = judgeHasChampionshipByContest.get(contest.id) || false;
+                
                 return (
                   <Button
                     key={contest.id}
-                    variant={hasStarted ? "outlined" : "outlined"}
+                    variant="outlined"
                     onClick={() => handleSelectContest(contest)}
-                    disabled={!hasStarted}
+                    disabled={isDisabled}
                     sx={{
-                      bgcolor: hasStarted ? 'transparent' : 'transparent',
-                      color: hasStarted 
-                        ? theme.palette.success.main 
-                        : theme.palette.grey[500],
-                      borderColor: hasStarted 
-                        ? theme.palette.success.main 
-                        : theme.palette.grey[400],
+                      bgcolor: isDisabled ? 'transparent' : 'transparent',
+                      color: isDisabled 
+                        ? theme.palette.grey[500]
+                        : theme.palette.success.main,
+                      borderColor: isDisabled 
+                        ? theme.palette.grey[400]
+                        : theme.palette.success.main,
                       '&:hover': {
-                        bgcolor: hasStarted 
-                          ? theme.palette.success.light
-                          : 'transparent',
-                        color: hasStarted ? 'white' : theme.palette.grey[500],
+                        bgcolor: isDisabled 
+                          ? 'transparent'
+                          : theme.palette.success.light,
+                        color: isDisabled ? theme.palette.grey[500] : 'white',
                       },
                       '&:disabled': {
                         borderColor: theme.palette.grey[400],
                         color: theme.palette.grey[500],
+                        opacity: 0.7,
+                        cursor: 'not-allowed',
                       },
                       textTransform: 'none',
                       borderRadius: 2,
@@ -969,6 +1106,19 @@ const isScoresheetEditable = (team: Team, sheetType: number) => {
                         }}
                       >
                         (Not Started)
+                      </Typography>
+                    )}
+                    {(anyTeamAdvanced || judgeHasChampionship) && hasStarted && (
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          ml: 1, 
+                          fontSize: "0.75rem",
+                          opacity: 0.7,
+                          color: theme.palette.grey[600]
+                        }}
+                      >
+                        (Advanced to Championship)
                       </Typography>
                     )}
                   </Button>

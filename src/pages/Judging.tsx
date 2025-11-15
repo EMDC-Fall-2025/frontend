@@ -1,4 +1,7 @@
-// Judging.tsx
+/**
+ * Main judging page component.
+ * Displays judge dashboard with teams and scoresheets for a specific judge.
+ */
 import {
   Box,
   Container,
@@ -19,10 +22,12 @@ import { useMapClusterJudgeStore } from "../store/map_stores/mapClusterToJudgeSt
 import useClusterTeamStore from "../store/map_stores/mapClusterToTeamStore";
 import JudgeDashboardTable from "../components/Tables/JudgeDashboardTable";
 import theme from "../theme";
-import { Team } from "../types";
+import { Team, ClusterWithContest, Contest } from "../types";
 import { api } from "../lib/api";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
+import { useContestStore } from "../store/primary_stores/contestStore";
+import { onDataChange, DataChangeEvent } from "../utils/dataChangeEvents";
 
 export default function Judging() {
   const { judgeId } = useParams();
@@ -31,34 +36,65 @@ export default function Judging() {
   const { role } = useAuthStore();
   const { judge, fetchJudgeById } = useJudgeStore();
   const { fetchAllClustersByJudgeId } = useMapClusterJudgeStore();
-  // Use selectors to subscribe to team updates
   const mapClusterToTeamError = useClusterTeamStore((state) => state.mapClusterToTeamError);
-  const fetchTeamsByJudgeId = useClusterTeamStore((state) => state.fetchTeamsByJudgeId);
   const fetchTeamsByClusterId = useClusterTeamStore((state) => state.fetchTeamsByClusterId);
-  const teamsByClusterId = useClusterTeamStore((state) => state.teamsByClusterId);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [currentCluster, setCurrentCluster] = useState<any>(null);
+  const [currentCluster, setCurrentCluster] = useState<(ClusterWithContest & {
+    judgeHasChampionshipByContest?: { [key: number]: boolean };
+    hasAnyTeamAdvancedByContest?: { [key: number]: boolean };
+  }) | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
   const isInitialLoadRef = useRef(true);
 
-  // Contests per team mapping
   const fetchContestsByTeams = useMapContestToTeamStore((state) => state.fetchContestsByTeams);
   const clearContests = useMapContestToTeamStore((state) => state.clearContests);
 
+  const lastLoadedJudgeIdRef = useRef<number | null>(null);
+  const teamsByClusterId = useClusterTeamStore((state) => state.teamsByClusterId);
+
+  /**
+   * Loads judge data and teams. If navigating back to the same judge,
+   * uses cached teams from store to display immediately without refetching.
+   */
   useEffect(() => {
     if (judgeIdNumber) {
-      // Clear teams on initial load to prevent showing stale data
+      const judgeIdChanged = lastLoadedJudgeIdRef.current !== judgeIdNumber;
+      
+      if (judgeIdChanged) {
       setTeams([]);
       setHasLoaded(false);
       isInitialLoadRef.current = true;
-
+        lastLoadedJudgeIdRef.current = judgeIdNumber;
 
       fetchJudgeById(judgeIdNumber);
       fetchAllClustersForJudge(judgeIdNumber);
+      } else {
+        const hasCachedTeams = Object.values(teamsByClusterId).some(clusterTeams => clusterTeams && clusterTeams.length > 0);
+        
+        if (hasCachedTeams && teams.length === 0) {
+          const allCachedTeams = Object.values(teamsByClusterId).flat();
+          const uniqueTeams = allCachedTeams.filter((team, index, self) =>
+            index === self.findIndex(t => t.id === team.id)
+          );
+          setTeams(uniqueTeams as Team[]);
+          setHasLoaded(true);
+          isInitialLoadRef.current = false;
+        } else if (teams.length > 0) {
+          if (!hasLoaded) {
+            setHasLoaded(true);
+            isInitialLoadRef.current = false;
+          }
+        } else if (!hasLoaded) {
+          fetchJudgeById(judgeIdNumber);
+          fetchAllClustersForJudge(judgeIdNumber);
+        }
+      }
     }
-  }, [judgeIdNumber]); // Only runs when judgeIdNumber changes
+  }, [judgeIdNumber, teams.length, hasLoaded, teamsByClusterId, fetchJudgeById]);
 
-  // Populate contestsForTeams whenever teams are available/updated
+  /**
+   * Populates contest mappings for teams whenever teams are available or updated.
+   */
   useEffect(() => {
     if (teams && teams.length > 0) {
       fetchContestsByTeams(teams);
@@ -68,155 +104,210 @@ export default function Judging() {
     };
   }, [teams, fetchContestsByTeams, clearContests]);
 
-  const fetchAllClustersForJudge = async (judgeId: number) => {
+  /**
+   * Listens for data changes that affect the judge dashboard.
+   * Refreshes data when contests, teams, judges, or clusters are modified.
+   */
+  useEffect(() => {
+    const handleDataChange = async (event: DataChangeEvent) => {
+      if (judgeIdNumber) {
+        if (event.type === 'contest' && event.action === 'delete') {
+          setTeams([]);
+          setHasLoaded(false);
+          isInitialLoadRef.current = true;
+          await fetchAllClustersForJudge(judgeIdNumber, true);
+        } else if (event.type === 'team' && (event.action === 'create' || event.action === 'update' || event.action === 'delete')) {
+          setTeams([]);
+          setHasLoaded(false);
+          isInitialLoadRef.current = true;
+          await fetchAllClustersForJudge(judgeIdNumber);
+        } else if (event.type === 'judge' && event.action === 'delete' && event.judgeId === judgeIdNumber && event.clusterId) {
+          setTeams([]);
+          setHasLoaded(false);
+          isInitialLoadRef.current = true;
+          await fetchAllClustersForJudge(judgeIdNumber, true);
+        } else if (event.type === 'cluster' && (event.action === 'create' || event.action === 'update' || event.action === 'delete')) {
+          setTeams([]);
+          setHasLoaded(false);
+          isInitialLoadRef.current = true;
+          await fetchAllClustersForJudge(judgeIdNumber);
+        }
+      }
+    };
+
+    const unsubscribeDataChange = onDataChange(handleDataChange);
+
+    const handleChampionshipUndo = async () => {
+      if (judgeIdNumber) {
+        setTeams([]);
+        setHasLoaded(false);
+        isInitialLoadRef.current = true;
+        await fetchAllClustersForJudge(judgeIdNumber, true);
+      }
+    };
+
+    window.addEventListener('championshipUndone', handleChampionshipUndo);
+
+    return () => {
+      unsubscribeDataChange();
+      window.removeEventListener('championshipUndone', handleChampionshipUndo);
+    };
+  }, [judgeIdNumber, currentCluster]);
+
+  /**
+   * Fetches all clusters and teams for a judge.
+   * Filters clusters to only show those from active contests.
+   * Determines championship assignments and team advancement status.
+   */
+  const fetchAllClustersForJudge = async (judgeId: number, forceRefresh: boolean = false) => {
     try {
-      const [allTeamsForJudge, allClusters] = await Promise.all([
-        fetchTeamsByJudgeId(judgeId),
-        fetchAllClustersByJudgeId(judgeId)
+      const contestStore = useContestStore.getState();
+      if (contestStore.allContests.length === 0) {
+        contestStore.fetchAllContests().catch(() => {
+          // Silently fail - will show all clusters if contests aren't available
+        });
+      }
+
+      const [allClusters] = await Promise.all([
+        fetchAllClustersByJudgeId(judgeId, forceRefresh)
       ]);
       
       if (allClusters && allClusters.length > 0) {
-        const championshipClusters = allClusters.filter((cluster: any) => 
-          cluster.cluster_type === 'championship' || 
+        const allContests = useContestStore.getState().allContests;
+        const activeContestIds = new Set(allContests.map((c: Contest) => c.id));
+
+        const clustersToShow = allClusters.filter((cluster: ClusterWithContest) => {
+          if (allContests.length === 0) {
+            return true;
+          }
+          return !cluster.contest_id || activeContestIds.has(cluster.contest_id);
+        });
+
+        /**
+         * Determines if judge has championship assignment in each contest.
+         * Used to disable preliminary scoresheets when judge has championship assignment.
+         */
+        const judgeHasChampionshipAssignmentByContest = new Map<number, boolean>();
+        clustersToShow.forEach((cluster: ClusterWithContest) => {
+          if (cluster.contest_id) {
+            const hasChampionship = cluster.sheet_flags?.championship === true ||
+              cluster.cluster_type === 'championship' ||
+              cluster.cluster_name?.toLowerCase().includes('championship');
+            
+            const currentValue = judgeHasChampionshipAssignmentByContest.get(cluster.contest_id) || false;
+            judgeHasChampionshipAssignmentByContest.set(cluster.contest_id, currentValue || hasChampionship);
+          }
+        });
+
+        const teamPromises = clustersToShow.map(cluster =>
+          fetchTeamsByClusterId(cluster.id).catch(() => [])
+        );
+        const teamsArrays = await Promise.all(teamPromises);
+        const allTeamsForJudge = teamsArrays.flat();
+
+        const uniqueTeams = allTeamsForJudge.filter((team, index, self) =>
+          index === self.findIndex(t => t.id === team.id)
+        );
+        
+        const processedTeams = uniqueTeams.map((t: Team) => ({
+                ...t,
+                advanced_to_championship: t.advanced_to_championship ?? false
+              }));
+      
+      
+        isInitialLoadRef.current = false;
+        setTeams(processedTeams as unknown as Team[]);
+
+        fetchContestsByTeams(processedTeams as unknown as Team[]).catch(() => {});
+
+        /**
+         * Fetches all teams for each contest to check if any team has advanced.
+         * This is needed to disable preliminary scoresheets when any team in a contest advances.
+         */
+        const contestIds = new Set<number>();
+        clustersToShow.forEach((cluster: ClusterWithContest) => {
+          if (cluster.contest_id) {
+            contestIds.add(cluster.contest_id);
+          }
+        });
+
+        const allTeamsByContest: { [contestId: number]: Team[] } = {};
+        
+        await Promise.all(
+          Array.from(contestIds).map(async (contestId: number) => {
+            try {
+              const response = await api.get<Team[]>(`/api/mapping/teamToContest/getTeamsByContest/${contestId}/`);
+              allTeamsByContest[contestId] = response.data || [];
+            } catch (error) {
+              console.error(`[Judging] Error fetching teams for contest ${contestId}:`, error);
+              allTeamsByContest[contestId] = [];
+            }
+          })
+        );
+
+        /**
+         * Checks if any team has advanced to championship in each contest.
+         * If any team has advanced, all preliminary scoresheets for all teams
+         * in that contest should be disabled.
+         */
+        const hasAnyTeamAdvancedByContest = new Map<number, boolean>();
+        Object.keys(allTeamsByContest).forEach((contestIdStr) => {
+          const contestId = parseInt(contestIdStr, 10);
+          const contestTeams = allTeamsByContest[contestId] || [];
+          const hasAdvanced = contestTeams.some((team: Team) => team.advanced_to_championship === true);
+          hasAnyTeamAdvancedByContest.set(contestId, hasAdvanced);
+        });
+
+        setHasLoaded(true);
+
+        const currentClusterToSet: (ClusterWithContest & {
+          judgeHasChampionshipByContest?: { [key: number]: boolean };
+          hasAnyTeamAdvancedByContest?: { [key: number]: boolean };
+        }) | null = clustersToShow[0] ? { ...clustersToShow[0] } : null;
+        
+        /**
+         * Store championship and advancement data in cluster object for access in JudgeDashboardTable.
+         * Convert Maps to plain objects since Maps don't serialize well in React props.
+         */
+        if (currentClusterToSet) {
+          const championshipByContestObj: { [key: number]: boolean } = {};
+          judgeHasChampionshipAssignmentByContest.forEach((value, key) => {
+            championshipByContestObj[key] = value;
+          });
+          currentClusterToSet.judgeHasChampionshipByContest = championshipByContestObj;
+          
+          const hasAdvancedByContestObj: { [key: number]: boolean } = {};
+          hasAnyTeamAdvancedByContest.forEach((value, key) => {
+            hasAdvancedByContestObj[key] = value;
+          });
+          currentClusterToSet.hasAnyTeamAdvancedByContest = hasAdvancedByContestObj;
+        }
+        
+        setCurrentCluster(currentClusterToSet);
+
+        const championshipClusters = clustersToShow.filter((cluster: ClusterWithContest) =>
+          cluster.cluster_type === 'championship' ||
           cluster.cluster_type === 'redesign' ||
           cluster.cluster_name?.toLowerCase().includes('championship') ||
           cluster.cluster_name?.toLowerCase().includes('redesign')
         );
-        
-        // Group clusters by contest_id
-        const clustersByContest: {[contestId: number | string]: any[]} = {};
-        const clustersWithoutContest: any[] = [];
-        
-        allClusters.forEach((cluster: any) => {
-          const contestId = cluster.contest_id;
+
+        if (championshipClusters.length > 0 && processedTeams.length > 0) {
+          const contestId = currentClusterToSet?.contest_id;
           if (contestId) {
-            const key = contestId.toString();
-            if (!clustersByContest[key]) {
-              clustersByContest[key] = [];
-            }
-            clustersByContest[key].push(cluster);
-          } else {
-            clustersWithoutContest.push(cluster);
-          }
-        });
-        
-        // Check if championship clusters have teams by checking store cache only
-        // Avoid API calls during initial load to prevent flash and store updates
-        const championshipCheckPromises = championshipClusters.map(async (cluster: any) => {
-          // For initial load, only check store cache (no API calls to prevent flash)
-          if (isInitialLoadRef.current) {
-            const cachedTeams = teamsByClusterId[cluster.id];
-            return { 
-              cluster, 
-              hasTeams: cachedTeams && cachedTeams.length > 0, 
-              contestId: cluster.contest_id 
-            };
-          }
-          // For subsequent loads, we can fetch if needed
-          try {
-            const teams = await fetchTeamsByClusterId(cluster.id);
-            return { cluster, hasTeams: teams && teams.length > 0, contestId: cluster.contest_id };
-          } catch (error) {
-            return { cluster, hasTeams: false, contestId: cluster.contest_id };
-          }
-        });
-        
-        const championshipChecks = await Promise.all(championshipCheckPromises);
-        
-        // Determine which clusters to show per contest
-        const clustersToShow: any[] = [];
-        const contestIds = Object.keys(clustersByContest);
-        
-        for (const contestIdKey of contestIds) {
-          const contestId = parseInt(contestIdKey, 10);
-          const contestClusters = clustersByContest[contestIdKey];
-          const contestChampionshipClusters = contestClusters.filter((c: any) => 
-            championshipClusters.some((cc: any) => cc.id === c.id)
-          );
-          
-          const hasTeamsInThisContestChampionship = championshipChecks.some(check => 
-            check.contestId === contestId && check.hasTeams
-          );
-          
-          if (hasTeamsInThisContestChampionship) {
-            clustersToShow.push(...contestChampionshipClusters);
-        } else {
-            clustersToShow.push(...contestClusters);
-          }
-        }
-        
-        clustersToShow.push(...clustersWithoutContest);
-        
-        // Process teams from direct fetch
-        const processedTeams = allTeamsForJudge.map((t: any) => ({
-                ...t,
-                advanced_to_championship: t.advanced_to_championship ?? false
-              }));
-      
-      
-        isInitialLoadRef.current = false;
-        setTeams((prev) => {
-          if (!prev || prev.length === 0) return processedTeams as unknown as Team[];
-          const byId = new Map<number, Team>();
-          for (const t of prev) byId.set(t.id, t);
-          for (const t of processedTeams as unknown as Team[]) byId.set(t.id, t);
-          return Array.from(byId.values());
-        });
-
-        // Kick off contests fetch in background; don't block initial reveal
-        fetchContestsByTeams(processedTeams as unknown as Team[]).catch(() => {});
-        setHasLoaded(true);
-
-        const currentClusterToSet = clustersToShow[0] || null;
-        
-        setCurrentCluster(currentClusterToSet);
-
-        // Run tabulation in background if needed
-        const contestId = (currentClusterToSet as any)?.contest_id || (processedTeams[0] as any)?.contest_id || (processedTeams[0] as any)?.contestid;
-        if (contestId && championshipClusters.length > 0) {
           api.put(`/api/tabulation/tabulateScores/`, {
             contestid: contestId,
-          }).then(() => {
-            // Refetch teams after tabulation
-            return fetchTeamsByJudgeId(judgeId);
-          }).then((refreshedTeams) => {
-            if (refreshedTeams && refreshedTeams.length > 0) {
-              const processed = refreshedTeams.map((t: any) => ({
-                ...t,
-                advanced_to_championship: t.advanced_to_championship ?? false
-              }));
-              setTeams((prev) => {
-                if (!prev || prev.length === 0) return processed as unknown as Team[];
-                const byId = new Map<number, Team>();
-                for (const t of prev) byId.set(t.id, t);
-                for (const t of processed as unknown as Team[]) byId.set(t.id, t);
-                return Array.from(byId.values());
-              });
-            }
-          }).catch((error) => {
-            console.error('Tabulation or refresh failed:', error);
+            }).catch((error) => {
+              console.error('Tabulation failed:', error);
           });
+          }
         }
-      } else {
-        // No clusters, but still set teams if we got them
-        if (allTeamsForJudge && allTeamsForJudge.length > 0) {
-          setTeams((prev) => {
-            if (!prev || prev.length === 0) return allTeamsForJudge as unknown as Team[];
-            const byId = new Map<number, Team>();
-            for (const t of prev) byId.set(t.id, t);
-            for (const t of allTeamsForJudge as unknown as Team[]) byId.set(t.id, t);
-            return Array.from(byId.values());
-          });
-
-          // Kick off contests fetch in background; don't block initial reveal
-          fetchContestsByTeams(allTeamsForJudge as unknown as Team[]).catch(() => {});
       } else {
         setTeams([]);
-        }
         isInitialLoadRef.current = false;
         setHasLoaded(true);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching teams/clusters for judge:', error);
       setTeams([]);
       isInitialLoadRef.current = false;

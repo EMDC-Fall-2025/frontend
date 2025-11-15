@@ -95,12 +95,15 @@ export default function ContestScores() {
     setTeamAwards(newTeamAwards);
   }, [awards, coachesByTeams, teamsByContest]);
 
+  // For preliminary results, use preliminary_total_score if available, otherwise fall back to total_score
   const rows = teamsByContest.map((team) => ({
     id: team.id,
     team_name: team.team_name,
     school_name: (team as any).school_name || "",
     team_rank: team.team_rank || 0,
-    total_score: team.total_score,
+    // Use preliminary_total_score for preliminary results (preserved before advancement)
+    // Fall back to total_score if preliminary_total_score is not available
+    total_score: (team as any).preliminary_total_score ?? team.total_score ?? 0,
     coachName: coachNames[team.id] || "N/A",
     awards: teamAwards[team.id] || "N/A",
   }));

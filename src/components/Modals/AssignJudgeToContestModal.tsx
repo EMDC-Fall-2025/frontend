@@ -105,42 +105,6 @@ export default function AssignJudgeToContestModal(
     }
   }, [contestId]);
 
-  // Load contest and judges when modal opens
-  React.useEffect(() => {
-    if (!open || !contestId) return;
-
-    let isMounted = true;
-    setError(null);
-    setSuccess(null);
-
-    (async () => {
-      try {
-        // Fetch the contest if not already loaded
-        if (!contest || contest.id !== contestId) {
-          await fetchContestById(contestId);
-        }
-
-        // Load all judges
-        const response = await api.get(
-          "/api/judge/getAll/",
-        );
-        if (!isMounted) return;
-        if (response.data?.Judges) {
-          setAllJudges(response.data.Judges);
-        } else {
-          setAllJudges([]);
-        }
-      } catch (err) {
-        if (!isMounted) return;
-        setError("Failed to load required data");
-      }
-    })();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [open, contestId, fetchContestById, contest]);
-
   // Helper: load clusters and assigned pairs for a contest (with optional force reload)
   const loadClustersForContest = React.useCallback(
     async (contestIdToLoad: number, force: boolean = false) => {
@@ -151,9 +115,14 @@ export default function AssignJudgeToContestModal(
       }
 
       // Only fetch if we haven't already loaded clusters for this contest,
-      // unless force is true (e.g., after creating a new cluster)
+      // unless force is true (e.g., after creating a new cluster or assigning a judge)
       if (!force && loadedContestIdRef.current === contestIdToLoad) {
         return;
+      }
+      
+      // Reset the loaded ref if forcing refresh
+      if (force) {
+        loadedContestIdRef.current = -1;
       }
 
       try {
@@ -199,6 +168,50 @@ export default function AssignJudgeToContestModal(
     []
   );
 
+  // Load contest and judges when modal opens
+  React.useEffect(() => {
+    if (!open || !contestId) return;
+
+    let isMounted = true;
+    setError(null);
+    setSuccess(null);
+    
+    // Reset loaded contest ref when modal opens to ensure fresh data
+    loadedContestIdRef.current = -1;
+
+    (async () => {
+      try {
+        // Fetch the contest if not already loaded
+        if (!contest || contest.id !== contestId) {
+          await fetchContestById(contestId);
+        }
+
+        // Load all judges
+        const response = await api.get(
+          "/api/judge/getAll/",
+        );
+        if (!isMounted) return;
+        if (response.data?.Judges) {
+          setAllJudges(response.data.Judges);
+        } else {
+          setAllJudges([]);
+        }
+        
+        // Load clusters for the contest when modal opens
+        if (contestId > 0) {
+          await loadClustersForContest(contestId, true);
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        setError("Failed to load required data");
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [open, contestId, fetchContestById, contest, loadClustersForContest]);
+
   // Load clusters when a contest is selected
   React.useEffect(() => {
     if (selectedContestId === -1 || selectedContestId <= 0) {
@@ -238,6 +251,16 @@ export default function AssignJudgeToContestModal(
             // Silently ignore; existing list remains
           }
         })();
+      }
+
+      // React to judge assignments being created/updated – refresh assigned pairs
+      // This ensures the modal stays in sync when judges are assigned elsewhere
+      if (detail.type === "judge" && (detail.action === "update" || detail.action === "create")) {
+        const currentContestId = contestId || selectedContestId;
+        if (currentContestId && currentContestId > 0) {
+          // Refresh clusters and assigned pairs to reflect new assignments
+          loadClustersForContest(currentContestId, true);
+        }
       }
     });
 
@@ -288,13 +311,9 @@ export default function AssignJudgeToContestModal(
 
       setSuccess(response?.data?.message || "Judge successfully assigned to contest!");
 
-      // Update assigned judge-cluster pairs to include the newly assigned pair
-      setAssignedJudgeClusterPairs((prev) => {
-        const newSet = new Set(prev);
-        const pairKey = `${selectedJudgeId}-${selectedContestId}-${selectedClusterId}`;
-        newSet.add(pairKey);
-        return newSet;
-      });
+      // Refresh assigned judge-cluster pairs from server to ensure accuracy
+      // This ensures the list is synced with the backend state
+      await loadClustersForContest(selectedContestId, true);
 
       onSuccess?.();
 

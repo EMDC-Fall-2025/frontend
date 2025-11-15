@@ -12,6 +12,7 @@ interface MapContestToTeamState {
   fetchContestsByTeams: (teamIds: Team[]) => Promise<void>;
   fetchTeamsByContest: (contestId: number, forceRefresh?: boolean) => Promise<void>;
   updateContestInTeams: (updatedContest: Contest) => void;
+  removeContestFromTeams: (contestId: number) => void;
   clearContests: () => void;
   clearTeamsByContest: () => void;
 }
@@ -40,6 +41,34 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
             }
           });
           return { contestsForTeams: updatedContestsForTeams };
+        });
+      },
+
+      removeContestFromTeams: (contestId: number) => {
+        set((state) => {
+          const updatedContestsForTeams = { ...state.contestsForTeams };
+          const updatedTeamsByContestMap = { ...(state.teamsByContestMap || {}) };
+
+          // Remove contest from contestsForTeams for all teams that had this contest
+          Object.keys(updatedContestsForTeams).forEach((teamIdStr) => {
+            const teamId = parseInt(teamIdStr, 10);
+            const contest = updatedContestsForTeams[teamId];
+            if (contest && contest.id === contestId) {
+              delete updatedContestsForTeams[teamId];
+            }
+          });
+
+          // Remove contest from teamsByContestMap
+          delete updatedTeamsByContestMap[contestId];
+
+          // Clear current contest data if it matches
+          const updatedTeamsByContest = state.teamsByContestMap?.[contestId] ? [] : state.teamsByContest;
+
+          return {
+            contestsForTeams: updatedContestsForTeams,
+            teamsByContestMap: updatedTeamsByContestMap,
+            teamsByContest: updatedTeamsByContest,
+          };
         });
       },
 

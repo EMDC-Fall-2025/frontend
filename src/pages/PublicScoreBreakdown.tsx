@@ -1,4 +1,4 @@
-import { CircularProgress, Typography, Button, Box, Skeleton } from "@mui/material";
+import { Typography, Button, Box, Skeleton } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../theme";
 import ScoreBreakdownTableStandard from "../components/Tables/ScoreBreakdownTableStandard";

@@ -34,11 +34,16 @@ export interface IJudgeModalProps {
   contestid?: number;
   clusters?: Cluster[];
   judgeData?: JudgeData;
+  clusterContext?: Cluster;
   onSuccess?: () => void;
 }
 
+/**
+ * Modal component for creating or editing judges.
+ * Handles judge creation, updates, and assignment to clusters and contests.
+ */
 export default function JudgeModal(props: IJudgeModalProps) {
-  const { handleClose, open, mode, judgeData, clusters, contestid, onSuccess } = props;
+  const { handleClose, open, mode, judgeData, clusters, contestid, clusterContext, onSuccess } = props;
 
   const { addJudgeToContest, updateJudgeInContest } = useContestJudgeStore();
   const { updateJudgeInAllClusters, addJudgeToCluster, judgesByClusterId } = useMapClusterJudgeStore();
@@ -80,6 +85,10 @@ export default function JudgeModal(props: IJudgeModalProps) {
   const currentCluster = clusters?.find(cluster => cluster.id === clusterId);
   const originalCluster = judgeData?.cluster;
   
+  /**
+   * Determines the cluster type based on cluster properties.
+   * Checks cluster_type field and cluster name for championship/redesign indicators.
+   */
   const getClusterType = (cluster: typeof currentCluster) => {
     if (!cluster) return 'preliminary';
     if (cluster.cluster_type === 'championship' || cluster.cluster_name?.toLowerCase().includes('championship')) return 'championship';
@@ -235,10 +244,10 @@ export default function JudgeModal(props: IJudgeModalProps) {
   const handleEditJudge = async () => {
     if (contestid && judgeData) {
       try {
-        const selectedClusterId = clusterId !== -1 ? clusterId : (judgeData.cluster?.id || -1);
-        const selectedCluster = clusters?.find(cluster => cluster.id === selectedClusterId);
+        const selectedCluster = clusterContext || judgeData.cluster;
+        const selectedClusterId = selectedCluster?.id || clusterId;
         const selectedClusterType = getClusterType(selectedCluster);
-        
+
         let allowedSheets = selectedSheets;
         if (selectedClusterType === 'championship') {
               allowedSheets = ["championshipSS"];
@@ -252,19 +261,27 @@ export default function JudgeModal(props: IJudgeModalProps) {
           last_name: lastName,
           phone_number: phoneNumber,
           presentation: allowedSheets.includes("presSS"),
-          mdo: allowedSheets.includes("mdoSS"),
           journal: allowedSheets.includes("journalSS"),
+          mdo: allowedSheets.includes("mdoSS"),
           runpenalties: allowedSheets.includes("runPenSS"),
           otherpenalties: allowedSheets.includes("genPenSS"),
-          redesign: allowedSheets.includes("redesignSS"),
-          championship: allowedSheets.includes("championshipSS"),
-          username: email,
           clusterid: selectedClusterId,
-          original_cluster_id: judgeData.cluster?.id || selectedClusterId,
+          username: email,
           role: selectedTitle,
+          clusters: [{
+            clusterid: selectedClusterId,
+            contestid: contestid,
+            presentation: allowedSheets.includes("presSS"),
+            journal: allowedSheets.includes("journalSS"),
+            mdo: allowedSheets.includes("mdoSS"),
+            runpenalties: allowedSheets.includes("runPenSS"),
+            otherpenalties: allowedSheets.includes("genPenSS"),
+            redesign: allowedSheets.includes("redesignSS"),
+            championship: allowedSheets.includes("championshipSS"),
+          }],
         };
 
-        const updatedJudge = await editJudge(updatedData);
+        const updatedJudge = await editJudge(updatedData as any);
         if (updatedJudge && contestid) {
           updateJudgeInContest(contestid, updatedJudge);
           updateJudgeInAllClusters(updatedJudge);

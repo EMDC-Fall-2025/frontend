@@ -85,15 +85,29 @@ export default function Organizer() {
         setHasLoaded(true);
         isInitialLoadRef.current = false;
       });
-  }, [organizerId, isAuthenticated, role?.user_type, fetchContestsByOrganizerId, fetchAllOrganizers, contests]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organizerId, isAuthenticated, role?.user_type]); // Removed contests, fetchContestsByOrganizerId, fetchAllOrganizers from deps to prevent infinite loop
 
   const safeContests = contests ?? [];
+  
+  // Memoize contest IDs to prevent unnecessary re-renders
+  const contestIds = useMemo(() => {
+    return safeContests.map(c => c.id).sort().join(',');
+  }, [safeContests]);
+  
+  // Track previous contest IDs to only call API when contests actually change
+  const prevContestIdsRef = useRef<string>('');
 
   useEffect(() => {
-    if (safeContests.length > 0) {
-      allSheetsSubmittedForContests(safeContests);
+    // Only call API if contests actually changed (not just on every render)
+    if (safeContests.length > 0 && contestIds !== prevContestIdsRef.current) {
+      prevContestIdsRef.current = contestIds;
+      allSheetsSubmittedForContests(safeContests).catch((error) => {
+        console.error('Error checking sheets submission status:', error);
+      });
     }
-  }, [safeContests, allSheetsSubmittedForContests]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contestIds, safeContests.length]); // Only depend on contest IDs string and length
 
   const handleChange = (_event: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);

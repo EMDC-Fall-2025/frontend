@@ -299,11 +299,21 @@ function JudgesTable(props: IJudgesTableProps) {
       return scoreSheets;
     }
 
-    if (judge.journal) scoreSheets.push("Journal");
-    if (judge.presentation) scoreSheets.push("Presentation");
-    if (judge.mdo) scoreSheets.push("Machine Design & Operation");
-    if (judge.otherpenalties) scoreSheets.push("General Penalties");
-    if (judge.runpenalties) scoreSheets.push("Run Penalties");
+    // Use cluster-specific sheet flags if available (from MapJudgeToCluster), 
+    // otherwise fall back to global judge flags
+    const sheetFlags = judge.cluster_sheet_flags || {
+      journal: judge.journal,
+      presentation: judge.presentation,
+      mdo: judge.mdo,
+      runpenalties: judge.runpenalties,
+      otherpenalties: judge.otherpenalties,
+    };
+
+    if (sheetFlags.journal) scoreSheets.push("Journal");
+    if (sheetFlags.presentation) scoreSheets.push("Presentation");
+    if (sheetFlags.mdo) scoreSheets.push("Machine Design & Operation");
+    if (sheetFlags.otherpenalties) scoreSheets.push("General Penalties");
+    if (sheetFlags.runpenalties) scoreSheets.push("Run Penalties");
     return scoreSheets;
   };
 
@@ -465,6 +475,7 @@ function JudgesTable(props: IJudgesTableProps) {
         mode="edit"
         clusters={clusters}
         judgeData={judgeData}
+        clusterContext={currentCluster}
         contestid={contestid}
         onSuccess={async () => {
           // Refresh judges for the current cluster

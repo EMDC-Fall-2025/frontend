@@ -1,4 +1,4 @@
-import { CircularProgress, Link, Typography, Button, Box, Skeleton } from "@mui/material";
+import { Link, Typography, Button, Box, Skeleton } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../theme";
 import { useEffect, useRef } from "react";

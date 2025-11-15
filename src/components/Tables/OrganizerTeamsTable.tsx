@@ -44,6 +44,7 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
   const { coachesByTeams } = useMapCoachToTeamStore();
   // selector to subscribe to team updates
   const teamsByClusterId = useMapClusterTeamStore((state) => state.teamsByClusterId);
+  const fetchTeamsByClusterId = useMapClusterTeamStore((state) => state.fetchTeamsByClusterId);
   const { deleteCluster } = useClusterStore();
   const { removeClusterFromContest } = useMapClusterToContestStore();
   const [openDisqualificationModal, setOpenDisqualificationModal] =
@@ -137,6 +138,35 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
         : [...prevIds, clusterId]
     );
   };
+
+  useEffect(() => {
+    if (!contestId) return;
+    const handleChampionshipUndo = (event: Event) => {
+      const detail = (event as CustomEvent<{ contestId?: number }>).detail;
+      if (detail?.contestId && detail.contestId !== contestId) return;
+      clusters.forEach((cluster) => {
+        fetchTeamsByClusterId(cluster.id, true).catch((error) => {
+          console.error("Failed to refresh teams after undo:", error);
+        });
+      });
+    };
+    window.addEventListener("championshipUndone", handleChampionshipUndo);
+    return () => {
+      window.removeEventListener("championshipUndone", handleChampionshipUndo);
+    };
+  }, [contestId, clusters, fetchTeamsByClusterId]);
+
+  useEffect(() => {
+    if (!clusters.length) return;
+    clusters.forEach((cluster) => {
+      const type = String(cluster.cluster_type || "").toLowerCase();
+      if (type === "championship" || type === "redesign") {
+        fetchTeamsByClusterId(cluster.id, true).catch((error) => {
+          console.error("Failed to sync special cluster teams:", error);
+        });
+      }
+    });
+  }, [clusters, fetchTeamsByClusterId]);
 
   const handleOpenAreYouSure = (
     teamName: string,

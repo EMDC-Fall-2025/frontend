@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import { presentationQuestions } from "../data/presentationQuestions";
 import MultiTeamScoreSheet from "../components/Tables/MultiTeamScoreTable";
@@ -8,6 +7,7 @@ import { useMapClusterJudgeStore } from "../store/map_stores/mapClusterToJudgeSt
 import useClusterTeamStore from "../store/map_stores/mapClusterToTeamStore";
 import { useScoreSheetStore } from "../store/primary_stores/scoreSheetStore";
 import { api } from "../lib/api";
+import { ClusterWithContest, ScoreSheetMappingWithSheet, Team, ScoreSheet, Question } from "../types";
 
 export default function MultiTeamPresentationScore() {
   const { role } = useAuthStore();
@@ -31,48 +31,42 @@ export default function MultiTeamPresentationScore() {
       if (!parsedJudgeId) return;
       
       try {
-        // Get all clusters for this judge
         const allClusters = await fetchAllClustersByJudgeId(parsedJudgeId);
-        
-        // Filter clusters by contestId (clusters have contest_id field from backend)
         const parsedContestId = contestId ? parseInt(contestId, 10) : null;
-        const clusters = parsedContestId 
-          ? allClusters.filter((c: any) => c.contest_id === parsedContestId)
+        const clusters: ClusterWithContest[] = parsedContestId 
+          ? allClusters.filter((c: ClusterWithContest) => c.contest_id === parsedContestId)
           : allClusters;
         
-        const clusterIds = clusters.map((c: any) => c.id);
+        const clusterIds = clusters.map((c: ClusterWithContest) => c.id);
         
         if (clusterIds.length === 0) {
-          console.warn(`No clusters found for judge ${parsedJudgeId} in contest ${parsedContestId}`);
           setTeams([]);
           setIsDataReady(true);
           return;
         }
         
-        // Fetch scoresheets and teams in parallel for faster loading
         const [clusterResults, teamResults] = await Promise.all([
-          // Fetch scoresheets for all clusters (sheetType 1 = Presentation)
-          Promise.all(clusterIds.map(async (clusterId) => {
+          Promise.all(clusterIds.map(async (clusterId: number): Promise<ScoreSheet[]> => {
             try {
-              const response = await api.get(`/api/mapping/scoreSheet/getSheetsByJudgeAndCluster/${parsedJudgeId}/${clusterId}/`);
+              const response = await api.get<{ ScoreSheets: ScoreSheetMappingWithSheet[] }>(
+                `/api/mapping/scoreSheet/getSheetsByJudgeAndCluster/${parsedJudgeId}/${clusterId}/`
+              );
               const scoreSheets = response.data?.ScoreSheets || [];
               
-              // Filter by sheetType 1 (Presentation) and transform
               return scoreSheets
-                .filter((item: any) => item.mapping?.sheetType === 1)
-                .map((item: any) => ({
-                  ...item.scoresheet,
+                .filter((item: ScoreSheetMappingWithSheet) => item.mapping?.sheetType === 1)
+                .map((item: ScoreSheetMappingWithSheet): ScoreSheet => ({
+                  ...(item.scoresheet || {}),
                   teamId: item.mapping.teamid,
                   judgeId: item.mapping.judgeid,
                   sheetType: item.mapping.sheetType,
-                }));
+                } as ScoreSheet));
             } catch (error) {
               console.error(`Error fetching scoresheets for cluster ${clusterId}:`, error);
               return [];
             }
           })),
-          // Fetch team names from clusters
-          Promise.all(clusterIds.map(async (clusterId) => {
+          Promise.all(clusterIds.map(async (clusterId: number): Promise<Team[]> => {
             try {
               return await fetchTeamsByClusterId(clusterId);
             } catch (error) {
@@ -83,20 +77,16 @@ export default function MultiTeamPresentationScore() {
         ]);
         
         const allSheets = clusterResults.flat();
-        
-        // Update the store with fetched scoresheets
         useScoreSheetStore.setState({ multipleScoreSheets: allSheets });
         const allTeams = teamResults.flat();
         
-        // Create a map of team IDs to team names
         const teamNameMap = new Map<number, string>();
-        allTeams.forEach((team: any) => {
-          teamNameMap.set(team.id, team.team_name || team.name || `Team ${team.id}`);
+        allTeams.forEach((team: Team) => {
+          teamNameMap.set(team.id, team.team_name || `Team ${team.id}`);
         });
         
-        // Extract unique teams from scoresheets and add names
         const teamMap = new Map<number, { id: number; name: string }>();
-        allSheets.forEach((sheet: any) => {
+        allSheets.forEach((sheet: ScoreSheet) => {
           if (sheet.teamId) {
             const teamName = teamNameMap.get(sheet.teamId) || `Team ${sheet.teamId}`;
             teamMap.set(sheet.teamId, {
@@ -125,7 +115,7 @@ export default function MultiTeamPresentationScore() {
       sheetType={1}
       title="Presentation Scores"
       teams={teams}
-      questions={presentationQuestions}
+      questions={presentationQuestions as Question[]}
       judgeId={parsedJudgeId}
       seperateJrAndSr={true}
       isDataReady={isDataReady}

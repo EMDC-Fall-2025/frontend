@@ -35,14 +35,16 @@ import { useMapScoreSheetStore } from "../../store/map_stores/mapScoreSheetStore
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import toast from "react-hot-toast";
 
+import { Question } from "../../types";
+
 type IMultiTeamScoreSheetProps = {
   sheetType: number; 
   title: string;   
-  teams: { id: number, name: string }[]; // Teams visible to this judge
-  questions: any[];  // Question configs (id, text, low/high points, criteria text)
-  seperateJrAndSr: boolean; // If true, show Jr/Sr copy in criteria for Q4
-  judgeId: number | null;   // Current judge (required to fetch sheets)
-  isDataReady?: boolean; // Whether data has been loaded
+  teams: { id: number, name: string }[];
+  questions: Question[];
+  seperateJrAndSr: boolean;
+  judgeId: number | null;
+  isDataReady?: boolean;
 };
 
 export default function MultiTeamScoreSheet({
@@ -171,53 +173,6 @@ export default function MultiTeamScoreSheet({
     }
   }, [sheetIdsString, multipleScoreSheets, filteredTeams]);
 
-  // Show message if no score sheets are available
-  if (multipleScoreSheets && multipleScoreSheets.length === 0) {
-    return (
-      <>
-        <Container
-          maxWidth="lg"
-          sx={{
-            px: { xs: 1, sm: 2 },
-            mt: { xs: 1, sm: 2 },
-            mb: 1,
-          }}
-        >
-          <Button
-            onClick={() => navigate(-1)}
-            startIcon={<ArrowBackIcon />}
-            sx={{
-              textTransform: "none",
-              color: theme.palette.success.dark,
-              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
-              fontWeight: 500,
-              px: { xs: 1.5, sm: 2 },
-              py: { xs: 0.75, sm: 1 },
-              borderRadius: "8px",
-              transition: "all 0.2s ease",
-              "&:hover": {
-                backgroundColor: "rgba(76, 175, 80, 0.08)",
-                transform: "translateX(-2px)",
-              },
-            }}
-          >
-            Back to Judging Dashboard
-          </Button>
-        </Container>
-        <Container maxWidth="lg" sx={{ mt: 4 }}>
-          <Box sx={{ textAlign: "center", py: 4 }}>
-            <Typography variant="h6" color="text.secondary">
-              No scoresheets available for this judge and sheet type.
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Please ensure scoresheets have been created for the teams in this judge's cluster.
-            </Typography>
-          </Box>
-        </Container>
-      </>
-    );
-  }
-
   const handleToggle = useCallback((id: number) => {
     setOpenRows((prevState) => ({
       ...prevState,
@@ -246,7 +201,9 @@ export default function MultiTeamScoreSheet({
     }));
   }, []);
 
-  //  team-to-sheet mapping for efficient lookups
+  /**
+   * Maps team IDs to their corresponding score sheets for efficient lookups.
+   */
   const teamToSheetMap = useMemo(() => {
     if (!multipleScoreSheets) return new Map();
     return new Map(multipleScoreSheets.map(sheet => [sheet.teamId, sheet]));
@@ -359,6 +316,53 @@ export default function MultiTeamScoreSheet({
     setOpenAreYouSure(false);
     navigate(-1); // Return to previous screen after submit
   }, [multipleScoreSheets, filteredTeams, formData, teamToSheetMap, sheetType, submitMultipleScoreSheets, judgeId, fetchScoreSheetsByJudge, navigate]);
+
+  // Show message if no score sheets are available
+  if (multipleScoreSheets && multipleScoreSheets.length === 0) {
+    return (
+      <>
+        <Container
+          maxWidth="lg"
+          sx={{
+            px: { xs: 1, sm: 2 },
+            mt: { xs: 1, sm: 2 },
+            mb: 1,
+          }}
+        >
+          <Button
+            onClick={() => navigate(-1)}
+            startIcon={<ArrowBackIcon />}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.success.dark,
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              fontWeight: 500,
+              px: { xs: 1.5, sm: 2 },
+              py: { xs: 0.75, sm: 1 },
+              borderRadius: "8px",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                backgroundColor: "rgba(76, 175, 80, 0.08)",
+                transform: "translateX(-2px)",
+              },
+            }}
+          >
+            Back to Judging Dashboard
+          </Button>
+        </Container>
+        <Container maxWidth="lg" sx={{ mt: 4 }}>
+          <Box sx={{ textAlign: "center", py: 4 }}>
+            <Typography variant="h6" color="text.secondary">
+              No scoresheets available for this judge and sheet type.
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Please ensure scoresheets have been created for the teams in this judge's cluster.
+            </Typography>
+          </Box>
+        </Container>
+      </>
+    );
+  }
 
   return (
     <>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Box, Chip, Container, Paper, Typography, Link, Tab, Tabs, Button } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../theme";
@@ -7,201 +7,171 @@ import { useAuthStore } from "../store/primary_stores/authStore";
 import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
 import InternalResultsTable from "../components/Tables/InternalResultsTable";
 import ResultsPreloader from "../components/ResultsPreloader";
-
-import { api } from "../lib/api";
 import useContestStore from "../store/primary_stores/contestStore";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { onDataChange, DataChangeEvent } from "../utils/dataChangeEvents";
   
-
 const InternalResults: React.FC = () => {
-
-
   const { contestId } = useParams<{ contestId: string }>();
   const navigate = useNavigate();
   const { role } = useAuthStore();
-  
-  // Check if navigation came from Rankings page (only show preloader on navigation, not reload)
+
   const [showPreloader, setShowPreloader] = useState(false);
-  // Ensure preloader shows for at least a minimum duration so animation can complete
   const [preloaderMinDone, setPreloaderMinDone] = useState(false);
-  
-  // Scroll to top when page loads or contestId changes
+
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [contestId]);
   
-  useEffect(() => {
-    // Check sessionStorage for flag set when navigating from Rankings / Past Contests
-    let timer: number | undefined;
-    const fromRankings = sessionStorage.getItem('fromRankings') === 'true';
-    if (fromRankings) {
-      setShowPreloader(true);
-      setPreloaderMinDone(false);
-      // Clear the flag immediately so it doesn't show on reload
-      sessionStorage.removeItem('fromRankings');
-      // After the preloader's full animation duration, mark min time done and scroll to top
-      timer = window.setTimeout(() => {
-        setPreloaderMinDone(true);
-        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-      }, 1500);
-    }
-    return () => {
-      if (timer) window.clearTimeout(timer);
-    };
-  }, []);
-
   const parsedContestId = contestId ? parseInt(contestId, 10) : undefined;
   const { contest, fetchContestById, isLoadingContest } = useContestStore();
   const [activeTab, setActiveTab] = useState(0);
-  
 
-
-  // Fetch contest information
   useEffect(() => {
     if (parsedContestId) {
       fetchContestById(parsedContestId);
     }
   }, [parsedContestId, fetchContestById]);
 
-  // selectors to subscribe only to needed state
   const fetchTeamsByContest = useMapContestToTeamStore((state) => state.fetchTeamsByContest);
-  const clearTeamsByContest = useMapContestToTeamStore((state) => state.clearTeamsByContest);
   const isLoading = useMapContestToTeamStore((state) => state.isLoadingMapContestToTeam);
   const teamsByContest = useMapContestToTeamStore((state) => state.teamsByContest);
   const [hasLoaded, setHasLoaded] = useState(false);
   const isInitialLoadRef = useRef(true);
+  const [isCachedDataLoad, setIsCachedDataLoad] = useState(false);
 
   useEffect(() => {
-    if (!parsedContestId) return;
-  
-    const load = async () => {
+    setHasLoaded(false);
+    setIsCachedDataLoad(false);
+  }, [parsedContestId]);
+
+  useEffect(() => {
+    sessionStorage.removeItem('fromRankings');
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let forceHideTimer: ReturnType<typeof setTimeout> | undefined;
+
+    if (!hasLoaded) {
+      timer = setTimeout(() => {
+        if (!hasLoaded) {
+          setShowPreloader(true);
+          setPreloaderMinDone(false);
+        }
+      }, 40);
+
+      forceHideTimer = setTimeout(() => {
+        setPreloaderMinDone(true);
+        setShowPreloader(false);
+      }, 1500);
+
+      return () => {
+        clearTimeout(timer);
+        if (forceHideTimer) clearTimeout(forceHideTimer);
+      };
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      if (forceHideTimer) clearTimeout(forceHideTimer);
+    };
+  }, [hasLoaded]);
+
+  useEffect(() => {
+    if (hasLoaded) {
+      setShowPreloader(false);
+      setPreloaderMinDone(true);
+    }
+  }, [hasLoaded]);
+
+  const load = useCallback(
+    async (options?: { force?: boolean }) => {
+      if (!parsedContestId) return;
+      const state = useMapContestToTeamStore.getState();
+      const cachedTeamsForContest =
+        state.teamsByContestMap?.[parsedContestId] ?? state.teamsByContest;
+      const hasCacheForContest = Boolean(cachedTeamsForContest && cachedTeamsForContest.length);
+      setIsCachedDataLoad(hasCacheForContest);
+
       try {
-        // Fetch immediately to render fast, then tabulate in background and refresh when done
-        const initialFetch = fetchTeamsByContest(parsedContestId);
-
-        api.put("/api/tabulation/tabulateScores/", { contestid: parsedContestId })
-          .then(() => fetchTeamsByContest(parsedContestId))
-          .catch(() => {
-
-          });
-
-        await initialFetch;
-      } catch (error) {
-        // Still try to fetch teams even if tabulation fails
-        await fetchTeamsByContest(parsedContestId);
+        await fetchTeamsByContest(parsedContestId, options?.force);
       } finally {
         setHasLoaded(true);
         isInitialLoadRef.current = false;
       }
-    };
-  
+    },
+    [parsedContestId, fetchTeamsByContest]
+  );
+
+  useEffect(() => {
+    if (!parsedContestId) return;
+
     load(); // initial
 
-    // Auto-refresh every 20 seconds (fallback only - events trigger immediate refresh)
     const interval = setInterval(() => {
-      load();
-    }, 20000); // 20 seconds
+      if (!document.hidden) {
+        load();
+      }
+    }, 300000);
 
     const onFocus = () => load();
     window.addEventListener("focus", onFocus);
 
-    // Listen for data change events to refresh immediately
     const handleDataChange = async (event: DataChangeEvent) => {
-      // Refresh if it's a team, cluster, or championship change for this contest
       if (
         (event.type === 'team' && (event.contestId === parsedContestId || !event.contestId)) ||
         (event.type === 'cluster' && (event.contestId === parsedContestId || !event.contestId)) ||
         (event.type === 'championship')
       ) {
-        // Clear cache and force refresh
-        clearTeamsByContest();
-        await fetchTeamsByContest(parsedContestId, true);
+        await load({ force: true });
       }
     };
 
-    // Register data change listener
     const unsubscribeDataChange = onDataChange(handleDataChange);
 
-    // Listen for championship undo events to refresh immediately
     const handleChampionshipUndo = async (event: Event) => {
       const customEvent = event as CustomEvent;
       const eventContestId = customEvent.detail?.contestId;
-      // Refresh if event is for this contest, or if no contestId specified (refresh all)
       if (!parsedContestId) return;
       if (eventContestId && eventContestId !== parsedContestId) return;
-      
-      // Force refresh immediately when championship is undone (bypass cache)
       try {
-        console.log('Championship undone event received, refreshing teams for contest:', parsedContestId);
-        // Clear cache first, then fetch fresh data
-        clearTeamsByContest();
-        await fetchTeamsByContest(parsedContestId, true); // forceRefresh = true
-        console.log('Teams refreshed after championship undo');
-      } catch (error) {
-        console.error('Error refreshing teams after championship undo:', error);
-      }
+        await load({ force: true });
+      } catch {}
     };
     window.addEventListener("championshipUndone", handleChampionshipUndo);
-  
+
     return () => {
       clearInterval(interval);
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("championshipUndone", handleChampionshipUndo);
       unsubscribeDataChange();
-      clearTeamsByContest();
+
+      // ----------- 
+      // KEY OPTIMIZATION:
+      // DO NOT clearTeamsByContest() here! 
+      // This allows cached team data for the contest to survive across navigation.
+      // Only clear cache on explicit contest switch/log out/hard reload if desired.
+      // -----------
     };
-  }, [parsedContestId, fetchTeamsByContest, clearTeamsByContest]);
+  }, [parsedContestId, load]);
 
-  // Trigger tabulation when switching to championship or redesign tabs
-  useEffect(() => {
-    if ((activeTab === 1 || activeTab === 2) && parsedContestId) { // Championship or Redesign tab
-      const runTabulation = async () => {
-        try {
-          await api.put(
-            "/api/tabulation/tabulateScores/",
-            { contestid: parsedContestId },
-          );
-          
-          // Fetch the updated teams with calculated scores
-          await fetchTeamsByContest(parsedContestId);
-        } catch (error) {
-          console.error('Error running tabulation:', error);
-        }
-      };
-      
-      runTabulation();
-    }
-  }, [activeTab, parsedContestId, fetchTeamsByContest]);
+  // Only run tabulation on demand - removed automatic tabulation on tab switches
 
-  // Check if any teams have advanced to championship (strict check - must be exactly true)
-  // After undoing championship, all teams will have advanced_to_championship = false, so this will be false
   const hasChampionshipAdvanced = teamsByContest?.some((team: any) => team.advanced_to_championship === true) ?? false;
-  
-  // Redesign works if any team has advanced to championship (regardless of championship status)
-  // and includes teams that are not in the championship
   const hasRedesignAdvanced = hasChampionshipAdvanced;
 
-  // Reset activeTab to 0 if championship/redesign tabs disappear
   useEffect(() => {
     if (!hasChampionshipAdvanced && activeTab !== 0) {
       setActiveTab(0);
     }
   }, [hasChampionshipAdvanced, activeTab]);
 
-  // Removed duplicate fetch effect to avoid redundant network calls
-
   const handleDownloadPDF = () => {
     const doc = new jsPDF();
-    
-    // Title
     doc.setFontSize(18);
     doc.text('Master ScoreSheet Results', 14, 20);
     doc.setFontSize(14);
     doc.text(contest?.name || 'Contest', 14, 30);
-    
-    // Get table data
+
     const teams = teamsByContest || [];
     const tableData = teams.map((team: any, index: number) => [
       index + 1,
@@ -214,27 +184,22 @@ const InternalResults: React.FC = () => {
       team.run_penalties || 0,
       team.total_score || 0,
     ]);
-    
-    // Generate table
     autoTable(doc, {
       startY: 40,
       head: [['Rank', 'Team', 'School', 'Journal', 'Present.', 'Machine', 'Gen. Penalties', 'Run Penalties', 'Total']],
       body: tableData,
     });
-    
     doc.save(`MasterScoreSheet_${contest?.name || 'Contest'}.pdf`);
   };
 
   return (
     <Box sx={{ bgcolor: "#fff", minHeight: "100vh" }}>
-      {/* Show preloader only when navigating from Rankings page */}
-      {/* Keep preloader visible until both the minimum time has passed AND data has loaded */}
       {showPreloader && !(hasLoaded && preloaderMinDone) && <ResultsPreloader />}
       <Container maxWidth={false} sx={{ px: { xs: 1.5, md: 3 }, py: { xs: 1.5, md: 3 } }}>
         <Box
           sx={{
             opacity: hasLoaded ? 1 : 0,
-            transition: hasLoaded ? `opacity ${isInitialLoadRef.current ? '0.6s' : '0.1s'} ease-in` : 'none',
+            transition: hasLoaded && !isCachedDataLoad ? `opacity ${isInitialLoadRef.current ? '0.6s' : '0.1s'} ease-in` : 'none',
             pointerEvents: hasLoaded ? 'auto' : 'none',
           }}
         >
@@ -304,10 +269,10 @@ const InternalResults: React.FC = () => {
                 {isLoadingContest ? "Loading..." : contest?.name || `ID: ${contestId}`}
                 </Typography>
                 <Box sx={{ mt: 1 }}>
-                  <Chip 
-                  size="small" 
-                  color="success" 
-                  label={isLoading ? "Loading…" : "Live"}
+                  <Chip
+                  size="small"
+                  color={isLoading ? "warning" : "success"}
+                  label={isLoading ? "Updating…" : "Live"}
                   sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}
                   />
                   </Box>
