@@ -20,6 +20,8 @@ const InteractiveGrid: React.FC<InteractiveGridProps> = ({
   const [showTooltip, setShowTooltip] = useState(false);
   const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isClickingRef = useRef(false);
+  const lastTooltipShownRef = useRef<number | null>(null);
+  const TOOLTIP_COOLDOWN_MS = 60 * 1000; // 1 minute in milliseconds
 
   const handleClick = (index: number) => {
     setCells(prev =>
@@ -47,7 +49,19 @@ const InteractiveGrid: React.FC<InteractiveGridProps> = ({
     // Don't show tooltip if user is clicking
     if (isClickingRef.current) return;
     
+    // Check if tooltip was shown in the last minute
+    const now = Date.now();
+    const lastShown = lastTooltipShownRef.current;
+    
+    if (lastShown !== null && (now - lastShown) < TOOLTIP_COOLDOWN_MS) {
+      // Tooltip was shown recently, don't show it again
+      return;
+    }
+    
+    // Show tooltip and record the time
+    lastTooltipShownRef.current = now;
     setShowTooltip(true);
+    
     // Clear any existing timeout
     if (tooltipTimeoutRef.current) {
       clearTimeout(tooltipTimeoutRef.current);
