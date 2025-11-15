@@ -14,11 +14,11 @@ export default defineConfig(({ mode }) => {
   // - Host dev → talk to backend on host port 7004
   // - Vite in Docker → talk to Django service on its container port 7004
   const defaultTarget = inDocker ? "http://django-api:7004" : "http://127.0.0.1:7004";
-  
 
   // Allow override via PROXY_TARGET in .env*
-  const target = env.PROXY_TARGET || defaultTarget;
+  const target = env.PROXY_TARGET || process.env.PROXY_TARGET || defaultTarget;
 
+  console.log("[vite] proxy target =", target, "| inDocker =", inDocker);
 
   return {
     plugins: [react()],
@@ -33,7 +33,13 @@ export default defineConfig(({ mode }) => {
           secure: false,
           cookieDomainRewrite: "localhost",
           configure: (proxy, _options) => {
-            proxy.on("error", (err) => console.error("proxy error", err));
+            proxy.on("error", (err) => console.log("proxy error", err));
+            proxy.on("proxyReq", (_proxyReq, req) =>
+              console.log("Sending Request to Target:", req.method, req.url)
+            );
+            proxy.on("proxyRes", (proxyRes, req) =>
+              console.log("Received Response:", proxyRes.statusCode, req.url)
+            );
           },
         },
       },

@@ -41,5 +41,5 @@ RUN echo '#!/bin/sh' > /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
-# Start the application in development mode
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Start the application in development mode 
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--force"]
