@@ -160,12 +160,6 @@ function JudgesTable(props: IJudgesTableProps) {
   const [judgeData, setJudgeData] = useState<JudgeData | undefined>(undefined);
   const { submissionStatus, checkAllScoreSheetsSubmitted, deleteJudge } = useJudgeStore();
   
-  // Check submission status for this specific cluster
-  React.useEffect(() => {
-    if (currentCluster && judges && judges.length > 0) {
-      checkAllScoreSheetsSubmitted(judges as any, currentCluster.id);
-    }
-  }, [currentCluster?.id, judges, checkAllScoreSheetsSubmitted]);
   const [judgeId, setJudgeId] = useState(0);
   const { fetchJudgesByClusterId, removeJudgeFromCluster, fetchClustersForJudges, judgesByClusterId } = useMapClusterJudgeStore();
   const { removeJudgeFromContestStoreIfNoOtherClusters, getAllJudgesByContestId } = useContestJudgeStore();
@@ -174,13 +168,38 @@ function JudgesTable(props: IJudgesTableProps) {
 
   const titles = ["Lead", "Technical", "General", "Journal"];
 
+  // Memoize judge IDs to prevent unnecessary re-fetches
+  const judgeIdsString = React.useMemo(() => {
+    return judges.map(j => j.id).sort((a, b) => a - b).join(',');
+  }, [judges]);
 
+  const lastCheckedClusterIdRef = React.useRef<number | null>(null);
+  const lastCheckedJudgeIdsRef = React.useRef<string>("");
+  const lastFetchedJudgeIdsRef = React.useRef<string>("");
 
+  // Check submission status for this specific cluster - only when cluster or judges actually change
   React.useEffect(() => {
-    if (judges && judges.length > 0) {
-      fetchClustersForJudges(judges as any);
+    if (!currentCluster || !judges || judges.length === 0) return;
+    
+    const clusterChanged = lastCheckedClusterIdRef.current !== currentCluster.id;
+    const judgesChanged = lastCheckedJudgeIdsRef.current !== judgeIdsString;
+    
+    if (clusterChanged || judgesChanged) {
+      lastCheckedClusterIdRef.current = currentCluster.id;
+      lastCheckedJudgeIdsRef.current = judgeIdsString;
+      checkAllScoreSheetsSubmitted(judges as any, currentCluster.id);
     }
-  }, [judges, fetchClustersForJudges]);
+  }, [currentCluster?.id, judgeIdsString, checkAllScoreSheetsSubmitted, judges]);
+
+  // Fetch clusters for judges - only when judge IDs actually change
+  React.useEffect(() => {
+    if (!judges || judges.length === 0) return;
+    
+    if (lastFetchedJudgeIdsRef.current !== judgeIdsString) {
+      lastFetchedJudgeIdsRef.current = judgeIdsString;
+      fetchClustersForJudges(judges as any).catch(console.error);
+    }
+  }, [judgeIdsString, fetchClustersForJudges, judges]);
 
   // Memoize the handler to prevent unnecessary re-renders
   const handleOpenJudgeModal = useCallback((judgeData: JudgeData) => {

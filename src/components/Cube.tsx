@@ -19,6 +19,7 @@ const InteractiveGrid: React.FC<InteractiveGridProps> = ({
   );
   const [showTooltip, setShowTooltip] = useState(false);
   const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isClickingRef = useRef(false);
 
   const handleClick = (index: number) => {
     setCells(prev =>
@@ -26,7 +27,26 @@ const InteractiveGrid: React.FC<InteractiveGridProps> = ({
     );
   };
 
+  const handleMouseDown = () => {
+    isClickingRef.current = true;
+    setShowTooltip(false);
+    // Clear timeout on click
+    if (tooltipTimeoutRef.current) {
+      clearTimeout(tooltipTimeoutRef.current);
+    }
+  };
+
+  const handleMouseUp = () => {
+    // Reset clicking state after a short delay to allow click to complete
+    setTimeout(() => {
+      isClickingRef.current = false;
+    }, 100);
+  };
+
   const handleMouseEnter = () => {
+    // Don't show tooltip if user is clicking
+    if (isClickingRef.current) return;
+    
     setShowTooltip(true);
     // Clear any existing timeout
     if (tooltipTimeoutRef.current) {
@@ -63,6 +83,8 @@ const InteractiveGrid: React.FC<InteractiveGridProps> = ({
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
     >
       <div
         style={{
