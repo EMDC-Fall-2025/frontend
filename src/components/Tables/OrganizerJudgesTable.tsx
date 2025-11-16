@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { useMapClusterJudgeStore } from "../../store/map_stores/mapClusterToJudgeStore";
 import { useJudgeStore } from "../../store/primary_stores/judgeStore";
 import useContestJudgeStore from "../../store/map_stores/mapContestToJudgeStore";
+import { useMapScoreSheetStore } from "../../store/map_stores/mapScoreSheetStore";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckIcon from "@mui/icons-material/Check";
 import toast from "react-hot-toast";
@@ -163,6 +164,7 @@ function JudgesTable(props: IJudgesTableProps) {
   const [judgeId, setJudgeId] = useState(0);
   const { fetchJudgesByClusterId, removeJudgeFromCluster, fetchClustersForJudges, judgesByClusterId } = useMapClusterJudgeStore();
   const { removeJudgeFromContestStoreIfNoOtherClusters, getAllJudgesByContestId } = useContestJudgeStore();
+  const { clearMappings } = useMapScoreSheetStore();
 
   const { judgeClusters } = useMapClusterJudgeStore();
 
@@ -359,19 +361,21 @@ function JudgesTable(props: IJudgesTableProps) {
           variant="outlined"
           onClick={(e) => {
             e.stopPropagation();
+            // Use cluster-specific sheet flags for editing
+            const clusterFlags = judge.cluster_sheet_flags || {};
             handleOpenJudgeModal({
               id: judge.id,
               firstName: judge.first_name,
               lastName: judge.last_name,
               cluster: judgeClusters[judge.id],
               role: judge.role,
-              journalSS: judge.journal,
-              presSS: judge.presentation,
-              mdoSS: judge.mdo,
-              runPenSS: judge.runpenalties,
-              genPenSS: judge.otherpenalties,
-              redesignSS: false,
-              championshipSS: false,
+              journalSS: clusterFlags.journal || false,
+              presSS: clusterFlags.presentation || false,
+              mdoSS: clusterFlags.mdo || false,
+              runPenSS: clusterFlags.runpenalties || false,
+              genPenSS: clusterFlags.otherpenalties || false,
+              redesignSS: clusterFlags.redesign || false,
+              championshipSS: clusterFlags.championship || false,
               phoneNumber: judge.phone_number,
             });
           }}
@@ -497,11 +501,11 @@ function JudgesTable(props: IJudgesTableProps) {
         clusterContext={currentCluster}
         contestid={contestid}
         onSuccess={async () => {
-          // Refresh judges for the current cluster
+          clearMappings();
+          
           if (currentCluster?.id) {
             await fetchJudgesByClusterId(currentCluster.id, true);
           }
-          // Also refresh all clusters to handle cluster changes
           if (clusters && clusters.length > 0) {
             await Promise.all(
               clusters.map(cluster => fetchJudgesByClusterId(cluster.id, true))
