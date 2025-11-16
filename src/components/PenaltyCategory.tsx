@@ -4,7 +4,6 @@ import {
   IconButton,
   TableCell,
   TableRow,
-  Typography,
 } from "@mui/material";
 import { PenaltyField } from "./PenaltyField";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -48,7 +47,6 @@ export default function PenaltyCategory({
           "& > *": { borderBottom: "unset" },
           boxShadow: isOpen ? "0 2px 8px rgba(0, 0, 0, 0.15)" : "none",
           transition: "box-shadow 0.3s ease",
-          cursor: "pointer",
         }}
         onClick={toggleOpen}
       >
@@ -57,15 +55,7 @@ export default function PenaltyCategory({
             {isOpen ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
           </IconButton>
         </TableCell>
-        <TableCell sx={{ cursor: "pointer" }}>
-          <Typography sx={{ 
-            fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-            fontWeight: 600,
-            cursor: "pointer"
-          }}>
-            {categoryTitle}
-          </Typography>
-        </TableCell>
+        <TableCell>{categoryTitle}</TableCell>
       </TableRow>
       <TableRow>
         <TableCell colSpan={6} style={{ paddingBottom: 0, paddingTop: 0 }}>

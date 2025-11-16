@@ -44,7 +44,6 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
   const { coachesByTeams } = useMapCoachToTeamStore();
   // selector to subscribe to team updates
   const teamsByClusterId = useMapClusterTeamStore((state) => state.teamsByClusterId);
-  const fetchTeamsByClusterId = useMapClusterTeamStore((state) => state.fetchTeamsByClusterId);
   const { deleteCluster } = useClusterStore();
   const { removeClusterFromContest } = useMapClusterToContestStore();
   const [openDisqualificationModal, setOpenDisqualificationModal] =
@@ -138,68 +137,6 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
         : [...prevIds, clusterId]
     );
   };
-
-
-  const clusterIdsString = React.useMemo(() => {
-    return clusters.map(c => c.id).sort((a, b) => a - b).join(',');
-  }, [clusters]);
-
-  const lastFetchedSpecialClustersRef = React.useRef<Set<number>>(new Set());
-
-  useEffect(() => {
-    if (!contestId) return;
-    const handleChampionshipUndo = (event: Event) => {
-      const detail = (event as CustomEvent<{ contestId?: number }>).detail;
-      if (detail?.contestId && detail.contestId !== contestId) return;
-      // Use current clusters from closure - will always have latest data
-      clusters.forEach((cluster) => {
-        fetchTeamsByClusterId(cluster.id, true).catch((error) => {
-          console.error("Failed to refresh teams after undo:", error);
-        });
-      });
-    };
-    window.addEventListener("championshipUndone", handleChampionshipUndo);
-    return () => {
-      window.removeEventListener("championshipUndone", handleChampionshipUndo);
-    };
-  }, [contestId, clusterIdsString, clusters, fetchTeamsByClusterId]);
-
-  // Fetch teams for championship/redesign clusters - only once per cluster
-  useEffect(() => {
-    if (!clusters.length) {
-      lastFetchedSpecialClustersRef.current.clear();
-      return;
-    }
-
-    const currentClusterIds = new Set(clusters.map(c => c.id));
-    
-    // Remove clusters that no longer exist
-    lastFetchedSpecialClustersRef.current.forEach(clusterId => {
-      if (!currentClusterIds.has(clusterId)) {
-        lastFetchedSpecialClustersRef.current.delete(clusterId);
-      }
-    });
-
-    const specialClustersToFetch = clusters.filter((cluster) => {
-      const type = String(cluster.cluster_type || "").toLowerCase();
-      const isSpecial = type === "championship" || type === "redesign";
-      const alreadyFetched = lastFetchedSpecialClustersRef.current.has(cluster.id);
-      return isSpecial && !alreadyFetched;
-    });
-
-    if (specialClustersToFetch.length === 0) return;
-
-    // Mark clusters as being fetched
-    specialClustersToFetch.forEach(c => lastFetchedSpecialClustersRef.current.add(c.id));
-
-    specialClustersToFetch.forEach((cluster) => {
-      fetchTeamsByClusterId(cluster.id, true).catch((error) => {
-        console.error("Failed to sync special cluster teams:", error);
-        // Remove from set if fetch failed so it can be retried
-        lastFetchedSpecialClustersRef.current.delete(cluster.id);
-      });
-    });
-  }, [clusterIdsString, fetchTeamsByClusterId]);
 
   const handleOpenAreYouSure = (
     teamName: string,

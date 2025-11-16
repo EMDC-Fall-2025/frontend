@@ -10,8 +10,6 @@ import theme from "./theme";
 import Navbar from "./components/Navbar";
 import { useAuthStore } from "./store/primary_stores/authStore";
 import Logout from "./pages/Logout";
-import Preloader from "./components/Preloader";
-import { useEffect } from "react";
 import ManageContest from "./pages/ManageContest";
 import Coach from "./pages/Coach";
 import JournalScore from "./pages/JournalScore";
@@ -31,8 +29,6 @@ import MultiTeamPresentationScore from "./pages/PresentationMultiTeamScore";
 import MultiTeamJournalScore from "./pages/JournalMultiTeamScore";
 import MultiTeamMachineDesignScore from "./pages/MachineDesignMultiTeamScore";
 import ChampionshipScore from "./pages/ChampionshipScore";
-import GeneralPenaltiesMultiTeam from "./pages/GeneralPenaltiesMultiTeam";
-import RunPenaltiesMultiTeam from "./pages/RunPenaltiesMultiTeam";
 import ChampionshipScoreBreakdown from "./pages/ChampionshipScoreBreakdown";
 import RedesignScoreBreakdown from "./pages/RedesignScoreBreakdown";
 import ContestScores from "./pages/ContestScores";
@@ -45,27 +41,11 @@ import Ranking from "./components/Tables/Rankings";
 
 function App() {
   const currentLink = useLocation().pathname;
-  const { isAuthenticated, role, showPreloader, setShowPreloader } = useAuthStore();
-
-
-
-  // Hide preloader after it completes its animation
-  useEffect(() => {
-    if (showPreloader) {
-      const timer = setTimeout(() => {
-        setShowPreloader(false);
-      }, 1500); // Match preloader duration
-      return () => clearTimeout(timer);
-    }
-  }, [showPreloader, setShowPreloader]);
-
-
+  const { isAuthenticated, role } = useAuthStore();
 
   return (
     <>
       <ThemeProvider theme={theme}>
-        {/* Show preloader only after login, not on reload */}
-        {showPreloader && <Preloader />}
         {currentLink !== "/set-password/" &&
           currentLink !== "/forgot-password/" &&
           currentLink !== "/login/" &&
@@ -128,18 +108,6 @@ function App() {
             <Route
               path="/multi-team-presentation-score/:judgeId/:contestId/"
               element={<MultiTeamPresentationScore />}
-            />
-          )}
-          {isAuthenticated && role?.user_type != 4 && (
-            <Route
-              path="/multi-team-general-penalties/:judgeId/:contestId/"
-              element={<GeneralPenaltiesMultiTeam />}
-            />
-          )}
-          {isAuthenticated && role?.user_type != 4 && (
-            <Route
-              path="/multi-team-run-penalties/:judgeId/:contestId/"
-              element={<RunPenaltiesMultiTeam />}
             />
           )}
 

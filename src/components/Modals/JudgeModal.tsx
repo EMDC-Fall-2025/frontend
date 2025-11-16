@@ -34,19 +34,14 @@ export interface IJudgeModalProps {
   contestid?: number;
   clusters?: Cluster[];
   judgeData?: JudgeData;
-  clusterContext?: Cluster;
   onSuccess?: () => void;
 }
 
-/**
- * Modal component for creating or editing judges.
- * Handles judge creation, updates, and assignment to clusters and contests.
- */
 export default function JudgeModal(props: IJudgeModalProps) {
-  const { handleClose, open, mode, judgeData, clusters, contestid, clusterContext, onSuccess } = props;
+  const { handleClose, open, mode, judgeData, clusters, contestid, onSuccess } = props;
 
   const { addJudgeToContest, updateJudgeInContest } = useContestJudgeStore();
-  const { updateJudgeInAllClusters, addJudgeToCluster, judgesByClusterId, fetchAllClustersByJudgeId } = useMapClusterJudgeStore();
+  const { updateJudgeInAllClusters, addJudgeToCluster, judgesByClusterId } = useMapClusterJudgeStore();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -83,14 +78,8 @@ export default function JudgeModal(props: IJudgeModalProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const currentCluster = clusters?.find(cluster => cluster.id === clusterId);
-  // For edit mode, use clusterContext as the original cluster (the one being edited from)
-  // For create mode, there is no original cluster
-  const originalCluster = mode === "edit" ? clusterContext : judgeData?.cluster;
+  const originalCluster = judgeData?.cluster;
   
-  /**
-   * Determines the cluster type based on cluster properties.
-   * Checks cluster_type field and cluster name for championship/redesign indicators.
-   */
   const getClusterType = (cluster: typeof currentCluster) => {
     if (!cluster) return 'preliminary';
     if (cluster.cluster_type === 'championship' || cluster.cluster_name?.toLowerCase().includes('championship')) return 'championship';
@@ -192,11 +181,6 @@ export default function JudgeModal(props: IJudgeModalProps) {
       return;
     }
 
-    // Remove hover/focus from the submit button to avoid lingering hover styles
-    if (typeof window !== "undefined" && document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-
     if (mode === "new") {
       await handleCreateJudge();
     } else {
@@ -246,15 +230,10 @@ export default function JudgeModal(props: IJudgeModalProps) {
   const handleEditJudge = async () => {
     if (contestid && judgeData) {
       try {
-        // Prioritize dropdown selection over context
-        const selectedClusterFromProps = clusterContext || judgeData.cluster;
-
-        // Simple logic: if user selected something in dropdown, use it; otherwise use context
-        const selectedClusterId = clusterId !== -1 ? clusterId : selectedClusterFromProps?.id || -1;
-
-        const selectedCluster = clusters?.find(c => c.id === selectedClusterId) || selectedClusterFromProps;
+        const selectedClusterId = clusterId !== -1 ? clusterId : (judgeData.cluster?.id || -1);
+        const selectedCluster = clusters?.find(cluster => cluster.id === selectedClusterId);
         const selectedClusterType = getClusterType(selectedCluster);
-
+        
         let allowedSheets = selectedSheets;
         if (selectedClusterType === 'championship') {
               allowedSheets = ["championshipSS"];
@@ -262,78 +241,37 @@ export default function JudgeModal(props: IJudgeModalProps) {
               allowedSheets = ["redesignSS"];
               }
 
-        // Get all existing cluster assignments for this judge
-        const existingClusters = await fetchAllClustersByJudgeId(judgeData.id);
-
-        // Build the complete cluster assignments list
-        const clusterAssignments = [];
-
-        // Add/update the preliminary cluster assignment (the one being edited)
-        clusterAssignments.push({
-          clusterid: selectedClusterId,
-          contestid: contestid,
-          presentation: allowedSheets.includes("presSS"),
-          journal: allowedSheets.includes("journalSS"),
-          mdo: allowedSheets.includes("mdoSS"),
-          runpenalties: allowedSheets.includes("runPenSS"),
-          otherpenalties: allowedSheets.includes("genPenSS"),
-          redesign: allowedSheets.includes("redesignSS"),
-          championship: allowedSheets.includes("championshipSS"),
-        });
-
-        // Add all existing championship/redesign assignments (preserve them)
-        for (const existingCluster of existingClusters as any) {
-          const clusterType = getClusterType(existingCluster);
-          if (clusterType === 'championship' || clusterType === 'redesign') {
-            // Keep championship/redesign assignments
-            clusterAssignments.push({
-              clusterid: existingCluster.id,
-              contestid: existingCluster.contest_id,
-              presentation: existingCluster.sheet_flags?.presentation || false,
-              journal: existingCluster.sheet_flags?.journal || false,
-              mdo: existingCluster.sheet_flags?.mdo || false,
-              runpenalties: existingCluster.sheet_flags?.runpenalties || false,
-              otherpenalties: existingCluster.sheet_flags?.otherpenalties || false,
-              redesign: existingCluster.sheet_flags?.redesign || false,
-              championship: existingCluster.sheet_flags?.championship || false,
-            });
-          }
-          // Skip preliminary clusters - we'll replace with the new one
-        }
-
         const updatedData = {
           id: judgeData.id,
           first_name: firstName,
           last_name: lastName,
           phone_number: phoneNumber,
           presentation: allowedSheets.includes("presSS"),
-          journal: allowedSheets.includes("journalSS"),
           mdo: allowedSheets.includes("mdoSS"),
+          journal: allowedSheets.includes("journalSS"),
           runpenalties: allowedSheets.includes("runPenSS"),
           otherpenalties: allowedSheets.includes("genPenSS"),
-          clusterid: selectedClusterId,
+          redesign: allowedSheets.includes("redesignSS"),
+          championship: allowedSheets.includes("championshipSS"),
           username: email,
+          clusterid: selectedClusterId,
+          original_cluster_id: judgeData.cluster?.id || selectedClusterId,
           role: selectedTitle,
-          clusters: clusterAssignments, // Send ALL cluster assignments
         };
 
-        const updatedJudge = await editJudge(updatedData as any);
-
+        const updatedJudge = await editJudge(updatedData);
         if (updatedJudge && contestid) {
           updateJudgeInContest(contestid, updatedJudge);
-
-          // Handle cluster movement in frontend state
-          const originalPreliminaryCluster = existingClusters.find((cluster: any) => getClusterType(cluster) === 'preliminary');
-
-          if (originalPreliminaryCluster && originalPreliminaryCluster.id !== selectedClusterId) {
-            // Judge is moving between clusters
-            const oldClusterJudges = judgesByClusterId[originalPreliminaryCluster.id] || [];
+          updateJudgeInAllClusters(updatedJudge);
+          
+          const originalClusterId = judgeData.cluster?.id;
+          if (originalClusterId && originalClusterId !== selectedClusterId) {
+            const oldClusterJudges = judgesByClusterId[originalClusterId] || [];
             const newClusterJudges = judgesByClusterId[selectedClusterId] || [];
-
             useMapClusterJudgeStore.setState({
               judgesByClusterId: {
                 ...judgesByClusterId,
-                [originalPreliminaryCluster.id]: oldClusterJudges.filter(j => j.id !== judgeData.id),
+                [originalClusterId]: oldClusterJudges.filter(j => j.id !== judgeData.id),
                 [selectedClusterId]: [
                   ...newClusterJudges.filter(j => j.id !== judgeData.id),
                   updatedJudge
@@ -341,8 +279,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
               }
             });
           } else {
-            // Just updating judge info within same cluster
-            updateJudgeInAllClusters(updatedJudge);
+            addJudgeToCluster(selectedClusterId, updatedJudge);
           }
         }
 
@@ -363,25 +300,26 @@ export default function JudgeModal(props: IJudgeModalProps) {
 
   const handleScoringSheetsChange = (event: any) => {
     const value = event.target.value as string[];
-
-    const hasPreliminarySheets = value.some(sheet =>
+    
+    const hasPreliminarySheets = value.some(sheet => 
       scoringSheetOptions.find(opt => opt.value === sheet)?.isPreliminary
     );
     const hasRedesignSheets = value.includes("redesignSS");
     const hasChampionshipSheets = value.includes("championshipSS");
-
-    let finalValue = value;
+    
     if (hasRedesignSheets || hasChampionshipSheets) {
-      finalValue = value.filter(sheet =>
+      const nonPreliminarySheets = value.filter(sheet => 
         !scoringSheetOptions.find(opt => opt.value === sheet)?.isPreliminary
       );
+      setSelectedSheets(nonPreliminarySheets);
     } else if (hasPreliminarySheets) {
-      finalValue = value.filter(sheet =>
+      const preliminarySheets = value.filter(sheet => 
         scoringSheetOptions.find(opt => opt.value === sheet)?.isPreliminary
       );
+      setSelectedSheets(preliminarySheets);
+    } else {
+      setSelectedSheets(value);
     }
-
-    setSelectedSheets(finalValue);
   };
 
   useEffect(() => {
@@ -493,8 +431,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
             >
               {clusters
                 ?.filter(cluster => {
-                  // In edit mode, only show preliminary clusters (never show championship/redesign)
-                  if (mode === "edit") {
+                  if (mode === "edit" && isPreliminaryCluster && originalCluster) {
                     return getClusterType(cluster) === 'preliminary';
                   }
                   return true;

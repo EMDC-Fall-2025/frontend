@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "../../lib/api";
 import { Cluster } from "../../types";
-import { dispatchDataChange } from "../../utils/dataChangeEvents";
 
 interface ClusterState {
   cluster: Cluster | null;
@@ -62,10 +61,6 @@ export const useClusterStore = create<ClusterState>()(
           const createdCluster = (response.data as any)?.cluster || response.data;
           set({ cluster: createdCluster });
           set({ clusterError: null });
-          // Dispatch event to notify other components
-          if (createdCluster?.id) {
-            dispatchDataChange({ type: 'cluster', action: 'create', id: createdCluster.id, contestId: data.contestid });
-          }
           return createdCluster;
         } catch (error) {
           const errorMessage = "Failed to create cluster";
@@ -84,12 +79,7 @@ export const useClusterStore = create<ClusterState>()(
             throw new Error(`Unexpected status ${res.status}`);
           }
           set({ clusterError: null });
-          const updatedCluster = (res.data as any)?.cluster;
-          // Dispatch event to notify other components
-          if (updatedCluster?.id) {
-            dispatchDataChange({ type: 'cluster', action: 'update', id: updatedCluster.id });
-          }
-          return updatedCluster;
+          return (res.data as any)?.cluster;
         } catch (error: any) {
           const msg = error?.response?.data?.detail || error?.message || "Failed to edit cluster";
           set({ clusterError: msg });
@@ -105,8 +95,6 @@ export const useClusterStore = create<ClusterState>()(
           await api.delete(`/api/cluster/delete/${clusterId}/`);
           set({ cluster: null });
           set({ clusterError: null });
-          // Dispatch event to notify other components
-          dispatchDataChange({ type: 'cluster', action: 'delete', id: clusterId });
         } catch (error) {
           const errorMessage = "Failed to delete cluster";
           set({ clusterError: errorMessage });

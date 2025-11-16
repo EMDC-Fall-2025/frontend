@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { api } from "../../lib/api";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { Judge, Cluster } from "../../types";
-import { dispatchDataChange } from "../../utils/dataChangeEvents";
 
 interface MapClusterJudgeState {
   judgesByClusterId: { [key: number]: Judge[] };
@@ -17,7 +16,7 @@ interface MapClusterJudgeState {
   addJudgeToCluster: (clusterId: number, judge: Judge) => void;
   fetchClusterByJudgeId: (judgeId: number) => Promise<void>;
   fetchClustersForJudges: (judges: Judge[]) => Promise<void>;
-  fetchAllClustersByJudgeId: (judgeId: number, forceRefresh?: boolean) => Promise<Cluster[]>;
+  fetchAllClustersByJudgeId: (judgeId: number) => Promise<Cluster[]>;
   createClusterJudgeMapping: (mapData: any) => Promise<void>;
   deleteClusterJudgeMapping: (
     mapId: number,
@@ -185,17 +184,14 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
         }
       },
 
-      fetchAllClustersByJudgeId: async (judgeId: number, _forceRefresh: boolean = false) => {
-        // Note: We don't cache clusters because they can change when judge is assigned to new contests
-        // Always fetch fresh data to ensure we get all clusters
+      fetchAllClustersByJudgeId: async (judgeId: number) => {
         set({ isLoadingMapClusterJudge: true });
         try {
           const response = await api.get(
             `/api/mapping/clusterToJudge/getAllClustersByJudge/${judgeId}/`
           );
-          const clusters = response.data?.Clusters || [];
           set({ mapClusterJudgeError: null });
-          return clusters;
+          return response.data?.Clusters || [];
         } catch (error) {
           const errorMessage = "Error fetching all clusters for judge";
           set({ mapClusterJudgeError: errorMessage });
@@ -279,14 +275,6 @@ export const useMapClusterJudgeStore = create<MapClusterJudgeState>()(
           await api.delete(`/api/mapping/clusterToJudge/remove/${judgeId}/${clusterId}/`);
       
           set({ mapClusterJudgeError: null });
-          
-          // Emit data change event to notify judge dashboard and other components
-          dispatchDataChange({
-            type: 'judge',
-            action: 'delete',
-            judgeId: judgeId,
-            clusterId: clusterId,
-          });
         } catch (error) {
           set((state) => ({
             judgesByClusterId: {

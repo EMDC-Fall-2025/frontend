@@ -6,13 +6,10 @@ import { Contest, Team } from "../../types";
 interface MapContestToTeamState {
   contestsForTeams: { [key: number]: Contest | null };
   teamsByContest: Team[];
-  teamsByContestMap?: { [contestId: number]: Team[] };
   isLoadingMapContestToTeam: boolean;
   mapContestToTeamError: string | null;
   fetchContestsByTeams: (teamIds: Team[]) => Promise<void>;
-  fetchTeamsByContest: (contestId: number, forceRefresh?: boolean) => Promise<void>;
-  updateContestInTeams: (updatedContest: Contest) => void;
-  removeContestFromTeams: (contestId: number) => void;
+  fetchTeamsByContest: (contestId: number) => Promise<void>;
   clearContests: () => void;
   clearTeamsByContest: () => void;
 }
@@ -24,74 +21,22 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
       isLoadingMapContestToTeam: false,
       mapContestToTeamError: null,
       teamsByContest: [],
-      teamsByContestMap: {},
 
       clearContests: () => set({ contestsForTeams: {} }),
-      clearTeamsByContest: () => set({ teamsByContest: [], teamsByContestMap: {} }),
-
-      updateContestInTeams: (updatedContest: Contest) => {
-        set((state) => {
-          const updatedContestsForTeams = { ...state.contestsForTeams };
-          // Update contest data for all teams that have this contest
-          Object.keys(updatedContestsForTeams).forEach((teamIdStr) => {
-            const teamId = parseInt(teamIdStr, 10);
-            const contest = updatedContestsForTeams[teamId];
-            if (contest && contest.id === updatedContest.id) {
-              updatedContestsForTeams[teamId] = updatedContest;
-            }
-          });
-          return { contestsForTeams: updatedContestsForTeams };
-        });
-      },
-
-      removeContestFromTeams: (contestId: number) => {
-        set((state) => {
-          const updatedContestsForTeams = { ...state.contestsForTeams };
-          const updatedTeamsByContestMap = { ...(state.teamsByContestMap || {}) };
-
-          // Remove contest from contestsForTeams for all teams that had this contest
-          Object.keys(updatedContestsForTeams).forEach((teamIdStr) => {
-            const teamId = parseInt(teamIdStr, 10);
-            const contest = updatedContestsForTeams[teamId];
-            if (contest && contest.id === contestId) {
-              delete updatedContestsForTeams[teamId];
-            }
-          });
-
-          // Remove contest from teamsByContestMap
-          delete updatedTeamsByContestMap[contestId];
-
-          // Clear current contest data if it matches
-          const updatedTeamsByContest = state.teamsByContestMap?.[contestId] ? [] : state.teamsByContest;
-
-          return {
-            contestsForTeams: updatedContestsForTeams,
-            teamsByContestMap: updatedTeamsByContestMap,
-            teamsByContest: updatedTeamsByContest,
-          };
-        });
-      },
+      clearTeamsByContest: () => set({ teamsByContest: [] }),
 
       fetchContestsByTeams: async (teams: Team[]) => {
-        // Check cache first - if we already have contest data for all teams, return early
-        const state = get();
-        const teamsNeedingData = teams.filter(team => !state.contestsForTeams[team.id]);
-        
-        if (teamsNeedingData.length === 0) {
-          return; // All teams already have cached contest data
-        }
-        
         set({ isLoadingMapContestToTeam: true });
         try {
           const response = await api.post(
             "/api/mapping/contestToTeam/contestsByTeams/",
-            teamsNeedingData
+            teams
           );
 
-          set((currentState) => ({
-            contestsForTeams: { ...currentState.contestsForTeams, ...response.data },
+          set({
+            contestsForTeams: response.data,
             mapContestToTeamError: null,
-          }));
+          });
         } catch (error: any) {
           const errorMessage = "Failed to fetch contests by team IDs";
           set({ mapContestToTeamError: errorMessage });
@@ -101,25 +46,28 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
         }
       },
 
-      fetchTeamsByContest: async (contestId: number, forceRefresh: boolean = false) => {
-        // Instant render from cache if available and not forcing refresh
-        const byContestMap = get().teamsByContestMap || {};
-        if (!forceRefresh && byContestMap[contestId] && byContestMap[contestId]!.length > 0) {
-          set({ teamsByContest: byContestMap[contestId]!, mapContestToTeamError: null });
-          return;
+      fetchTeamsByContest: async (contestId: number) => {
+        // Check cache first - if we already have teams for this contest, return early
+        // teamsByContest is a single array, so we check if it's already populated
+        const cachedTeams = get().teamsByContest;
+        if (cachedTeams && cachedTeams.length > 0) {
+          // Check if any team belongs to this contest
+          const hasTeamsForContest = cachedTeams.some(team => (team as any).contest_id === contestId);
+          if (hasTeamsForContest) {
+            return; // Use cached data
+          }
         }
-
+        
         set({ isLoadingMapContestToTeam: true });
         try {
           const response = await api.get(
             `/api/mapping/teamToContest/getTeamsByContest/${contestId}/`
           );
 
-          set((state) => ({
+          set({
             teamsByContest: response.data,
-            teamsByContestMap: { ...(state.teamsByContestMap || {}), [contestId]: response.data },
             mapContestToTeamError: null,
-          }));
+          });
         } catch (error: any) {
           const errorMessage = "Failed to fetch teams by contest id";
           set({ mapContestToTeamError: errorMessage });
@@ -135,5 +83,3 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
     }
   )
 );
-
-

@@ -4,7 +4,6 @@ import { api } from "../../lib/api";
 import { Contest, Organizer } from "../../types";
 import useContestStore from "../primary_stores/contestStore";
 import useOrganizerStore from "../primary_stores/organizerStore";
-import { dispatchDataChange } from "../../utils/dataChangeEvents";
 
 interface MapContestOrganizerState {
   contests: Contest[];
@@ -138,10 +137,6 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
             });
           }
           
-          // Dispatch data change event for contest update (organizer assignment changed)
-          console.log('🚀 Dispatching contest update event for organizer assignment:', contestId);
-          dispatchDataChange({ type: 'contest', action: 'update', id: contestId });
-          
           set({ mapContestOrganizerError: null });
         } catch (error) {
           const errorMessage = "Error creating organizer contest mapping";
@@ -188,10 +183,6 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
             
             return updates;
           });
-
-          
-          dispatchDataChange({ type: 'contest', action: 'update', id: contestId });
-
           set({ mapContestOrganizerError: null });
         } catch (error) {
           const errorMessage = "Error deleting organizer contest mapping";
@@ -375,31 +366,7 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
         });
       },
 
-      fetchContestsByOrganizerId: async (organizerId: number, forceRefresh = false) => {
-        // If we already have contests and not forcing refresh, show them immediately and refresh in background
-        const currentContests = get().contests;
-        if (!forceRefresh && currentContests && currentContests.length > 0) {
-          // Refresh in background without blocking
-          api.get(
-            `/api/mapping/contestToOrganizer/getByOrganizer/${organizerId}/`,
-            {
-              withCredentials: true,
-            }
-          )
-            .then((response) => {
-              set({
-                contests: response.data.Contests,
-                mapContestOrganizerError: null,
-              });
-            })
-            .catch((error: any) => {
-              const errorMessage = error?.response?.data?.detail || error?.message || "Error fetching contests";
-              console.error(`Failed to refresh contests for organizer ${organizerId}:`, errorMessage);
-              // Don't set error on background refresh failure, just log it
-            });
-          return; // Return early with cached data
-        }
-
+      fetchContestsByOrganizerId: async (organizerId: number) => {
         set({
           isLoadingMapContestOrganizer: true,
           mapContestOrganizerError: null,
@@ -407,26 +374,15 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
 
         try {
           const response = await api.get(
-            `/api/mapping/contestToOrganizer/getByOrganizer/${organizerId}/`,
-            {
-              withCredentials: true, // Ensure credentials are sent
-            }
+            `/api/mapping/contestToOrganizer/getByOrganizer/${organizerId}/`
           );
           set({
             contests: response.data.Contests,
           });
           set({ mapContestOrganizerError: null });
-        } catch (error: any) {
-          // Extract detailed error message from backend
-          const errorMessage = error?.response?.data?.detail || error?.message || "Error fetching contests";
+        } catch (error) {
+          const errorMessage = "Error fetching contests";
           set({ mapContestOrganizerError: errorMessage });
-          console.error(`Failed to fetch contests for organizer ${organizerId}:`, errorMessage);
-          
-          // If authentication error, log more details
-          if (error?.response?.status === 401 || errorMessage.includes("Authentication credentials")) {
-            console.error("Session may have expired. Please log in again.");
-          }
-          
           throw new Error(errorMessage);
         } finally {
           set({ isLoadingMapContestOrganizer: false });

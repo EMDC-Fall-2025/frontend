@@ -3,7 +3,6 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "../../lib/api";
 import { EditedJudge, Judge, NewJudge } from "../../types";
 import { extractErrorMessage } from "../../utils/errorHandler";
-import { dispatchDataChange } from "../../utils/dataChangeEvents";
 
 interface JudgeState {
   judge: Judge | null;
@@ -72,16 +71,12 @@ export const useJudgeStore = create<JudgeState>()(
           const { data } = await api.post(`/api/judge/create/`, newJudge);
           const createdJudge = (data as any)?.judge;
           set({ judge: createdJudge, judgeError: null });
-          // Dispatch event to notify other components
-          if (createdJudge?.id) {
-            dispatchDataChange({ type: 'judge', action: 'create', id: createdJudge.id });
-          }
           return createdJudge;
         } catch (judgeError: any) {
           // Convert error to string to prevent React rendering issues
           const errorMessage = extractErrorMessage(judgeError) || "Error creating judge";
           set({ judgeError: errorMessage });
-          throw judgeError; 
+          throw judgeError; // Re-throw the original error
         } finally {
           set({ isLoadingJudge: false });
         }
@@ -96,10 +91,6 @@ export const useJudgeStore = create<JudgeState>()(
             judge: updatedJudge,
           }));
           set({ judgeError: null });
-          // Dispatch event to notify other components
-          if (updatedJudge?.id) {
-            dispatchDataChange({ type: 'judge', action: 'update', id: updatedJudge.id });
-          }
           return updatedJudge;
         } catch (judgeError: any) {
           // Convert error to string to prevent React rendering issues
@@ -116,8 +107,6 @@ export const useJudgeStore = create<JudgeState>()(
         try {
           await api.delete(`/api/judge/delete/${judgeId}/`);
           set({ judgeError: null });
-          // Dispatch event to notify other components
-          dispatchDataChange({ type: 'judge', action: 'delete', id: judgeId });
         } catch (judgeError) {
           const errorMessage = "Error deleting judge:" + judgeError;
           set({ judgeError: errorMessage });

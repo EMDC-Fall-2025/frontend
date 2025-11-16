@@ -5,6 +5,7 @@ import {
   Collapse,
   Container,
   IconButton,
+  Link,
   Paper,
   Table,
   TableBody,
@@ -23,7 +24,6 @@ import theme from "../theme";
 import React from "react";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import useMapScoreSheetStore from "../store/map_stores/mapScoreSheetStore";
 import { useScoreSheetStore } from "../store/primary_stores/scoreSheetStore";
 import AreYouSureModal from "../components/Modals/AreYouSureModal";
@@ -104,7 +104,7 @@ export default function GeneralPenalties() {
       generalPenaltiesQuestions.forEach((question) => {
         const fieldValue = Number(scoreSheet[question.field as keyof ScoreSheet]);
         const pointValue = question.pointValue;
-        newPenaltyState[question.id] = fieldValue === 0 ? 0 : Math.abs(fieldValue) / pointValue;
+        newPenaltyState[question.id] = fieldValue === 0 ? 0 : fieldValue / pointValue;
       });
 
       setPenaltyState(newPenaltyState);
@@ -187,44 +187,28 @@ export default function GeneralPenalties() {
 
   // Loading state: keep original behavior
   return isLoadingScoreSheet ? (
-    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
-      <CircularProgress />
-    </Box>
+    <CircularProgress />
   ) : (
     // Page background and spacing (aligns with Admin/Public pages)
     <Box sx={{ pb: 8, backgroundColor: "#fafafa", minHeight: "100vh" }}>
-      {/* Navigation back to judging dashboard - aligned with navbar */}
-      <Container
-        maxWidth="lg"
-        sx={{
-          px: { xs: 1, sm: 2 },
-          mt: { xs: 1, sm: 2 },
-          mb: 1,
-        }}
-      >
-        <Button
+      <Container maxWidth="lg" sx={{ pt: 4 }}>
+        {/* Back link styled with green accent */}
+        <Link
           onClick={() => navigate(-1)}
-          startIcon={<ArrowBackIcon />}
           sx={{
-            textTransform: "none",
-            color: theme.palette.success.dark,
-            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
-            fontWeight: 500,
-            px: { xs: 1.5, sm: 2 },
-            py: { xs: 0.75, sm: 1 },
-            borderRadius: "8px",
-            transition: "all 0.2s ease",
-            "&:hover": {
-              backgroundColor: "rgba(76, 175, 80, 0.08)",
-              transform: "translateX(-2px)",
-            },
+            textDecoration: "none",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            color: theme.palette.success.main,
+            "&:hover": { color: theme.palette.success.dark },
+            mb: 1.5,
           }}
         >
-          Back to Judging Dashboard
-        </Button>
-      </Container>
-
-      <Container maxWidth="lg" sx={{ pt: 2 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            {"<"} Back to Judging Dashboard{" "}
+          </Typography>
+        </Link>
 
         {/* Card wrapper: title, subtitle, helper text, actions, and table */}
         <Paper
@@ -233,27 +217,14 @@ export default function GeneralPenalties() {
             borderRadius: 3,
             border: `1px solid ${theme.palette.grey[300]}`,
             backgroundColor: "#fff",
-            opacity: scoreSheet?.isSubmitted ? 0.7 : 1,
-            pointerEvents: scoreSheet?.isSubmitted ? 'none' : 'auto',
           }}
         >
           {/* Title + Team */}
-          <Stack spacing={1} sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 3 }, textAlign: "center" }}>
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontWeight: 600,
-                fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" },
-                color: theme.palette.success.main 
-              }}
-            >
+          <Stack spacing={1} sx={{ px: 3, py: 3 }}>
+            <Typography variant="h4" sx={{ fontWeight: 800, color: theme.palette.success.main }}>
               General Penalties
             </Typography>
-            <Typography 
-              variant="subtitle2" 
-              color="text.secondary"
-              sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}
-            >
+            <Typography variant="subtitle2" color="text.secondary">
               {team?.team_name ? `Team: ${team.team_name}` : "Loading team..."}
             </Typography>
           </Stack>
@@ -264,23 +235,15 @@ export default function GeneralPenalties() {
           <Stack
             spacing={1.25}
             direction={{ xs: "column", sm: "row" }}
-            sx={{ px: { xs: 2, sm: 3 }, py: { xs: 1.5, sm: 2 } }}
+            sx={{ px: 3, py: 2 }}
             alignItems={{ xs: "flex-start", sm: "center" }}
             justifyContent="space-between"
           >
             <Box>
-              <Typography 
-                variant="body2" 
-                color="text.secondary"
-                sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}
-              >
+              <Typography variant="body2" color="text.secondary">
                 *Only enter a penalty if it occurred.
               </Typography>
-              <Typography 
-                variant="body2" 
-                color="text.secondary"
-                sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}
-              >
+              <Typography variant="body2" color="text.secondary">
                 *Counters adjust the number of occurrences.
               </Typography>
             </Box>
@@ -292,12 +255,10 @@ export default function GeneralPenalties() {
                 bgcolor: theme.palette.success.main,
                 "&:hover": { bgcolor: theme.palette.success.dark },
                 color: "#fff",
-                minWidth: { xs: "100%", sm: 160 },
-                height: { xs: 40, sm: 44 },
+                minWidth: 160,
+                height: 42,
                 textTransform: "none",
                 borderRadius: 2,
-                fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                fontWeight: 600,
               }}
             >
               Save
@@ -305,41 +266,20 @@ export default function GeneralPenalties() {
           </Stack>
 
           {/* Main content: categories table + disqualification section + submit */}
-          <Box sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 3 } }}>
-        
+          <Box sx={{ px: 3, pb: 3 }}>
+            {/* Bordered, rounded table container for categories */}
             <TableContainer
               component={Paper}
               sx={{
                 borderRadius: 2,
                 border: `1px solid ${theme.palette.grey[200]}`,
                 boxShadow: "none",
-                overflow: { xs: "auto", sm: "hidden" },
-                width: "100%",
-                "&::-webkit-scrollbar": {
-                  height: "8px",
-                },
-                "&::-webkit-scrollbar-track": {
-                  backgroundColor: "#f1f1f1",
-                  borderRadius: "4px",
-                },
-                "&::-webkit-scrollbar-thumb": {
-                  backgroundColor: "#c1c1c1",
-                  borderRadius: "4px",
-                },
-                "&::-webkit-scrollbar-thumb:hover": {
-                  backgroundColor: "#a8a8a8",
-                },
+                overflow: "hidden",
               }}
             >
               <Table
                 sx={{
-                  minWidth: { xs: "600px", sm: "auto" },
-                  "& td, & th": { 
-                    borderColor: theme.palette.grey[200],
-                    fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                    py: { xs: 0.75, sm: 1.25 },
-                    px: { xs: 0.5, sm: 1 }
-                  },
+                  "& td, & th": { borderColor: theme.palette.grey[200] },
                 }}
               >
                 <TableBody>
@@ -415,6 +355,7 @@ export default function GeneralPenalties() {
                         "& > *": { borderBottom: "unset" },
                         transition: "background-color 120ms ease",
                         cursor: "pointer",
+                        "&:hover td": { backgroundColor: "rgba(46,125,50,0.04)" },
                       }}
                       onClick={() => setOpenDisqualifications(!openDisqualifications)}
                     >
@@ -423,14 +364,8 @@ export default function GeneralPenalties() {
                           {openDisqualifications ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
                         </IconButton>
                       </TableCell>
-                      <TableCell component="th" scope="row" sx={{ cursor: "pointer" }}>
-                        <Typography sx={{ 
-                          fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                          fontWeight: 600,
-                          cursor: "pointer"
-                        }}>
-                          Disqualification
-                        </Typography>
+                      <TableCell component="th" scope="row">
+                        <Typography sx={{ fontWeight: 600 }}>Disqualification</Typography>
                       </TableCell>
                     </TableRow>
 
@@ -440,75 +375,27 @@ export default function GeneralPenalties() {
                           <Box sx={{ pt: 1, pb: 1, pl: 0.75, pr: 0.75, flexDirection: "column" }}>
                             {/* Reasons list */}
                             <Box component="ul" sx={{ pl: 2, mb: 1 }}>
-                              <Typography 
-                                component="li" 
-                                sx={{ 
-                                  mb: 1.5,
-                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                                  fontWeight: 400
-                                }}
-                              >
+                              <Typography component="li" sx={{ mb: 1.5 }}>
                                 Corporate logos without written permission. If permission to use a logo is granted, a
                                 written letter of permission must be provided and be kept with the machine.
                               </Typography>
-                              <Typography 
-                                component="li" 
-                                sx={{ 
-                                  mb: 1.5,
-                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                                  fontWeight: 400
-                                }}
-                              >
+                              <Typography component="li" sx={{ mb: 1.5 }}>
                                 Safety issues as deemed by the Judging Committee.
                               </Typography>
-                              <Typography 
-                                component="li" 
-                                sx={{ 
-                                  mb: 1.5,
-                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                                  fontWeight: 400
-                                }}
-                              >
+                              <Typography component="li" sx={{ mb: 1.5 }}>
                                 Use of live animals, hazardous material (toxic, noxious, dangerous), explosives, or flames.
                               </Typography>
-                              <Typography 
-                                component="li" 
-                                sx={{ 
-                                  mb: 1.5,
-                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                                  fontWeight: 400
-                                }}
-                              >
+                              <Typography component="li" sx={{ mb: 1.5 }}>
                                 Use of profane, indecent or lewd expressions, offensive symbols, graphics, or language.
                               </Typography>
-                              <Typography 
-                                component="li" 
-                                sx={{ 
-                                  mb: 1.5,
-                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                                  fontWeight: 400
-                                }}
-                              >
+                              <Typography component="li" sx={{ mb: 1.5 }}>
                                 Any device requiring a combustion engine.
                               </Typography>
-                              <Typography 
-                                component="li" 
-                                sx={{ 
-                                  mb: 1.5,
-                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                                  fontWeight: 400
-                                }}
-                              >
+                              <Typography component="li" sx={{ mb: 1.5 }}>
                                 Unsafe machine or intentionally causing loose/flying objects to go outside set boundaries of the machine.
                               </Typography>
-                              <Typography 
-                                component="li"
-                                sx={{ 
-                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                                  fontWeight: 400
-                                }}
-                              >
-                                Damaging another team's machine.
+                              <Typography component="li">
+                                Damaging another team’s machine.
                               </Typography>
                             </Box>
                           </Box>
@@ -541,16 +428,14 @@ export default function GeneralPenalties() {
             <Button
               variant="contained"
               sx={{
-                mt: { xs: 2, sm: 3 },
+                mt: 3,
                 bgcolor: theme.palette.success.main,
                 "&:hover": { bgcolor: theme.palette.success.dark },
                 color: "#fff",
-                minWidth: { xs: "100%", sm: 200 },
-                height: { xs: 40, sm: 44 },
+                minWidth: 200,
+                height: 45,
                 textTransform: "none",
                 borderRadius: 2,
-                fontSize: { xs: "0.9rem", sm: "1rem" },
-                fontWeight: 600,
               }}
               onClick={() => setOpenAreYouSure(true)}
             >

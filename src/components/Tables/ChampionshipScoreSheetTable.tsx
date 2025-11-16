@@ -688,6 +688,9 @@ export default function ChampionshipScoreSheetTable({
                 sx={{
                   width: "100%",
                   "& .MuiTableRow-root": { transition: "background-color 120ms ease" },
+                  "& tr:hover td": {
+                    backgroundColor: "rgba(46,125,50,0.04)",
+                  },
                   "& td, & th": { 
                     borderColor: theme.palette.grey[200],
                     fontSize: { xs: "0.75rem", sm: "0.95rem" },
@@ -705,16 +708,7 @@ export default function ChampionshipScoreSheetTable({
                             {openQuestions[index + 1] ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
                           </IconButton>
                         </TableCell>
-                        <TableCell 
-                          component="th" 
-                          scope="row" 
-                          sx={{ 
-                            fontWeight: 600, 
-                            wordBreak: "break-word", 
-                            fontSize: { xs: "0.7rem", sm: "0.875rem" },
-                            cursor: "pointer"
-                          }}
-                        >
+                        <TableCell component="th" scope="row" sx={{ fontWeight: 600, wordBreak: "break-word", fontSize: { xs: "0.7rem", sm: "0.875rem" } }}>
                           {question.questionText}
                         </TableCell>
                         <TableCell align="right" sx={{ width: { xs: 32, sm: 40 } }}>
@@ -947,6 +941,9 @@ export default function ChampionshipScoreSheetTable({
                 sx={{
                   width: "100%",
                   "& .MuiTableRow-root": { transition: "background-color 120ms ease" },
+                  "& tr:hover td": {
+                    backgroundColor: "rgba(46,125,50,0.04)",
+                  },
                   "& td, & th": { 
                     borderColor: theme.palette.grey[200],
                     fontSize: { xs: "0.75rem", sm: "0.95rem" },
@@ -964,16 +961,7 @@ export default function ChampionshipScoreSheetTable({
                             {openQuestions[index + 10] ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
                           </IconButton>
                         </TableCell>
-                        <TableCell 
-                          component="th" 
-                          scope="row" 
-                          sx={{ 
-                            fontWeight: 600, 
-                            wordBreak: "break-word", 
-                            fontSize: { xs: "0.7rem", sm: "0.875rem" },
-                            cursor: "pointer"
-                          }}
-                        >
+                        <TableCell component="th" scope="row" sx={{ fontWeight: 600, wordBreak: "break-word", fontSize: { xs: "0.7rem", sm: "0.875rem" } }}>
                           {question.questionText}
                         </TableCell>
                         <TableCell align="right" sx={{ width: { xs: 32, sm: 40 } }}>
@@ -1194,6 +1182,9 @@ export default function ChampionshipScoreSheetTable({
                 sx={{
                   width: "100%",
                   "& .MuiTableRow-root": { transition: "background-color 120ms ease" },
+                  "& tr:hover td": {
+                    backgroundColor: "rgba(46,125,50,0.04)",
+                  },
                   "& td, & th": { 
                     borderColor: theme.palette.grey[200],
                     fontSize: { xs: "0.75rem", sm: "0.95rem" },
@@ -1286,6 +1277,9 @@ export default function ChampionshipScoreSheetTable({
                 sx={{
                   width: "100%",
                   "& .MuiTableRow-root": { transition: "background-color 120ms ease" },
+                  "& tr:hover td": {
+                    backgroundColor: "rgba(46,125,50,0.04)",
+                  },
                   "& td, & th": { 
                     borderColor: theme.palette.grey[200],
                     fontSize: { xs: "0.75rem", sm: "0.95rem" },

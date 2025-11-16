@@ -43,9 +43,7 @@ export default function TeamModal(props: ITeamModalProps) {
   const [coachLastName, setCoachLastName] = useState("");
   const [coachEmail, setCoachEmail] = useState("");
   const { createTeam, editTeam } = useTeamStore();
-  const addTeamToCluster = useMapClusterTeamStore((s) => s.addTeamToCluster);
-  const removeTeamFromOtherClusters = useMapClusterTeamStore((s) => s.removeTeamFromOtherClusters);
-  const fetchTeamsByClusterId = useMapClusterTeamStore((s) => s.fetchTeamsByClusterId);
+  const { addTeamToCluster } = useMapClusterTeamStore();
 
   const title = mode === "new" ? "New Team" : "Edit Team";
 
@@ -54,10 +52,6 @@ export default function TeamModal(props: ITeamModalProps) {
   const handleCreateTeam = async () => {
     if (contestId) {
       try {
-        // Remove hover/focus from the submit button to avoid lingering hover styles
-        if (typeof window !== "undefined" && document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur();
-        }
         // Create team with initial scores and coach information
         const createdTeam = await createTeam({
           team_name: teamName,
@@ -76,28 +70,20 @@ export default function TeamModal(props: ITeamModalProps) {
           last_name: coachLastName || "",
           contestid: contestId,
         });
-
+        
         if (createdTeam) {
-          const allTeamsCluster = clusters?.find((c) => c.cluster_name === "All Teams");
-          // Add to selected cluster first (if not All Teams)
-          if (cluster !== -1 && (!allTeamsCluster || cluster !== allTeamsCluster.id)) {
-            addTeamToCluster(cluster, createdTeam);
-          }
-          // Then ensure presence under All Teams (will not remove from other clusters)
+          // Always add team to "All Teams" cluster in UI
+          const allTeamsCluster = clusters?.find(c => c.cluster_name === "All Teams");
           if (allTeamsCluster) {
             addTeamToCluster(allTeamsCluster.id, createdTeam);
           }
-          // Background refresh both lists to ensure UI sync with backend
-          try {
-            if (cluster !== -1) {
-              fetchTeamsByClusterId(cluster, true);
-            }
-            if (allTeamsCluster?.id) {
-              fetchTeamsByClusterId(allTeamsCluster.id, true);
+          
+          // If a specific cluster was also selected, add team to that cluster too
+          if (cluster !== -1 && cluster !== allTeamsCluster?.id) {
+            addTeamToCluster(cluster, createdTeam);
           }
-          } catch {}
         }
-
+        
         toast.success("Team created successfully!");
         onSuccess?.();
         handleCloseModal();
@@ -110,38 +96,20 @@ export default function TeamModal(props: ITeamModalProps) {
   // Update existing team information and coach details
   const handleEditTeam = async () => {
     try {
-      // Remove hover/focus from the submit button to avoid lingering hover styles
-      if (typeof window !== "undefined" && document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
       // Update team with current form values
-      const updatedTeam = await editTeam({
+      // Note: username is disabled in edit mode, so we use the original teamData username
+      await editTeam({
         id: teamData?.id ?? 0,
         team_name: teamName,
         school_name: schoolName || "NA",
         clusterid: cluster,
-        username: teamData?.username || coachEmail,
+        username: teamData?.username || coachEmail, // Use original username from teamData if available
         first_name: coachFirstName,
         last_name: coachLastName,
         contestid: contestId ?? 0,
       });
 
-      if (updatedTeam && cluster !== -1) {
-        const allTeamsCluster = clusters?.find((c) => c.cluster_name === "All Teams");
-        // Remove from all non-AllTeams clusters, then place in selected cluster
-        removeTeamFromOtherClusters(updatedTeam.id, cluster);
-        addTeamToCluster(cluster, updatedTeam);
-        // Ensure presence in All Teams
-        if (allTeamsCluster?.id) {
-          addTeamToCluster(allTeamsCluster.id, updatedTeam);
-        }
-        // Refresh both views
-        try {
-          await fetchTeamsByClusterId(cluster, true);
-          if (allTeamsCluster?.id) await fetchTeamsByClusterId(allTeamsCluster.id, true);
-        } catch {}
-      }
-
+      // updateTeamInAllClusters is already called in editTeam, so no need to manually update clusters
       toast.success("Team updated successfully!");
       onSuccess?.();
       handleCloseModal();
@@ -183,7 +151,11 @@ export default function TeamModal(props: ITeamModalProps) {
   };
 
   return (
-    <Modal open={open} handleClose={handleCloseModal} title={title}>
+    <Modal
+      open={open}
+      handleClose={handleCloseModal}
+      title={title}
+    >
       <form
         onSubmit={handleSubmit}
         style={{
@@ -254,7 +226,7 @@ export default function TeamModal(props: ITeamModalProps) {
           disabled={mode === "edit"}
           sx={{ mt: 3, width: 300 }}
         />
-
+        
         <Button
           type="submit"
           sx={{
@@ -271,7 +243,7 @@ export default function TeamModal(props: ITeamModalProps) {
               inset 0 1px 0 rgba(255, 255, 255, 0.2)
             `,
             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-            "&:hover": {
+            "&:hover": { 
               bgcolor: theme.palette.success.dark,
               transform: "translateY(-2px)",
               boxShadow: `
@@ -295,3 +267,4 @@ export default function TeamModal(props: ITeamModalProps) {
     </Modal>
   );
 }
+

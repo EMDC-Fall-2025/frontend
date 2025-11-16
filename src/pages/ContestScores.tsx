@@ -1,5 +1,5 @@
 // ContestScores.tsx
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Typography, Container, Tabs, Tab, Box, Stack, Alert, Button } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -32,72 +32,55 @@ export default function ContestScores() {
   const {
     teamsByContest,
     fetchTeamsByContest,
-    isLoadingMapContestToTeam,
+    clearTeamsByContest,
+    clearContests,
   } = useMapContestToTeamStore();
 
   const { awards, AwardsByTeamTable } = useSpecialAwardStore();
   const { coachesByTeams, fetchCoachesByTeams } = useMapCoachToTeamStore();
 
+  const [coachNames, setCoachNames] = useState<{ [key: number]: string }>({});
+  const [teamAwards, setTeamAwards] = useState<{ [key: number]: string }>({});
   const [activeTab, setActiveTab] = useState("prelim");
   const [hasCelebrated, setHasCelebrated] = useState(false);
-  const lastContestIdRef = useRef<number | null>(null);
+  // Check if championship advancement has occurred
 
-  // Check if championship advancement has occurred (memoized)
-  const hasChampionshipAdvance = useMemo(
-    () => teamsByContest.some((team) => team.advanced_to_championship === true),
-    [teamsByContest]
-  );
+  const hasChampionshipAdvance = teamsByContest.some((team) => team.advanced_to_championship === true);
 
-  // Fetch data on mount or contest change - fetchTeamsByContest uses cache internally for instant display
   useEffect(() => {
-    if (!contestIdNumber) return;
-
-    lastContestIdRef.current = contestIdNumber;
-
-    // Fetch all data in parallel 
-    Promise.all([
-      fetchTeamsByContest(contestIdNumber), // Uses cache if available for instant render
-      fetchContestById(contestIdNumber),
-      fetchClustersByContestId(contestIdNumber),
-      getAllJudgesByContestId(contestIdNumber),
-    ]).catch((error) => {
-      console.error("Error fetching contest data:", error);
-    });
-  }, [contestIdNumber, fetchTeamsByContest, fetchContestById, fetchClustersByContestId, getAllJudgesByContestId]);
-
-  // Fetch coaches and awards only for teams missing data (optimized)
-  useEffect(() => {
-    if (teamsByContest.length === 0) return;
-
-    const teamData = teamsByContest.map((team) => ({ id: team.id }));
-    
-    // Only fetch coaches for teams that don't have coach data
-    const teamsNeedingCoaches = teamData.filter((team) => !coachesByTeams[team.id]);
-    if (teamsNeedingCoaches.length > 0) {
-      fetchCoachesByTeams(teamsNeedingCoaches);
+    if (contestIdNumber) {
+      fetchTeamsByContest(contestIdNumber);
+      fetchContestById(contestIdNumber);
+      fetchClustersByContestId(contestIdNumber);
+      getAllJudgesByContestId(contestIdNumber);
+      fetchTeamsByContest(contestIdNumber);
     }
-    
-    // Only fetch awards for teams that don't have award data
-    teamsByContest.forEach((team) => {
-      if (!awards[team.id]) {
-        AwardsByTeamTable(team.id);
-      }
-    });
-  }, [teamsByContest, coachesByTeams, awards, fetchCoachesByTeams, AwardsByTeamTable]);
+    return () => {
+      clearTeamsByContest();
+      clearContests();
+    };
+  }, [contestIdNumber]);
 
-  // Memoize coach names and awards computation for instant rendering
-  const coachNames = useMemo(() => {
-    return teamsByContest.reduce((acc, team) => {
+  useEffect(() => {
+    if (teamsByContest.length > 0) {
+      const teamData = teamsByContest.map((team) => ({ id: team.id }));
+      fetchCoachesByTeams(teamData);
+      teamsByContest.forEach((team) => {
+        AwardsByTeamTable(team.id);
+      });
+    }
+  }, [teamsByContest]);
+
+  useEffect(() => {
+    const newCoachNames = teamsByContest.reduce((acc, team) => {
       const teamCoachData = coachesByTeams[team.id];
       const fullName = teamCoachData
         ? `${teamCoachData.first_name || ""} ${teamCoachData.last_name || ""}`.trim()
         : "N/A";
       return { ...acc, [team.id]: fullName || "N/A" };
-    }, {} as { [key: number]: string });
-  }, [teamsByContest, coachesByTeams]);
+    }, {});
 
-  const teamAwards = useMemo(() => {
-    return teamsByContest.reduce((acc, team) => {
+    const newTeamAwards = teamsByContest.reduce((acc, team) => {
       const teamAwardsData = awards[team.id];
       let awardString = "N/A";
       if (Array.isArray(teamAwardsData)) {
@@ -106,32 +89,28 @@ export default function ContestScores() {
         awardString = teamAwardsData.award_name || "N/A";
       }
       return { ...acc, [team.id]: awardString };
-    }, {} as { [key: number]: string });
-  }, [teamsByContest, awards]);
+    }, {});
 
-  // Memoize rows computation for instant rendering
-  const rows = useMemo(() => {
-    return teamsByContest.map((team) => ({
-      id: team.id,
-      team_name: team.team_name,
-      school_name: (team as any).school_name || "",
-      team_rank: team.team_rank || 0,
-      // Use preliminary_total_score for preliminary results 
- 
-      total_score: (team as any).preliminary_total_score ?? team.total_score ?? 0,
-      coachName: coachNames[team.id] || "N/A",
-      awards: teamAwards[team.id] || "N/A",
-    }));
-  }, [teamsByContest, coachNames, teamAwards]);
+    setCoachNames(newCoachNames);
+    setTeamAwards(newTeamAwards);
+  }, [awards, coachesByTeams, teamsByContest]);
 
-  // Memoize ranked rows to prevent recalculation
-  const rankedRows = useMemo(() => {
-    const sorted = [...rows].sort((a, b) => b.total_score - a.total_score);
-    return sorted.map((team, index) => ({
-      ...team,
-      team_rank: index + 1
-    }));
-  }, [rows]);
+  const rows = teamsByContest.map((team) => ({
+    id: team.id,
+    team_name: team.team_name,
+    school_name: (team as any).school_name || "",
+    team_rank: team.team_rank || 0,
+    total_score: team.total_score,
+    coachName: coachNames[team.id] || "N/A",
+    awards: teamAwards[team.id] || "N/A",
+  }));
+
+  // Recalculate ranks to ensure no duplicates
+  const sortedRows = [...rows].sort((a, b) => b.total_score - a.total_score);
+  const rankedRows = sortedRows.map((team, index) => ({
+    ...team,
+    team_rank: index + 1
+  }));
 
   // Trigger celebration sprinklers on first load when results are available
   useEffect(() => {
@@ -170,42 +149,40 @@ export default function ContestScores() {
     }
   }, [rankedRows.length, hasCelebrated, activeTab]);
 
-  // Memoize championship rows for instant rendering
-  const championshipRows = useMemo(() => {
-    const championshipTeams = teamsByContest.filter((team) => team.advanced_to_championship);
-    return championshipTeams
-      .map((team) => {
-        const championshipScore = (team as any).championship_total_score || (team as any).championship_score || team.total_score || 0;
-        return {
-          id: team.id,
-          team_name: team.team_name,
-          school_name: (team as any).school_name || "",
-          team_rank: (team as any).championship_rank || 0,
-          total_score: championshipScore,
-          coachName: coachNames[team.id] || "N/A",
-          awards: teamAwards[team.id] || "N/A",
-        };
-      })
-      .sort((a, b) => b.total_score - a.total_score)
-      .slice(0, 6);
-  }, [teamsByContest, coachNames, teamAwards]);
+  // Championship teams - teams that advanced to championship
+  const championshipTeams = teamsByContest.filter((team) => team.advanced_to_championship);
 
-  // Memoize redesign rows for instant rendering
-  const redesignRows = useMemo(() => {
-    const redesignTeams = teamsByContest.filter((team) => !team.advanced_to_championship);
-    return redesignTeams
-      .map((team) => ({
+  const championshipRows = championshipTeams
+    .map((team) => {
+      const championshipScore = (team as any).championship_total_score || (team as any).championship_score || team.total_score || 0;
+      return {
         id: team.id,
         team_name: team.team_name,
         school_name: (team as any).school_name || "",
-        team_rank: (team as any).redesign_rank || 0,
-        total_score: (team as any).redesign_total_score || (team as any).redesign_score || team.total_score || 0,
+        team_rank: (team as any).championship_rank || 0,
+        total_score: championshipScore,
         coachName: coachNames[team.id] || "N/A",
         awards: teamAwards[team.id] || "N/A",
-      }))
-      .sort((a, b) => b.total_score - a.total_score)
-      .slice(0, 3);
-  }, [teamsByContest, coachNames, teamAwards]);
+      };
+    })
+    .sort((a, b) => b.total_score - a.total_score)
+    .slice(0, 6);
+
+  // Redesign teams - teams that did not advance to championship
+  const redesignTeams = teamsByContest.filter((team) => !team.advanced_to_championship);
+
+  const redesignRows = redesignTeams
+    .map((team) => ({
+      id: team.id,
+      team_name: team.team_name,
+      school_name: (team as any).school_name || "",
+      team_rank: (team as any).redesign_rank || 0,
+      total_score: (team as any).redesign_total_score || (team as any).redesign_score || team.total_score || 0,
+      coachName: coachNames[team.id] || "N/A",
+      awards: teamAwards[team.id] || "N/A",
+    }))
+    .sort((a, b) => b.total_score - a.total_score)
+    .slice(0, 3);
 
   if (isCoach && contest && contest.is_open === true) {
     return (
@@ -359,9 +336,9 @@ export default function ContestScores() {
           >
             Preliminary Round – Top 6
           </Typography>
-          {rankedRows.length > 0 ? (
+          {rows.length > 0 ? (
             <ContestResultsTable rows={rankedRows.slice(0, 6)} />
-          ) : !isLoadingMapContestToTeam ? (
+          ) : (
             <Typography 
               sx={{ 
                 textAlign: "center", 
@@ -372,7 +349,7 @@ export default function ContestScores() {
             >
               No preliminary results available.
             </Typography>
-          ) : null}
+          )}
         </Container>
       )}
 

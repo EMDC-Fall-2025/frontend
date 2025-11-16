@@ -55,14 +55,10 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
     return dt && !isNaN(dt.getTime()) ? dt.toLocaleDateString() : String(d || "—");
   };
 
-  /**
-   * Determines which contests to display based on user role:
-   * - Organizers: only their assigned contests
-   * - Judges: their assigned contest
-   * - Admins: all contests
-   * Filters out ended contests (is_open === false && is_tabulated === true).
-   * Memoized to prevent infinite loops in useEffect.
-   */
+  // Determine which contests to display based on user role
+  // Organizers see only their assigned contests, judges see their assigned contest, admins see all contests
+  // Filter out ended contests (is_open === false && is_tabulated === true)
+  // Memoize to prevent infinite loops in useEffect
   const contests = useMemo(() => {
     const sourceContests = propContests || (
       role?.user_type === 2 ? organizerContests : 
@@ -72,13 +68,11 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
     return sourceContests.filter(contest => !(contest.is_open === false && contest.is_tabulated === true));
   }, [propContests, role?.user_type, organizerContests, judgeContest, allContests]);
 
-  /**
-   * Loads contest data based on user role.
-   * Skips fetching if parent component provides contests.
-   */
+  // Load contest data based on user role
   useEffect(() => {
     if (!role) return;
 
+    // if parent passed contests, skip fetching from backend
     if (propContests && propContests.length > 0) return;
 
     let mounted = true;
@@ -110,19 +104,14 @@ export default function ContestOverviewTable({ contests: propContests }: Contest
     propContests, //effect re-evaluates if parent supplies contests later
   ]);
 
-  /**
-   * Memoizes contest IDs as a sorted comma-separated string.
-   * Used as a stable dependency for useEffect to prevent unnecessary refetches.
-   */
+  // Memoize contest IDs string to use as stable dependency
   const contestIdsString = useMemo(() => {
     return contests.map(contest => contest.id).sort().join(',');
   }, [contests]);
 
-  /**
-   * Fetches judges and clusters for each contest in parallel.
-   * Only runs when contestIdsString changes.
-   */
+  // Fetch judges and clusters for each contest in parallel
   useEffect(() => {
+    // contestIdsString is '' when no contests, guard early
     if (!contestIdsString) return;
 
     let mounted = true;

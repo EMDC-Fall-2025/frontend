@@ -101,7 +101,7 @@ export default function Penalties() {
           if (i === 9) {
             newPenaltyState[i] = ""; // comments row
           } else if (pointValue != undefined) {
-            newPenaltyState[i] = fieldValue === 0 ? 0 : Math.abs(fieldValue) / pointValue;
+            newPenaltyState[i] = fieldValue === 0 ? 0 : fieldValue / pointValue;
           }
         } else {
           if (i === 9) {
@@ -224,10 +224,7 @@ export default function Penalties() {
             mb: 1.5,
           }}
         >
-          <Typography sx={{ 
-            fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-            fontWeight: 600 
-          }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
             {"<"} Back to Judging Dashboard{" "}
           </Typography>
         </Link>
@@ -236,8 +233,6 @@ export default function Penalties() {
         <Paper
           elevation={0}
           sx={{
-            opacity: scoreSheet?.isSubmitted ? 0.7 : 1,
-            pointerEvents: scoreSheet?.isSubmitted ? 'none' : 'auto',
             borderRadius: 3,
             border: `1px solid ${theme.palette.grey[300]}`,
             backgroundColor: "#fff",
@@ -247,19 +242,11 @@ export default function Penalties() {
           <Stack spacing={1} sx={{ px: 3, py: 3 }}>
             <Typography
               variant="h4"
-              sx={{ 
-                fontWeight: 600, 
-                fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" },
-                color: theme.palette.success.main 
-              }}
+              sx={{ fontWeight: 800, color: theme.palette.success.main }}
             >
               Run Penalties
             </Typography>
-            <Typography 
-              variant="subtitle2" 
-              color="text.secondary"
-              sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}
-            >
+            <Typography variant="subtitle2" color="text.secondary">
               {team?.team_name ? `Team: ${team.team_name}` : "Loading team..."}
             </Typography>
           </Stack>
@@ -269,18 +256,10 @@ export default function Penalties() {
           {/* Helper text + Save button */}
           <Stack spacing={1.25} direction={{ xs: "column", sm: "row" }} sx={{ px: 3, py: 2 }} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent="space-between">
             <Box>
-              <Typography 
-                variant="body2" 
-                color="text.secondary"
-                sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}
-              >
+              <Typography variant="body2" color="text.secondary">
                 *Only enter a penalty if it occurred.
               </Typography>
-              <Typography 
-                variant="body2" 
-                color="text.secondary"
-                sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}
-              >
+              <Typography variant="body2" color="text.secondary">
                 *Counters adjust the number of occurrences.
               </Typography>
             </Box>
@@ -296,8 +275,6 @@ export default function Penalties() {
                 height: 42,
                 textTransform: "none",
                 borderRadius: 2,
-                fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                fontWeight: 600,
               }}
             >
               Save
@@ -317,12 +294,7 @@ export default function Penalties() {
             >
               <Table
                 sx={{
-                  "& td, & th": { 
-                    borderColor: theme.palette.grey[200],
-                    fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                    py: { xs: 0.75, sm: 1.25 },
-                    px: { xs: 0.5, sm: 1 }
-                  },
+                  "& td, & th": { borderColor: theme.palette.grey[200] },
                 }}
               >
                 <TableBody>

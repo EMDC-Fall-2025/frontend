@@ -6,7 +6,6 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../theme";
 import { useContestStore } from "../store/primary_stores/contestStore";
 import ContestTable from "../components/Tables/ContestTable";
-import InteractiveGrid from "../components/Cube";
 import toast from "react-hot-toast";
 
 // FILE OVERVIEW: page for displaying contests
@@ -50,7 +49,6 @@ export default function Contests() {
       toast.success(
         "🎉 Stay tuned! Results will be available once the contest ends and scores are finalized!",
         {
-          id: "contest-results-stay-tuned",
           duration: 4000,
           style: {
             background: '#4caf50',
@@ -117,12 +115,7 @@ export default function Contests() {
           </Button>
         </Box>
 
-        <Stack 
-          direction="row" 
-          spacing={2} 
-          alignItems="center" 
-          sx={{ mb: 1 }}
-        >
+        <Stack spacing={1} sx={{ mb: 1 }}>
           <Typography
             variant="h1"
             sx={{
@@ -136,9 +129,6 @@ export default function Contests() {
           >
             Contests
           </Typography>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <InteractiveGrid cellSize={16} gap={3} />
-          </Box>
         </Stack>
 
       </Container>

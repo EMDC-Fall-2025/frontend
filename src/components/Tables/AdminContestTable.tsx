@@ -18,8 +18,8 @@ import useContestStore from "../../store/primary_stores/contestStore";
 import { useNavigate } from "react-router-dom";
 import AreYouSureModal from "../Modals/AreYouSureModal";
 import ContestModal from "../Modals/ContestModal";
-import { onDataChange, DataChangeEvent } from "../../utils/dataChangeEvents";
 import dayjs from "dayjs";
+import useMapContestOrganizerStore from "../../store/map_stores/mapContestToOrganizerStore";
 import CampaignIcon from "@mui/icons-material/Campaign";
 import GroupIcon from "@mui/icons-material/Group";
 
@@ -34,48 +34,31 @@ function createData(
   return { id, name, date, is_open, is_tabulated, organizers };
 }
 
-// Global event listener setup - survives component unmounts
-let globalListenerUnsubscribe: (() => void) | null = null;
-
-const setupGlobalListener = () => {
-  if (globalListenerUnsubscribe) {
-    return; 
-  }
-
-  const handleDataChange = (event: DataChangeEvent) => {
-   
-    if (event.type === 'contest' && (event.action === 'create' || event.action === 'update' || event.action === 'delete')) {
-      // Refresh contest data 
-      useContestStore.getState().fetchAllContests(true);  
-    } else if (event.type === 'organizer' && event.action === 'update') {
-      
-      useContestStore.getState().fetchAllContests(true);
-    }
-  };
-
-  globalListenerUnsubscribe = onDataChange(handleDataChange);
-
-};
-
-
-setupGlobalListener();
-
 export default function AdminContestTable() {
   const navigate = useNavigate();
 
+  // Contest store for managing contest data - use selectors to subscribe to updates
   const allContests = useContestStore((state) => state.allContests);
   const fetchAllContests = useContestStore((state) => state.fetchAllContests);
   const deleteContest = useContestStore((state) => state.deleteContest);
   const isLoadingContest = useContestStore((state) => state.isLoadingContest);
+
+  // Organizer mapping store for contest-organizer relationships - use selectors to subscribe to updates
+  const organizerNamesByContests = useMapContestOrganizerStore((state) => state.organizerNamesByContests);
+  const fetchOrganizerNamesByContests = useMapContestOrganizerStore((state) => state.fetchOrganizerNamesByContests);
+  const isLoadingMapContestOrganizer = useMapContestOrganizerStore((state) => state.isLoadingMapContestOrganizer);
+
+  // Modal state management
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
   const [contestId, setContestId] = useState(0);
   const [openContestModal, setOpenContestModal] = useState(false);
   const [contestData, setContestData] = useState<any>();
 
+  // Delayed spinner - only show if loading takes more than 1.5 seconds
   const [showSpinner, setShowSpinner] = useState(false);
   
   useEffect(() => {
-    const loading = isLoadingContest;
+    const loading = isLoadingContest || isLoadingMapContestOrganizer;
     let timer: NodeJS.Timeout;
     
     if (loading) {
@@ -87,9 +70,9 @@ export default function AdminContestTable() {
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [isLoadingContest]);
+  }, [isLoadingContest, isLoadingMapContestOrganizer]);
 
- 
+  // Fetch contests on component mount (only if not cached)
   useEffect(() => {
     if (allContests.length === 0) {
       fetchAllContests();
@@ -97,21 +80,27 @@ export default function AdminContestTable() {
    
   }, []);
 
+  // Fetch organizer names when contests are loaded (only if not cached)
+  useEffect(() => {
+    if (allContests.length > 0 && Object.keys(organizerNamesByContests || {}).length === 0) {
+      fetchOrganizerNamesByContests();
+    }
+  
+  }, [allContests.length]);
 
+  // Transform contest data for table display
+  const rows = useMemo(() => allContests.map((contest) =>
+    createData(
+      contest.id,
+      contest.name,
+      dayjs(contest.date),
+      contest.is_open,
+      contest.is_tabulated,
+      organizerNamesByContests[contest.id]
+    )
+  ), [allContests, organizerNamesByContests]);
 
-
-  const rows = useMemo(() =>
-    allContests.map((contest) =>
-      createData(
-        contest.id,
-        contest.name,
-        dayjs(contest.date),
-        contest.is_open,
-        contest.is_tabulated,
-        (contest as any).organizers || []
-      )
-    ), [allContests]);
-
+  // Open edit modal with contest data
   const handleOpenEditContest = (contest: any) => {
     setContestData({
       contestid: contest.id,
@@ -121,9 +110,12 @@ export default function AdminContestTable() {
     setOpenContestModal(true);
   };
 
+  // Delete contest and refresh data
   const handleDelete = async (id: number) => {
     await deleteContest(id);
   };
+
+  // Open confirmation modal for deletion
   const handleOpenAreYouSure = (id: number) => {
     setContestId(id);
     setOpenAreYouSure(true);
