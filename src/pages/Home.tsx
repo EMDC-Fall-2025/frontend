@@ -19,6 +19,7 @@ export default function Home() {
           <img
             src={image}
             alt="Emdc Homepage"
+            loading="lazy"
             style={{
               width: "calc(100% + 2px)",
               height: "100%",

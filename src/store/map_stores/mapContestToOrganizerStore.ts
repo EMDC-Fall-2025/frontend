@@ -4,6 +4,7 @@ import { api } from "../../lib/api";
 import { Contest, Organizer } from "../../types";
 import useContestStore from "../primary_stores/contestStore";
 import useOrganizerStore from "../primary_stores/organizerStore";
+import { dispatchDataChange } from "../../utils/dataChangeEvents";
 
 interface MapContestOrganizerState {
   contests: Contest[];
@@ -137,6 +138,10 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
             });
           }
           
+          // Dispatch data change event for contest update (organizer assignment changed)
+          console.log('🚀 Dispatching contest update event for organizer assignment:', contestId);
+          dispatchDataChange({ type: 'contest', action: 'update', id: contestId });
+
           set({ mapContestOrganizerError: null });
         } catch (error) {
           const errorMessage = "Error creating organizer contest mapping";
@@ -183,6 +188,10 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
             
             return updates;
           });
+
+          
+          dispatchDataChange({ type: 'contest', action: 'update', id: contestId });
+
           set({ mapContestOrganizerError: null });
         } catch (error) {
           const errorMessage = "Error deleting organizer contest mapping";

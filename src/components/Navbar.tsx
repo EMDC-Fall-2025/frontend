@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import logo from "../assets/EMDC_Fullcolor.png";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
@@ -20,7 +20,7 @@ import SetSharedPasswordDialog from "./Modals/SetSharedPasswordDialog";
 import theme from "../theme";
 import KeyIcon from "@mui/icons-material/Key";
 
-export default function Nav() {
+function Nav() {
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
   const [openSetShared, setOpenSetShared] = useState(false);
   const [snackOpen, setSnackOpen] = useState(false);
@@ -275,3 +275,5 @@ export default function Nav() {
     </>
   );
 }
+
+export default memo(Nav);

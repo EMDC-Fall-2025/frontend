@@ -42,10 +42,9 @@ export const useOrganizerStore = create<OrganizerState>()(
       },
 
       fetchAllOrganizers: async (forceRefresh: boolean = false) => {
-        // Check cache first - if we already have organizers and not forcing refresh, return early
         const cachedOrganizers = get().allOrganizers;
         if (!forceRefresh && cachedOrganizers && cachedOrganizers.length > 0) {
-          return; // Use cached data
+          return;
         }
         
         set({ isLoadingOrganizer: true });
@@ -80,7 +79,6 @@ export const useOrganizerStore = create<OrganizerState>()(
         set({ isLoadingOrganizer: true });
         try {
           const { data } = await api.post(`/api/organizer/create/`, newOrganizer);
-          // Extract organizer from response - backend returns { user, organizer, user_map }
           const apiOrganizer = data.organizer || data;
           const createdOrganizer: Organizer = {
             ...apiOrganizer,
@@ -90,12 +88,10 @@ export const useOrganizerStore = create<OrganizerState>()(
             allOrganizers: [...state.allOrganizers, createdOrganizer],
             organizerError: null,
           }));
-          // Dispatch event to notify other components
           if (createdOrganizer?.id) {
             dispatchDataChange({ type: 'organizer', action: 'create', id: createdOrganizer.id });
           }
         } catch (error: any) {
-          // Convert error to string to prevent React rendering issues
           let errorMessage = "Error creating organizer";
           if (error?.response?.data) {
             const data = error.response.data;
@@ -121,33 +117,29 @@ export const useOrganizerStore = create<OrganizerState>()(
       editOrganizer: async (editedOrganizer: Organizer) => {
         set({ isLoadingOrganizer: true });
         try {
-          // Get the old organizer name before editing
           const state = get();
           const oldOrganizer = state.allOrganizers.find((org) => org.id === editedOrganizer.id);
-          const oldName = oldOrganizer 
+          const oldName = oldOrganizer
             ? `${oldOrganizer.first_name} ${oldOrganizer.last_name}`.trim()
             : null;
 
-          // Ensure id is included in the request body
           const payload = {
             id: editedOrganizer.id,
             first_name: editedOrganizer.first_name,
             last_name: editedOrganizer.last_name,
             username: editedOrganizer.username,
-            password: editedOrganizer.password || "password", // Backend might need this
+            password: editedOrganizer.password || "password",
           };
           const { data } = await api.post(`/api/organizer/edit/`, payload);
-          
-          // Use the response data from backend to update state
+
           const updatedOrganizer = data.organizer || editedOrganizer;
           const finalOrganizer: Organizer = {
             ...updatedOrganizer,
-            username: editedOrganizer.username, // Preserve username from request
+            username: editedOrganizer.username,
           };
-          
-          // Calculate new name
+
           const newName = `${finalOrganizer.first_name} ${finalOrganizer.last_name}`.trim();
-          
+
           set((state) => ({
             allOrganizers: state.allOrganizers.map((org) =>
               org.id === editedOrganizer.id ? finalOrganizer : org
@@ -155,17 +147,14 @@ export const useOrganizerStore = create<OrganizerState>()(
             organizerError: null,
           }));
 
-          // Update organizer name in contest mappings if name changed
           if (oldName && newName && oldName !== newName) {
             const { updateOrganizerNameInContests } = useMapContestOrganizerStore.getState();
             updateOrganizerNameInContests(editedOrganizer.id, oldName, newName);
           }
-          // Dispatch event to notify other components
           if (finalOrganizer?.id) {
             dispatchDataChange({ type: 'organizer', action: 'update', id: finalOrganizer.id });
           }
         } catch (error: any) {
-          // Convert error to string to prevent React rendering issues
           let errorMessage = "Error editing organizer";
           if (error?.response?.data) {
             const data = error.response.data;
@@ -192,17 +181,14 @@ export const useOrganizerStore = create<OrganizerState>()(
         set({ isLoadingOrganizer: true });
         try {
           await api.delete(`/api/organizer/delete/${organizerId}/`);
-          // Only update state if deletion succeeds
           set((state) => ({
             allOrganizers: state.allOrganizers.filter(
               (org) => org.id !== organizerId
             ),
             organizerError: null,
           }));
-          // Dispatch event to notify other components
           dispatchDataChange({ type: 'organizer', action: 'delete', id: organizerId });
         } catch (error: any) {
-          // Extract error message from backend response
           let errorMessage = "Error deleting organizer";
           if (error?.response?.data) {
             const data = error.response.data;

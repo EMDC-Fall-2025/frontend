@@ -13,7 +13,7 @@ interface ContestState {
   contest: Contest | null;
   isLoadingContest: boolean;
   contestError: string | null;
-  fetchAllContests: () => Promise<void>;
+  fetchAllContests: (forceRefresh?: boolean) => Promise<void>;
   fetchContestById: (contestId: number) => Promise<void>;
   createContest: (newContest: NewContest) => Promise<void>;
   editContest: (editedContest: Contest) => Promise<void>;
@@ -37,13 +37,12 @@ export const useContestStore = create<ContestState>()(
         set({ contest: null, contestError: null });
       },
 
-      fetchAllContests: async () => {
-        // Check cache first - if we already have contests, return early
+      fetchAllContests: async (forceRefresh: boolean = false) => {
         const cachedContests = get().allContests;
-        if (cachedContests && cachedContests.length > 0) {
-          return; // Use cached data
+        if (!forceRefresh && cachedContests && cachedContests.length > 0) {
+          return;
         }
-        
+
         set({ isLoadingContest: true });
         try {
           const { data } = await api.get(`/api/contest/getAll/`);
@@ -58,17 +57,15 @@ export const useContestStore = create<ContestState>()(
       },
 
       fetchContestById: async (contestId: number) => {
-        // Check cache first - if we already have this contest, return early
         const cachedContest = get().contest;
         if (cachedContest && cachedContest.id === contestId) {
-          return; // Use cached data
+          return;
         }
-        
-        // Also check allContests array for the contest
+
         const cachedInAll = get().allContests.find(c => c.id === contestId);
         if (cachedInAll) {
           set({ contest: cachedInAll });
-          return; // Use cached data
+          return;
         }
         
         set({ isLoadingContest: true });
@@ -113,20 +110,17 @@ export const useContestStore = create<ContestState>()(
             allContests: state.allContests.map((c) =>
               c.id === updatedContest.id ? updatedContest : c
             ),
-            // Also update the contest object if it matches
             contest: state.contest && state.contest.id === updatedContest.id ? updatedContest : state.contest,
             contestError: null,
           }));
 
-          // Update contest in all mappings (contestsByOrganizers, etc.)
           const { updateContestInMappings } = useMapContestOrganizerStore.getState();
           updateContestInMappings(updatedContest.id, updatedContest);
 
-          // Update contest in mapContestToTeamStore so judge dashboard shows updated name
           const { updateContestInTeams } = useMapContestToTeamStore.getState();
           updateContestInTeams(updatedContest);
 
-          // Update contest in mapContestToJudgeStore so judge dashboard shows updated name
+          const { updateContestInJudges } = useMapContestToJudgeStore.getState();
           const { updateContestForJudge } = useMapContestJudgeStore.getState();
           updateContestForJudge(updatedContest);
         } catch (contestError) {
@@ -147,23 +141,18 @@ export const useContestStore = create<ContestState>()(
             contestError: null,
           }));
 
-          // Remove contest from all organizers' assigned contests
           const { removeContestFromAllOrganizers } = useMapContestOrganizerStore.getState();
           removeContestFromAllOrganizers(contestId);
 
-          // Remove contest from teams mapping
           const { removeContestFromTeams } = useMapContestToTeamStore.getState();
           removeContestFromTeams(contestId);
 
-          // Remove contest from judges mapping
           const { removeContestFromJudges } = useMapContestJudgeStore.getState();
           removeContestFromJudges(contestId);
 
-          // Remove contest from clusters mapping
           const { removeContestFromClusters } = useMapClusterToContestStore.getState();
           removeContestFromClusters(contestId);
 
-          // Dispatch event to notify all components that contest was deleted
           dispatchDataChange({ type: 'contest', action: 'delete', id: contestId });
         } catch (contestError) {
           set({ contestError: "Error deleting contest: " + contestError });

@@ -32,6 +32,7 @@ export const useAuthStore = create<AuthState>()(
       login: async (username, password) => {
         set({ isLoadingAuth: true });
         set({ authError: null });
+
         try {
           const { data } = await api.post(`/api/login/`, {
             username,
@@ -43,7 +44,7 @@ export const useAuthStore = create<AuthState>()(
             role: data.role ?? null,
             isAuthenticated: true,
             isLoadingAuth: false,
-            showPreloader: true, // Show preloader after successful login
+            showPreloader: true,
           });
           set({ authError: null });
         } catch (authError: any) {
@@ -54,13 +55,16 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: async () => {
+        // Clear authentication state immediately for instant UI update
+        set({ user: null, role: null, isAuthenticated: false, showPreloader: false });
+        sessionStorage.clear();
+
         try {
+          // Make logout API call (don't block UI on this)
           await api.post(`/api/logout/`, {});
-        } finally {
-          // Clear all authentication data
-          set({ user: null, role: null, isAuthenticated: false, showPreloader: false });
-          // Clear session storage
-          sessionStorage.clear();
+        } catch (error) {
+          // Even if logout API fails, user is already logged out locally
+          console.error("Logout API error:", error);
         }
       },
     }),

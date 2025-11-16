@@ -1,4 +1,3 @@
-// Admin.tsx
 import React, { useState, useRef } from "react";
 import useContestStore from "../store/primary_stores/contestStore";
 import useOrganizerStore from "../store/primary_stores/organizerStore";
@@ -38,22 +37,26 @@ export default function Admin() {
   const isInitialLoadRef = useRef(true);
   const navigate = useNavigate();
 
-  const { allContests, fetchAllContests, isLoadingContest } = useContestStore();
-  const { allOrganizers, fetchAllOrganizers, isLoadingOrganizer } = useOrganizerStore();
+  const { allContests, isLoadingContest } = useContestStore();
+  const { allOrganizers, isLoadingOrganizer } = useOrganizerStore();
 
-  /**
-   * Loads contests and organizers data on component mount.
-   * Only fetches if data is not already available in store.
-   */
   useEffect(() => {
+    const needsContests = allContests.length === 0;
+    const needsOrganizers = allOrganizers.length === 0;
+
+    if (!needsContests && !needsOrganizers) {
+      setHasLoaded(true);
+      isInitialLoadRef.current = false;
+      return;
+    }
     Promise.all([
-      allContests.length === 0 ? fetchAllContests() : Promise.resolve(),
-      allOrganizers.length === 0 ? fetchAllOrganizers() : Promise.resolve()
+      needsContests ? useContestStore.getState().fetchAllContests() : Promise.resolve(),
+      needsOrganizers ? useOrganizerStore.getState().fetchAllOrganizers() : Promise.resolve()
     ]).then(() => {
       setHasLoaded(true);
       isInitialLoadRef.current = false;
     });
-  }, [allContests.length, allOrganizers.length, fetchAllContests, fetchAllOrganizers]);
+  }, [allContests.length, allOrganizers.length]); // Remove function dependencies to prevent re-runs
 
 
   const handleChange = (_e: React.SyntheticEvent, newValue: string) => {
