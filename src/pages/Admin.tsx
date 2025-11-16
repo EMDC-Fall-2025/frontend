@@ -1,5 +1,4 @@
-// Admin.tsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import useContestStore from "../store/primary_stores/contestStore";
 import useOrganizerStore from "../store/primary_stores/organizerStore";
 import { useEffect } from "react";
@@ -34,43 +33,69 @@ export default function Admin() {
   const [value, setValue] = useState("1");
   const [contestModal, setContestModal] = useState(false);
   const [organizerModal, setOrganizerModal] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const isInitialLoadRef = useRef(true);
   const navigate = useNavigate();
 
-  const { allContests, fetchAllContests, isLoadingContest } = useContestStore();
-const { allOrganizers, fetchAllOrganizers, isLoadingOrganizer } = useOrganizerStore();
+  const { allContests, isLoadingContest } = useContestStore();
+  const { allOrganizers, isLoadingOrganizer } = useOrganizerStore();
 
-useEffect(() => {
-  if (allContests.length === 0) fetchAllContests();
-  if (allOrganizers.length === 0) fetchAllOrganizers();
+  useEffect(() => {
+    const needsContests = allContests.length === 0;
+    const needsOrganizers = allOrganizers.length === 0;
 
-}, []);
+    if (!needsContests && !needsOrganizers) {
+      setHasLoaded(true);
+      isInitialLoadRef.current = false;
+      return;
+    }
+    Promise.all([
+      needsContests ? useContestStore.getState().fetchAllContests() : Promise.resolve(),
+      needsOrganizers ? useOrganizerStore.getState().fetchAllOrganizers() : Promise.resolve()
+    ]).then(() => {
+      setHasLoaded(true);
+      isInitialLoadRef.current = false;
+    });
+  }, [allContests.length, allOrganizers.length]); // Remove function dependencies to prevent re-runs
 
 
   const handleChange = (_e: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);
   };
 
-  //display cards at the top for contests and organizers
-
-  
   const StatCard = ({ value, label }: { value: number | string; label: string }) => (
     <Card
       elevation={0}
       sx={{
-        borderRadius: 3,
-        border: `1px solid ${theme.palette.grey[300]}`,
-        backgroundColor: "#fff",
+        borderRadius: 2,
+        border: `1px solid ${theme.palette.grey[200]}`,
+        background: `linear-gradient(135deg, #ffffff 0%, #fafafa 100%)`,
+        boxShadow: `0 2px 8px rgba(76, 175, 80, 0.08)`,
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+          boxShadow: `0 4px 16px rgba(76, 175, 80, 0.12)`,
+          transform: 'translateY(-1px)',
+        },
       }}
     >
-      <CardContent sx={{ py: 3, px: 4 }}>
-     
+      <CardContent sx={{ py: 1.5, px: 2, position: 'relative' }}>
+        <Box sx={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          width: 20,
+          height: 20,
+          borderRadius: '50%',
+          backgroundColor: theme.palette.success.light,
+          opacity: 0.1,
+        }} />
         <Typography
           variant="h4"
           sx={{ fontWeight: 700, color: theme.palette.success.dark, lineHeight: 1, mb: 0.5 }}
         >
           {value}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
           {label}
         </Typography>
       </CardContent>
@@ -81,8 +106,14 @@ useEffect(() => {
   return (
     <Box sx={{ pb: 8, backgroundColor: "#fafafa", minHeight: "100vh" }}>
       <Container maxWidth="lg" sx={{ pb: 6, px: { xs: 2, sm: 3 } }}>
-        {/* Title in green */}
-        <Stack spacing={1} sx={{ mb: 3, mt: 3 }}>
+        <Box
+          sx={{
+            opacity: hasLoaded ? 1 : 0,
+            transition: hasLoaded ? `opacity ${isInitialLoadRef.current ? '0.6s' : '0.1s'} ease-in` : 'none',
+            pointerEvents: hasLoaded ? 'auto' : 'none',
+          }}
+        >
+          <Stack spacing={1} sx={{ mb: 2, mt: 2 }}>
           <Typography 
             variant="h4" 
             sx={{ 
@@ -305,6 +336,7 @@ useEffect(() => {
             </Box>
           </TabPanel>
         </TabContext>
+        </Box>
       </Container>
 
      

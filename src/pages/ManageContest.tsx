@@ -6,7 +6,7 @@ import {
   Typography,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useParams, Link as RouterLink } from "react-router-dom";
 import theme from "../theme";
 import TabContext from "@mui/lab/TabContext";
@@ -53,6 +53,8 @@ export default function ManageContest() {
   const parsedContestId = contestId ? parseInt(contestId, 10) : 0;
 
   const [value, setValue] = useState(() => getCookie(ACTIVE_TAB_COOKIE) || "1");
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const isInitialLoadRef = useRef(true);
   // Modal state management for different creation/editing operations
   const [openJudgeModal, setOpenJudgeModal] = useState(false);
   const [openClusterModal, setOpenClusterModal] = useState(false);
@@ -80,41 +82,122 @@ export default function ManageContest() {
     [clusters]
   );
 
-  useEffect(() => {
-    if (!parsedContestId) return;
+  // Track last fetched contest ID to prevent refetching on same contest
+  const lastFetchedContestIdRef = useRef<number | null>(null);
 
+  useEffect(() => {
+    if (!parsedContestId) {
+      setHasLoaded(true);
+      isInitialLoadRef.current = false;
+      lastFetchedContestIdRef.current = null;
+      return;
+    }
+
+    // Only fetch if contest ID changed
+    if (lastFetchedContestIdRef.current === parsedContestId) {
+      return;
+    }
+
+    lastFetchedContestIdRef.current = parsedContestId;
+    setHasLoaded(false);
     Promise.all([
       fetchContestById(parsedContestId),
       getAllJudgesByContestId(parsedContestId),
       fetchClustersByContestId(parsedContestId)
-    ]).catch(console.error);
-  }, [parsedContestId]);
+    ]).then(() => {
+      setHasLoaded(true);
+      isInitialLoadRef.current = false;
+    }).catch((error) => {
+      console.error(error);
+      setHasLoaded(true);
+      isInitialLoadRef.current = false;
+    });
+  }, [parsedContestId, fetchContestById, getAllJudgesByContestId, fetchClustersByContestId]);
 
+  // Track which clusters have been fetched to prevent duplicate calls
+  const fetchedClustersRef = useRef<Set<number>>(new Set());
+
+  /**
+   * Fetches teams and judges for clusters that don't have cached data.
+   * Only fetches for clusters that haven't been loaded yet to avoid unnecessary API calls.
+   */
   useEffect(() => {
-    if (!clusters.length) return;
+    if (!clusters.length) {
+      fetchedClustersRef.current.clear();
+      return;
+    }
 
-    const clustersToFetchTeams = clusters.filter(c => !(teamsByClusterId[c.id]?.length > 0));
-    const clustersToFetchJudges = clusters.filter(c => !(judgesByClusterId[c.id]?.length > 0));
+    const currentClusterIds = new Set(clusters.map(c => c.id));
+    
+    // Remove clusters that no longer exist
+    fetchedClustersRef.current.forEach(clusterId => {
+      if (!currentClusterIds.has(clusterId)) {
+        fetchedClustersRef.current.delete(clusterId);
+      }
+    });
+
+    const clustersToFetchTeams = clusters.filter(c => {
+      const hasCached = teamsByClusterId[c.id]?.length > 0;
+      const alreadyFetched = fetchedClustersRef.current.has(c.id);
+      return !hasCached && !alreadyFetched;
+    });
+
+    const clustersToFetchJudges = clusters.filter(c => {
+      const hasCached = judgesByClusterId[c.id]?.length > 0;
+      const alreadyFetched = fetchedClustersRef.current.has(c.id);
+      return !hasCached && !alreadyFetched;
+    });
 
     if (clustersToFetchTeams.length === 0 && clustersToFetchJudges.length === 0) return;
+
+    // Mark clusters as being fetched
+    clustersToFetchTeams.forEach(c => fetchedClustersRef.current.add(c.id));
+    clustersToFetchJudges.forEach(c => fetchedClustersRef.current.add(c.id));
 
     Promise.all([
       ...clustersToFetchTeams.map(c => fetchTeamsByClusterId(c.id)),
       ...clustersToFetchJudges.map(c => fetchJudgesByClusterId(c.id))
     ]).catch(console.error);
-  }, [clusterIds]);
+  }, [clusterIds, teamsByClusterId, judgesByClusterId, fetchTeamsByClusterId, fetchJudgesByClusterId]);
 
-  // Load coaches when teams become available 
+  /**
+   * Aggregates all teams from all clusters into a single array.
+   * Used for loading coach data when teams tab is active.
+   */
   const allTeams = useMemo(() => {
     return clusters.flatMap(c => teamsByClusterId[c.id] ?? []);
-  }, [clusterIds, teamsByClusterId]);
+  }, [clusterIds, teamsByClusterId, clusters]);
+
+  // Memoize team IDs to prevent unnecessary re-fetches
+  const teamIdsString = useMemo(() => {
+    return allTeams.map(t => t.id).sort((a, b) => a - b).join(',');
+  }, [allTeams]);
 
   const isTeamsTab = value === "2";
+  const lastFetchedTeamIdsRef = useRef<string>("");
+  const lastFetchedTabRef = useRef<string>("");
 
+  /**
+   * Loads coach data when teams tab is active and teams are available.
+   * Only fetches coaches when needed to optimize performance.
+   */
   useEffect(() => {
-    if (!isTeamsTab || allTeams.length === 0) return;
+    if (!isTeamsTab || allTeams.length === 0) {
+      lastFetchedTabRef.current = "";
+      return;
+    }
+
+    // Only fetch if tab changed to teams or team IDs changed
+    const shouldFetch = 
+      lastFetchedTabRef.current !== "2" || 
+      lastFetchedTeamIdsRef.current !== teamIdsString;
+
+    if (!shouldFetch) return;
+
+    lastFetchedTabRef.current = "2";
+    lastFetchedTeamIdsRef.current = teamIdsString;
     fetchCoachesByTeams(allTeams).catch(console.error);
-  }, [isTeamsTab, allTeams.length]);
+  }, [isTeamsTab, teamIdsString, allTeams, fetchCoachesByTeams]);
 
 
 
@@ -229,6 +312,13 @@ export default function ManageContest() {
         isolation: "isolate",
       }}
     >
+      <Box
+        sx={{
+          opacity: hasLoaded ? 1 : 0,
+          transition: hasLoaded ? `opacity ${isInitialLoadRef.current ? '0.6s' : '0.1s'} ease-in` : 'none',
+          pointerEvents: hasLoaded ? 'auto' : 'none',
+        }}
+      >
       {/* Action Buttons */}
 {!contest?.is_open && (
   <Box sx={{ mb: 3, display: "flex", flexWrap: "wrap", gap: 1.5 }}>
@@ -417,6 +507,7 @@ export default function ManageContest() {
           )}
         </TabPanel>
       </TabContext>
+      </Box>
     </Container>
 
     {/* Modals */}

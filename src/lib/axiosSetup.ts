@@ -8,10 +8,20 @@ function getCookie(name: string): string | null {
 axios.defaults.withCredentials = true;
 
 // Prime the CSRF cookie once in the browser so subsequent POSTs succeed
+// Use requestIdleCallback for non-blocking initialization
 if (typeof window !== "undefined") {
-  fetch("/api/auth/csrf/", { credentials: "include" }).catch(() => {
-    // ignore — login/signup will retry automatically if needed
-  });
+  const fetchCSRF = () => {
+    fetch("/api/auth/csrf/", { credentials: "include" }).catch(() => {
+      // ignore — login/signup will retry automatically if needed
+    });
+  };
+  
+  // Use requestIdleCallback if available (non-blocking), otherwise setTimeout
+  if (window.requestIdleCallback) {
+    window.requestIdleCallback(fetchCSRF, { timeout: 2000 });
+  } else {
+    setTimeout(fetchCSRF, 0);
+  }
 }
 
 axios.interceptors.request.use((config) => {

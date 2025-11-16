@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "../../lib/api";
 import { Team, NewTeam, EditedTeam } from "../../types";
+import { dispatchDataChange } from "../../utils/dataChangeEvents";
 import { useMapCoachToTeamStore } from "../map_stores/mapCoachToTeamStore";
 import useMapClusterTeamStore from "../map_stores/mapClusterToTeamStore";
 
@@ -81,6 +82,10 @@ export const useTeamStore = create<TeamState>()(
           }
           
           set({ teamError: null });
+          // Dispatch event to notify other components
+          if (createdTeam?.id) {
+            dispatchDataChange({ type: 'team', action: 'create', id: createdTeam.id, contestId: newTeam.contestid });
+          }
           return createdTeam;
         } catch (teamError: any) {
           
@@ -136,6 +141,10 @@ export const useTeamStore = create<TeamState>()(
             const { updateTeamInAllClusters } = useMapClusterTeamStore.getState();
             updateTeamInAllClusters(updatedTeam.id, updatedTeam);
           }
+          // Dispatch event to notify other components
+          if (updatedTeam?.id) {
+            dispatchDataChange({ type: 'team', action: 'update', id: updatedTeam.id, contestId: editedTeam.contestid });
+          }
           return updatedTeam;
         } catch (teamError: any) {
          
@@ -167,6 +176,8 @@ export const useTeamStore = create<TeamState>()(
           await api.delete(`/api/team/delete/${teamId}/`);
           set({ team: null });
           set({ teamError: null });
+          // Dispatch event to notify other components
+          dispatchDataChange({ type: 'team', action: 'delete', id: teamId });
         } catch (teamError) {
           set({ teamError: "Error deleting team" });
           throw new Error("Error deleting team");

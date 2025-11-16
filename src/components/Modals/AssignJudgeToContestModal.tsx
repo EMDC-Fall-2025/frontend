@@ -34,6 +34,7 @@ import { useContestStore } from "../../store/primary_stores/contestStore";
 import { Judge } from "../../types";
 import { api } from "../../lib/api";
 import SearchBar from "../SearchBar";
+import { onDataChange, DataChangeEvent } from "../../utils/dataChangeEvents";
 
 export interface IAssignJudgeToContestModalProps {
   open: boolean;
@@ -104,6 +105,69 @@ export default function AssignJudgeToContestModal(
     }
   }, [contestId]);
 
+  // Helper: load clusters and assigned pairs for a contest (with optional force reload)
+  const loadClustersForContest = React.useCallback(
+    async (contestIdToLoad: number, force: boolean = false) => {
+      if (!contestIdToLoad || contestIdToLoad <= 0) {
+        setContestClusters([]);
+        setAssignedJudgeClusterPairs(new Set());
+        return;
+      }
+
+      // Only fetch if we haven't already loaded clusters for this contest,
+      // unless force is true (e.g., after creating a new cluster or assigning a judge)
+      if (!force && loadedContestIdRef.current === contestIdToLoad) {
+        return;
+      }
+      
+      // Reset the loaded ref if forcing refresh
+      if (force) {
+        loadedContestIdRef.current = -1;
+      }
+
+      try {
+        // Fetch clusters for the selected contest
+        const clustersResponse = await api.get(
+          `/api/mapping/clusterToContest/getAllClustersByContest/${contestIdToLoad}/`
+        );
+
+        const clusters = clustersResponse.data?.Clusters || [];
+        setContestClusters(clusters);
+
+        // Fetch assigned judges by cluster to build precise judge–contest–cluster pairs
+        const assignedPairs = new Set<string>();
+        await Promise.all(
+          clusters.map(async (cluster: any) => {
+            try {
+              const judgesByClusterResponse = await api.get(
+                `/api/mapping/clusterToJudge/getAllJudgesByCluster/${cluster.id}/`
+              );
+              if (judgesByClusterResponse.data?.Judges) {
+                judgesByClusterResponse.data.Judges.forEach((judge: any) => {
+                  const pairKey = `${judge.id}-${contestIdToLoad}-${cluster.id}`;
+                  assignedPairs.add(pairKey);
+                });
+              }
+            } catch (error) {
+              // Ignore individual cluster judge fetch errors; we still keep other data
+            }
+          })
+        );
+
+        // Update assigned judge–cluster pairs to prevent duplicate assignments
+        setAssignedJudgeClusterPairs(assignedPairs);
+
+        // Mark this contest as loaded to prevent duplicate requests
+        loadedContestIdRef.current = contestIdToLoad;
+      } catch (error) {
+        // Handle general data fetching errors
+        setContestClusters([]);
+        setAssignedJudgeClusterPairs(new Set());
+      }
+    },
+    []
+  );
+
   // Load contest and judges when modal opens
   React.useEffect(() => {
     if (!open || !contestId) return;
@@ -111,6 +175,9 @@ export default function AssignJudgeToContestModal(
     let isMounted = true;
     setError(null);
     setSuccess(null);
+    
+    // Reset loaded contest ref when modal opens to ensure fresh data
+    loadedContestIdRef.current = -1;
 
     (async () => {
       try {
@@ -129,6 +196,11 @@ export default function AssignJudgeToContestModal(
         } else {
           setAllJudges([]);
         }
+        
+        // Load clusters for the contest when modal opens
+        if (contestId > 0) {
+          await loadClustersForContest(contestId, true);
+        }
       } catch (err) {
         if (!isMounted) return;
         setError("Failed to load required data");
@@ -138,68 +210,65 @@ export default function AssignJudgeToContestModal(
     return () => {
       isMounted = false;
     };
-  }, [open, contestId, fetchContestById, contest]);
+  }, [open, contestId, fetchContestById, contest, loadClustersForContest]);
 
   // Load clusters when a contest is selected
   React.useEffect(() => {
-    // cluster validation
     if (selectedContestId === -1 || selectedContestId <= 0) {
-    
       setContestClusters([]);
+      setAssignedJudgeClusterPairs(new Set());
       return;
     }
-    
-    // Only fetch if we haven't already loaded clusters for this contest
-    if (loadedContestIdRef.current !== selectedContestId) {
-      // Fetch clusters and assigned judges for this contest
-      (async () => {
-        try {
-          // #Fetch clusters for the selected contest
-          const clustersResponse = await api.get(
-            `/api/mapping/clusterToContest/getAllClustersByContest/${selectedContestId}/`,
-          );
-          
-          // Process clusters response and update state
-          if (clustersResponse.data?.Clusters) {
-            setContestClusters(clustersResponse.data.Clusters);
-          } else {
-            setContestClusters([]);
-          }
-          
-          // Fetch assigned judges by cluster to build precise judge–contest–cluster pairs
-          const assignedPairs = new Set<string>();
-          await Promise.all(
-            (clustersResponse.data?.Clusters || []).map(async (cluster: any) => {
-              try {
-                const judgesByClusterResponse = await api.get(
-                  `/api/mapping/clusterToJudge/getAllJudgesByCluster/${cluster.id}/`,
-                );
-                if (judgesByClusterResponse.data?.Judges) {
-                  judgesByClusterResponse.data.Judges.forEach((judge: any) => {
-                    const pairKey = `${judge.id}-${selectedContestId}-${cluster.id}`;
-                    assignedPairs.add(pairKey);
-                  });
-                }
-              } catch (error) {
-                
-              }
-            })
-          );
 
-          // Update assigned judge–cluster pairs to prevent duplicate assignments
-          setAssignedJudgeClusterPairs(assignedPairs);
-        } catch (error) {
-          // Handle general data fetching errors
-          setContestClusters([]);
-          setAssignedJudgeClusterPairs(new Set());
+    loadClustersForContest(selectedContestId, false);
+  }, [selectedContestId, loadClustersForContest]);
+
+  // Sync with new clusters created while the modal is open (via global dataChange events)
+  React.useEffect(() => {
+    if (!open) return;
+
+    const unsubscribe = onDataChange((detail: DataChangeEvent) => {
+      const currentContestId = contestId || selectedContestId;
+
+      // React to new clusters for the current contest
+      if (detail.type === "cluster" && detail.action === "create") {
+        const eventContestId = detail.contestId;
+        if (currentContestId && eventContestId === currentContestId) {
+          // Force reload clusters so the new one appears without a full page refresh
+          loadClustersForContest(currentContestId, true);
         }
-      })();
-      
-      // Mark this contest as loaded to prevent duplicate requests
-      loadedContestIdRef.current = selectedContestId;
-    }
-   
-  }, [selectedContestId]);
+      }
+
+      // React to new judges being created anywhere – refresh judge list
+      if (detail.type === "judge" && detail.action === "create") {
+        (async () => {
+          try {
+            const response = await api.get("/api/judge/getAll/");
+            if (response.data?.Judges) {
+              setAllJudges(response.data.Judges);
+            }
+          } catch {
+            // Silently ignore; existing list remains
+          }
+        })();
+      }
+
+      // React to judge assignments being created/updated – refresh assigned pairs
+      // This ensures the modal stays in sync when judges are assigned elsewhere
+      if (detail.type === "judge" && (detail.action === "update" || detail.action === "create")) {
+        const currentContestId = contestId || selectedContestId;
+        if (currentContestId && currentContestId > 0) {
+          // Refresh clusters and assigned pairs to reflect new assignments
+          loadClustersForContest(currentContestId, true);
+        }
+      }
+    });
+
+    return () => {
+      // Clean up listener when modal closes/unmounts
+      unsubscribe();
+    };
+  }, [open, contestId, selectedContestId, loadClustersForContest]);
 
   /**
    * Handle form submission for judge assignment
@@ -242,13 +311,9 @@ export default function AssignJudgeToContestModal(
 
       setSuccess(response?.data?.message || "Judge successfully assigned to contest!");
 
-      // Update assigned judge-cluster pairs to include the newly assigned pair
-      setAssignedJudgeClusterPairs((prev) => {
-        const newSet = new Set(prev);
-        const pairKey = `${selectedJudgeId}-${selectedContestId}-${selectedClusterId}`;
-        newSet.add(pairKey);
-        return newSet;
-      });
+      // Refresh assigned judge-cluster pairs from server to ensure accuracy
+      // This ensures the list is synced with the backend state
+      await loadClustersForContest(selectedContestId, true);
 
       onSuccess?.();
 

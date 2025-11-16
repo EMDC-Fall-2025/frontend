@@ -6,6 +6,48 @@ export interface Cluster {
   cluster_type?: ClusterType;
 }
 
+/**
+ * Cluster with additional fields returned from API.
+ * Extends base Cluster with contest_id and sheet_flags.
+ */
+export interface ClusterWithContest extends Cluster {
+  contest_id?: number;
+  sheet_flags?: {
+    presentation?: boolean;
+    journal?: boolean;
+    mdo?: boolean;
+    runpenalties?: boolean;
+    otherpenalties?: boolean;
+    redesign?: boolean;
+    championship?: boolean;
+  };
+}
+
+/**
+ * Question configuration for score sheets.
+ * Used for presentation, journal, and machine design questions.
+ * Some questions use Junior/Senior specific criteria instead of generic criteria1/2/3.
+ */
+export interface Question {
+  id: number;
+  field: string;
+  questionText: string;
+  criteria1?: string;
+  criteria1Points?: string;
+  criteria2?: string;
+  criteria2Points?: string;
+  criteria3?: string;
+  criteria3Points?: string;
+  lowPoints: number;
+  highPoints: number;
+  criteria1Junior?: string;
+  criteria1Senior?: string;
+  criteria2Junior?: string;
+  criteria2Senior?: string;
+  criteria3Junior?: string;
+  criteria3Senior?: string;
+}
+
 export interface ClusterTeamMapping {
   id: number;
   clusterid: number;

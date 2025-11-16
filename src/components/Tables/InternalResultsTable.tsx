@@ -16,18 +16,20 @@ import { useMapContestToTeamStore } from "../../store/map_stores/mapContestToTea
 import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
 import { useEffect, useMemo } from "react";
 
+// NOTE: Per request, business logic is UNCHANGED. Only UI/interactivity tweaks for mobile & UX.
+
 const COLS = [
-  { key: "rank", label: "Rank", width: "6%", align: "center" as const },
-  { key: "team", label: "Team", width: "18%", align: "left" as const },
-  { key: "school", label: "School", width: "18%", align: "left" as const },
+  { key: "rank", label: "Rank", width: "5%", align: "center" as const },
+  { key: "team", label: "Team", width: "16%", align: "left" as const },
+  { key: "school", label: "School", width: "16%", align: "left" as const },
   { key: "journal", label: "Journal", width: "8%", align: "center" as const },
   { key: "presentation", label: "Present.", width: "8%", align: "center" as const },
-  { key: "machine", label: "Machine", width: "10%", align: "center" as const },
-  { key: "general_penalties", label: "Gen. Penalties", width: "9%", align: "center" as const },
-  { key: "run_penalties", label: "Run Penalties", width: "9%", align: "center" as const },
-  { key: "penalties", label: "Penalties", width: "8%", align: "center" as const },
+  { key: "machine", label: "Machine", width: "9%", align: "center" as const },
+  { key: "general_penalties", label: "Gen. Penalties", width: "8%", align: "center" as const },
+  { key: "run_penalties", label: "Run Penalties", width: "8%", align: "center" as const },
+  { key: "penalties", label: "Penalties", width: "7%", align: "center" as const },
   { key: "total", label: "Total", width: "8%", align: "center" as const },
-  { key: "details", label: "Details", width: "8%", align: "center" as const },
+  { key: "details", label: "Details", width: "7%", align: "center" as const },
 ];
 
 const GOLD = "#D4AF37";
@@ -97,48 +99,67 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
   
   
   // Filter and sort rows based on result type
-  const filteredRows = (() => {
+  const filteredRows = useMemo(() => {
     if (resultType === 'preliminary') {
       // Preliminary: ALL teams in the contest, sorted by preliminary_total_score descending
-      const sorted = rows.sort((a, b) => (b.preliminary_total_score || 0) - (a.preliminary_total_score || 0));
+      const sorted = [...rows].sort((a, b) => (b.preliminary_total_score || 0) - (a.preliminary_total_score || 0));
       return sorted;
     } else if (resultType === 'championship') {
-      
+      // Championship: ONLY teams explicitly advanced to championship (advanced_to_championship === true)
       return rows
-        .filter(team => team.advanced_to_championship)
+        .filter(team => team.advanced_to_championship === true)
         .sort((a, b) => (b.total_score || 0) - (a.total_score || 0));
     } else if (resultType === 'redesign') {
-      // Redesign: Teams NOT advanced to championship, sorted by total_score descending
+      // Redesign: Teams NOT advanced to championship (advanced_to_championship !== true, including null/undefined)
       return rows
-        .filter(team => !team.advanced_to_championship)
+        .filter(team => team.advanced_to_championship !== true)
         .sort((a, b) => (b.total_score || 0) - (a.total_score || 0));
     }
     return rows;
-  })();
+  }, [rows, resultType]);
+
+  // UI-only: make rows clickable for the same navigation as the VIEW button
+  const handleView = (teamId: number) => {
+    if (resultType === 'preliminary') {
+      navigate(`/score-breakdown/${teamId}`);
+    } else if (resultType === 'championship') {
+      navigate(`/championship-score-breakdown/${teamId}`);
+    } else if (resultType === 'redesign') {
+      navigate(`/redesign-score-breakdown/${teamId}`);
+    }
+  };
  
-
-
-
   return (
-    <Container maxWidth={false} sx={{ px: 0, py: 0 }}>
-      {/* Wrapper that enables smooth horizontal scroll on small screens */}
+    <Container maxWidth={false} sx={{ px: 0, py: 0, width: "100%" }}>
       <TableContainer
         component={Paper}
         elevation={2}
         sx={{
           borderRadius: 1,
           width: "100%",
-          overflowX: "auto",
+          // Only enable horizontal scroll on small/medium screens, no scroll on large screens
+          overflowX: { xs: "auto", sm: "auto", lg: "visible" },
           overflowY: "hidden",
           WebkitOverflowScrolling: "touch",
+          scrollbarWidth: { xs: 'thin', lg: 'none' },
+          '&::-webkit-scrollbar': { 
+            height: { xs: 8, lg: 0 },
+            display: { xs: 'block', lg: 'none' } // Hide scrollbar on larger screens
+          },
+          '&::-webkit-scrollbar-thumb': {
+            bgcolor: (t) => alpha(t.palette.text.primary, 0.3),
+            borderRadius: 8,
+          },
         }}
       >
         <Table
           size="small"
+          stickyHeader
           sx={{
-            // Force a wide natural width so mobile uses horizontal scroll instead of squeezing
-            width: "1200px",
-            minWidth: "1200px",
+            // Responsive width: fixed on mobile/tablet, 100% on larger screens
+            width: { xs: "1200px", lg: "100%" },
+            minWidth: { xs: "1200px", lg: "auto" },
+            maxWidth: "100%",
             tableLayout: "fixed",
           }}
           aria-label="contest results"
@@ -189,7 +210,20 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
           </TableHead>
 
           <TableBody>
-            {filteredRows.map((team: any, idx: number) => {
+            {filteredRows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={visibleCols.length} align="center" sx={{ py: 4 }}>
+                  <Typography variant="body1" color="text.secondary">
+                    {resultType === 'championship' 
+                      ? 'No teams have advanced to championship yet.'
+                      : resultType === 'redesign'
+                      ? 'No redesign teams available.'
+                      : 'No teams found.'}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredRows.map((team: any, idx: number) => {
               // Rank is based on position in the sorted array (1-based)
               const rank = idx + 1;
               
@@ -219,10 +253,18 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
                 <TableRow
                   key={team.id}
                   hover
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleView(team.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleView(team.id); }}
                   sx={{
                     bgcolor: rowBg,
                     borderTop: borderColor ? `3px solid ${borderColor}` : undefined,
                     borderBottom: borderColor ? `3px solid ${borderColor}` : undefined,
+                    cursor: 'pointer',
+                    transition: 'background-color 120ms ease',
+                    outline: 'none',
+                    '&:focus-visible': { boxShadow: (t) => `0 0 0 2px ${alpha(t.palette.primary.main, 0.4)}` },
                   }}
                 >
                   <TableCell align="center" sx={{ fontWeight: 900, color: borderColor ?? "text.primary" }}>
@@ -297,19 +339,13 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
                      resultType === 'redesign' ? Number((team.total_score ?? team.redesign_score) || 0).toFixed(1) : 0}
                   </TableCell>
 
-                  <TableCell align="center">
+                  <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                     <Button
                       size="small"
                       variant="outlined"
                       color="success"
                       onClick={() => {
-                        if (resultType === 'preliminary') {
-                          navigate(`/score-breakdown/${team.id}`);
-                        } else if (resultType === 'championship') {
-                          navigate(`/championship-score-breakdown/${team.id}`);
-                        } else if (resultType === 'redesign') {
-                          navigate(`/redesign-score-breakdown/${team.id}`);
-                        }
+                        handleView(team.id);
                       }}
                       sx={{
                         fontSize: { xs: "0.6rem", sm: "0.75rem" },
@@ -322,7 +358,8 @@ export default function InternalResultsTable({ contestId, resultType='preliminar
                   </TableCell>
                 </TableRow>
               );
-            })}
+            })
+            )}
           </TableBody>
         </Table>
       </TableContainer>

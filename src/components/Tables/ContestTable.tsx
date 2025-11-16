@@ -18,7 +18,7 @@ interface ContestRow {
 interface ContestTableProps {
   rows: ContestRow[];
   isLoading: boolean;
-  onRowClick: (contestId: number) => void;
+  onRowClick: (id: number) => void;
 }
 
 export default function ContestTable({
@@ -27,72 +27,76 @@ export default function ContestTable({
   onRowClick,
 }: ContestTableProps) {
   return (
-    <TableContainer
-      component={Paper}
-      sx={{
-        borderRadius: 3,
-        overflow: "hidden",
-        boxShadow: 3,
-      }}
-    >
-      <Table
-        aria-label="contest table"
+    <div style={{ position: "relative" }}>
+      <TableContainer
+        component={Paper}
         sx={{
-          "& th:first-of-type, & td:first-of-type": { pl: 1 },
+          borderRadius: 3,
+          overflow: "hidden",
+          boxShadow: 3,
+          zIndex: 1, // Ensure table is above gear
+          position: "relative",
         }}
       >
-        <TableHead>
-          <TableRow sx={{ backgroundColor: theme.palette.primary.main }}>
-            <TableCell sx={{ fontWeight: 700, color: "#fff" }}>
-              Contest Name
-            </TableCell>
-            <TableCell sx={{ fontWeight: 700, color: "#fff" }}>Date</TableCell>
-            <TableCell sx={{ fontWeight: 700, color: "#fff" }}>Status</TableCell>
-          </TableRow>
-        </TableHead>
-
-        <TableBody>
-          {isLoading ? (
-            <TableRow>
-              <TableCell colSpan={3} align="center">
-                <Typography>Loading contests...</Typography>
+        <Table
+          aria-label="contest table"
+          sx={{
+            "& th:first-of-type, & td:first-of-type": { pl: 1 },
+          }}
+        >
+          <TableHead>
+            <TableRow sx={{ backgroundColor: theme.palette.primary.main }}>
+              <TableCell sx={{ fontWeight: 700, color: "#fff" }}>
+                Contest Name
               </TableCell>
+              <TableCell sx={{ fontWeight: 700, color: "#fff" }}>Date</TableCell>
+              <TableCell sx={{ fontWeight: 700, color: "#fff" }}>Status</TableCell>
             </TableRow>
-          ) : (
-            rows.map((row) => (
-              <TableRow
-                key={row.id}
-                hover
-                onClick={() => onRowClick(row.id)}
-                sx={{
-                  cursor: "pointer",
-                  transition: "background-color 0.2s ease, transform 0.1s ease",
-                  "&:hover": {
-                    backgroundColor: theme.palette.primary.light,
-                    transform: "scale(1.01)",
-                  },
-                }}
-              >
-                <TableCell>{row.name}</TableCell>
-                <TableCell>{row.date}</TableCell>
-                <TableCell
-                  sx={{
-                    color:
-                      row.status === "Finalized"
-                        ? "green"
-                        : row.status === "In Progress"
-                          ? "orange"
-                          : "red",
-                    fontWeight: 600,
-                  }}
-                >
-                  {row.status}
+          </TableHead>
+
+          <TableBody>
+            {isLoading && (
+              <TableRow>
+                <TableCell colSpan={3} align="center">
+                  <Typography>Loading contests...</Typography>
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
+            )}
+            {!isLoading &&
+              rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  hover
+                  onClick={() => onRowClick(row.id)}
+                  sx={{
+                    cursor: "pointer",
+                    transition: "background-color 0.2s ease, transform 0.1s ease",
+                    "&:hover": {
+                      backgroundColor: theme.palette.primary.light,
+                      transform: "scale(1.01)",
+                    },
+                  }}
+                >
+                  <TableCell>{row.name}</TableCell>
+                  <TableCell>{row.date}</TableCell>
+                  <TableCell
+                    sx={{
+                      color:
+                        row.status === "Finalized"
+                          ? "green"
+                          : row.status === "In Progress"
+                          ? "orange"
+                          : "red",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {row.status}
+                  </TableCell>
+                </TableRow>
+              ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </div>
   );
 }

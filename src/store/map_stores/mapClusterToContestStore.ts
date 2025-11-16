@@ -12,6 +12,7 @@ interface MapClusterContestState {
   addClusterToContest: (contestId: number, cluster: Cluster) => void;
   updateClusterInContest: (contestId: number, updatedCluster: Cluster) => void;
   removeClusterFromContest: (contestId: number, clusterId: number) => void;
+  removeContestFromClusters: (contestId: number) => void;
   clearClusters: () => void;
   clearContestClusters: () => Promise<void>;
   fetchClustersForMultipleContests: (contestIds: number[]) => Promise<void>;
@@ -117,6 +118,27 @@ export const useMapClusterToContestStore = create<MapClusterContestState>()(
             ...state.contestClusters,
             [contestId]: (state.contestClusters[contestId] || []).filter((c) => c.id !== clusterId),
           },
+        });
+      },
+
+      removeContestFromClusters: (contestId: number) => {
+        set((state) => {
+          const updatedContestClusters = { ...state.contestClusters };
+          delete updatedContestClusters[contestId];
+
+          // Remove clusters that belonged only to this contest
+          const clustersToKeep = state.clusters.filter(cluster => {
+            // Keep clusters that exist in other contests
+            return Object.keys(updatedContestClusters).some(contestIdKey => {
+              const cid = parseInt(contestIdKey);
+              return cid !== contestId && updatedContestClusters[cid]?.some(c => c.id === cluster.id);
+            });
+          });
+
+          return {
+            contestClusters: updatedContestClusters,
+            clusters: clustersToKeep,
+          };
         });
       },
 

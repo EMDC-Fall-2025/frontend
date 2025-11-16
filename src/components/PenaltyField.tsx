@@ -47,13 +47,31 @@ export function PenaltyField({
       }}
     >
       {isIncrement ? (
-        <Typography sx={{ mb: { xs: 1, sm: 0 } }}>{text}</Typography>
+        <Typography sx={{ 
+          mb: { xs: 1, sm: 0 },
+          fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+          fontWeight: 400,
+          cursor: "default"
+        }}>
+          {text}
+        </Typography>
       ) : (
-        <Typography>{text}</Typography>
+        <Typography sx={{ 
+          fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+          fontWeight: 400,
+          cursor: "default"
+        }}>
+          {text}
+        </Typography>
       )}
 
       <Box sx={{ display: "flex", alignItems: "center" }}>
-        <Typography variant="body2" sx={{ ml: 2 }}>
+        <Typography sx={{ 
+          ml: 2,
+          fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+          fontWeight: 400,
+          cursor: "default"
+        }}>
           {points}
         </Typography>
         {!isIncrement ? (
@@ -66,7 +84,13 @@ export function PenaltyField({
               sx={{ ml: 2 }}
               disabled={disabled}
             />
-            <Typography>{yesOrNo}</Typography>
+            <Typography sx={{ 
+              fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+              fontWeight: 400,
+              cursor: "default"
+            }}>
+              {yesOrNo}
+            </Typography>
           </>
         ) : (
           <Box
@@ -91,7 +115,14 @@ export function PenaltyField({
             >
               -
             </Button>
-            <Typography sx={{ ml: 2 }}>{penaltyState[fieldId]}</Typography>
+            <Typography sx={{ 
+              ml: 2,
+              fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+              fontWeight: 600,
+              cursor: "default"
+            }}>
+              {penaltyState[fieldId]}
+            </Typography>
             <Button
               id={`penalty-increment-${fieldId}`}
               name={`penalty-increment-${fieldId}`}

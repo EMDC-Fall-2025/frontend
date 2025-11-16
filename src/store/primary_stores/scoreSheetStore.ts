@@ -11,13 +11,16 @@ interface ScoreSheetState {
   scoreSheetError: string | null;
   scoreSheetBreakdown: ScoreSheetDetails;
   multipleScoreSheets: ScoreSheet[] | null;
+  // Lightweight cache for breakdowns to speed up page loads
+  scoreSheetBreakdownByTeam?: { [teamId: number]: ScoreSheetDetails };
+  scoreBreakdownCacheTsByTeam?: { [teamId: number]: number };
   
   // Existing methods
   fetchScoreSheetById: (scoresId: number) => Promise<void>;
   createScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>;
   editScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>;
   updateScores: (data: Partial<ScoreSheet>) => Promise<void>;
-  submitScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>; // New optimized submission method
+  submitScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>; 
   editScoreSheetField: (
     id: number,
     field: string | number,
@@ -41,6 +44,7 @@ interface ScoreSheetState {
   fetchMultipleScoreSheets: (teamIds: number[], judgeId: number, sheetType: number) => Promise<void>;
   updateMultipleScores: (scoreSheets: Partial<ScoreSheet>[]) => Promise<void>;
   submitMultipleScoreSheets: (scoreSheets: Partial<ScoreSheet>[]) => Promise<void>;
+  fetchMultiTeamPenalties: (judgeId: number, contestId: number, sheetType: number) => Promise<void>;
 }
 
 export const useScoreSheetStore = create<ScoreSheetState>()(
@@ -52,6 +56,8 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
       scoreSheetError: null,
       scoreSheetBreakdown: null,
       multipleScoreSheets: null,
+      scoreSheetBreakdownByTeam: {},
+      scoreBreakdownCacheTsByTeam: {},
 
       clearScoreSheet: async () => {
         try {
@@ -127,13 +133,35 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
       },
 
       getScoreSheetBreakdown: async (teamId: number) => {
-        set({ isLoadingScoreSheet: true });
+        const now = Date.now();
+        const cache = get().scoreSheetBreakdownByTeam || {};
+        const cacheTs = get().scoreBreakdownCacheTsByTeam || {};
+        const cached = cache[teamId];
+        const cachedTs = cacheTs[teamId] || 0;
+        const FRESH_MS = 30_000; // consider fresh for 30s
+
+        // If we have fresh cache, use it immediately with no spinner
+        if (cached && (now - cachedTs) < FRESH_MS) {
+          set({ scoreSheetBreakdown: cached, scoreSheetError: null });
+          return;
+        }
+
+        // If we have stale cache, show it immediately and refresh in background
+        if (cached) {
+          set({ scoreSheetBreakdown: cached, scoreSheetError: null });
+        } else {
+          set({ isLoadingScoreSheet: true });
+        }
+
         try {
-          const response = await api.get(
-            `/api/scoreSheet/getDetails/${teamId}/`
-          );
-          set({ scoreSheetBreakdown: response.data as ScoreSheetDetails });
-          set({ scoreSheetError: null });
+          const response = await api.get(`/api/scoreSheet/getDetails/${teamId}/`);
+          const data = response.data as ScoreSheetDetails;
+          set((state) => ({
+            scoreSheetBreakdown: data,
+            scoreSheetError: null,
+            scoreSheetBreakdownByTeam: { ...(state.scoreSheetBreakdownByTeam || {}), [teamId]: data },
+            scoreBreakdownCacheTsByTeam: { ...(state.scoreBreakdownCacheTsByTeam || {}), [teamId]: now },
+          }));
         } catch (scoreSheetError: any) {
           set({ scoreSheetError: "Failed to fetch score sheet breakdown" });
           throw new Error("Failed to fetch score sheet breakdown");
@@ -323,9 +351,22 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
         }
       },
       
-      // Update scores for multiple score sheets
+      // Update scores for multiple score sheets - optimized for instant updates
       updateMultipleScores: async (scoreSheets: Partial<ScoreSheet>[]) => {
-        set({ isLoadingScoreSheet: true });
+        // Optimistically update local state first for instant UI feedback
+        const currentSheets = get().multipleScoreSheets;
+        if (currentSheets) {
+          const updatedSheets = currentSheets.map(sheet => {
+            const update = scoreSheets.find(s => s.id === sheet.id);
+            if (update) {
+              return { ...sheet, ...update };
+            }
+            return sheet;
+          });
+          set({ multipleScoreSheets: updatedSheets });
+        }
+        
+        // Then update in background (non-blocking)
         try {
           const updatePromises = scoreSheets.map(sheet => 
             api.post(`/api/scoreSheet/edit/updateScores/`, sheet)
@@ -333,28 +374,46 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
           
           await Promise.all(updatePromises);
           
-          // After successful updates, refresh the data
-          const currentSheets = get().multipleScoreSheets;
+          // Refresh the data to ensure consistency
           if (currentSheets && currentSheets.length > 0) {
             const teamIds = currentSheets.map(sheet => sheet.teamId).filter((id): id is number => id !== undefined);
             const sampleSheet = currentSheets[0];
             
             if (teamIds.length > 0 && sampleSheet?.judgeId && sampleSheet?.sheetType) {
-              await get().fetchMultipleScoreSheets(teamIds, sampleSheet.judgeId, sampleSheet.sheetType);
+              // Refresh in background without blocking
+              get().fetchMultipleScoreSheets(teamIds, sampleSheet.judgeId, sampleSheet.sheetType).catch(() => {
+                // Silently fail - optimistic update already shown
+              });
             }
           }
           
           set({ scoreSheetError: null });
         } catch (error) {
+          // Revert optimistic update on error
+          if (currentSheets) {
+            set({ multipleScoreSheets: currentSheets });
+          }
           set({ scoreSheetError: "Failed to update multiple score sheets" });
           console.error("Failed to update multiple score sheets:", error);
-        } finally {
-          set({ isLoadingScoreSheet: false });
+          throw error;
         }
       },
       
-      // Submit multiple score sheets (mark as submitted)
+      // Submit multiple score sheets (mark as submitted) - optimized for instant updates
       submitMultipleScoreSheets: async (scoreSheets: Partial<ScoreSheet>[]) => {
+        // Optimistically update local state first for instant UI feedback
+        const currentSheets = get().multipleScoreSheets;
+        if (currentSheets) {
+          const updatedSheets = currentSheets.map(sheet => {
+            const update = scoreSheets.find(s => s.id === sheet.id);
+            if (update) {
+              return { ...sheet, ...update, isSubmitted: true };
+            }
+            return sheet;
+          });
+          set({ multipleScoreSheets: updatedSheets });
+        }
+        
         set({ isLoadingScoreSheet: true });
         try {
           const submitPromises = scoreSheets.map(sheet => 
@@ -373,6 +432,32 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
           set({ scoreSheetError: "Failed to submit multiple score sheets" });
           toast.error("Failed to submit scoresheets. Please try again.");
           console.error("Failed to submit multiple score sheets:", error);
+        } finally {
+          set({ isLoadingScoreSheet: false });
+        }
+      },
+
+      fetchMultiTeamPenalties: async (judgeId: number, contestId: number, sheetType: number) => {
+        set({ isLoadingScoreSheet: true });
+        try {
+          // Choose the right endpoint based on sheet type
+          const endpoint = sheetType === 4 
+            ? `/api/scoreSheet/multiTeamRunPenalties/${judgeId}/${contestId}/`
+            : `/api/scoreSheet/multiTeamGeneralPenalties/${judgeId}/${contestId}/`;
+          
+          const response = await api.get(endpoint);
+
+          if (response.data && response.data.teams) {
+            const sheets = response.data.teams.map((team: any) => ({
+              ...team.scoresheet,
+              teamId: team.team_id,
+              teamName: team.team_name,
+            }));
+            set({ multipleScoreSheets: sheets, scoreSheetError: null });
+          }
+        } catch (error) {
+          console.error("Failed to fetch multi-team penalties:", error);
+          set({ scoreSheetError: "Failed to load penalty sheets" });
         } finally {
           set({ isLoadingScoreSheet: false });
         }

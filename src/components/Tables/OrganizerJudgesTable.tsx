@@ -17,12 +17,14 @@ import { useNavigate } from "react-router-dom";
 import { useMapClusterJudgeStore } from "../../store/map_stores/mapClusterToJudgeStore";
 import { useJudgeStore } from "../../store/primary_stores/judgeStore";
 import useContestJudgeStore from "../../store/map_stores/mapContestToJudgeStore";
+import { useMapScoreSheetStore } from "../../store/map_stores/mapScoreSheetStore";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckIcon from "@mui/icons-material/Check";
 import toast from "react-hot-toast";
 import ClusterModal from "../Modals/ClusterModal";
 import { Cluster, Judge, JudgeData } from "../../types";
 import AreYouSureModal from "../Modals/AreYouSureModal";
+import Modal from "../Modals/Modal";
 
 interface IJudgesTableProps {
   judges: any[];
@@ -153,30 +155,53 @@ function JudgesTable(props: IJudgesTableProps) {
   const navigate = useNavigate();
   const [openJudgeModal, setOpenJudgeModal] = useState(false);
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
+  const [openDeleteOptions, setOpenDeleteOptions] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState<string>("");
+  const [onConfirm, setOnConfirm] = useState<(() => void) | null>(null);
   const [judgeData, setJudgeData] = useState<JudgeData | undefined>(undefined);
-  const { submissionStatus, checkAllScoreSheetsSubmitted } = useJudgeStore();
+  const { submissionStatus, checkAllScoreSheetsSubmitted, deleteJudge } = useJudgeStore();
   
-  // Check submission status for this specific cluster
-  React.useEffect(() => {
-    if (currentCluster && judges && judges.length > 0) {
-      checkAllScoreSheetsSubmitted(judges as any, currentCluster.id);
-    }
-  }, [currentCluster?.id, judges, checkAllScoreSheetsSubmitted]);
   const [judgeId, setJudgeId] = useState(0);
   const { fetchJudgesByClusterId, removeJudgeFromCluster, fetchClustersForJudges, judgesByClusterId } = useMapClusterJudgeStore();
-  const { removeJudgeFromContestStoreIfNoOtherClusters } = useContestJudgeStore();
+  const { removeJudgeFromContestStoreIfNoOtherClusters, getAllJudgesByContestId } = useContestJudgeStore();
+  const { clearMappings } = useMapScoreSheetStore();
 
   const { judgeClusters } = useMapClusterJudgeStore();
 
   const titles = ["Lead", "Technical", "General", "Journal"];
 
+  // Memoize judge IDs to prevent unnecessary re-fetches
+  const judgeIdsString = React.useMemo(() => {
+    return judges.map(j => j.id).sort((a, b) => a - b).join(',');
+  }, [judges]);
 
+  const lastCheckedClusterIdRef = React.useRef<number | null>(null);
+  const lastCheckedJudgeIdsRef = React.useRef<string>("");
+  const lastFetchedJudgeIdsRef = React.useRef<string>("");
 
+  // Check submission status for this specific cluster - only when cluster or judges actually change
   React.useEffect(() => {
-    if (judges && judges.length > 0) {
-      fetchClustersForJudges(judges as any);
+    if (!currentCluster || !judges || judges.length === 0) return;
+    
+    const clusterChanged = lastCheckedClusterIdRef.current !== currentCluster.id;
+    const judgesChanged = lastCheckedJudgeIdsRef.current !== judgeIdsString;
+    
+    if (clusterChanged || judgesChanged) {
+      lastCheckedClusterIdRef.current = currentCluster.id;
+      lastCheckedJudgeIdsRef.current = judgeIdsString;
+      checkAllScoreSheetsSubmitted(judges as any, currentCluster.id);
     }
-  }, [judges, fetchClustersForJudges]);
+  }, [currentCluster?.id, judgeIdsString, checkAllScoreSheetsSubmitted, judges]);
+
+  // Fetch clusters for judges - only when judge IDs actually change
+  React.useEffect(() => {
+    if (!judges || judges.length === 0) return;
+    
+    if (lastFetchedJudgeIdsRef.current !== judgeIdsString) {
+      lastFetchedJudgeIdsRef.current = judgeIdsString;
+      fetchClustersForJudges(judges as any).catch(console.error);
+    }
+  }, [judgeIdsString, fetchClustersForJudges, judges]);
 
   // Memoize the handler to prevent unnecessary re-renders
   const handleOpenJudgeModal = useCallback((judgeData: JudgeData) => {
@@ -184,10 +209,10 @@ function JudgesTable(props: IJudgesTableProps) {
     setOpenJudgeModal(true);
   }, []);
 
-  // Memoize the handler to prevent unnecessary re-renders
-  const handleOpenAreYouSure = useCallback((judgeId: number) => {
+  // Open delete options (choose between cluster-only vs complete delete)
+  const handleOpenDeleteOptions = useCallback((judgeId: number) => {
     setJudgeId(judgeId);
-    setOpenAreYouSure(true);
+    setOpenDeleteOptions(true);
   }, []);
 
   // Memoize navigate handler
@@ -251,6 +276,30 @@ function JudgesTable(props: IJudgesTableProps) {
     }
   };
 
+  // Permanently delete judge (system-wide)
+  const handleDeleteCompletely = async (judgeId: number) => {
+    try {
+      await deleteJudge(judgeId);
+
+      // Refresh all clusters in this contest to remove the judge visually
+      if (clusters && clusters.length > 0) {
+        await Promise.all(clusters.map((cluster) => fetchJudgesByClusterId(cluster.id, true)));
+      }
+      // Refresh contest judges list
+      if (contestid) {
+        await getAllJudgesByContestId(contestid, true);
+      }
+
+      toast.success("Judge deleted from system successfully.");
+    } catch (error: any) {
+      const msg = error?.response?.data?.detail || error?.message || "Failed to delete judge.";
+      toast.error(msg);
+    } finally {
+      setOpenAreYouSure(false);
+      setOpenDeleteOptions(false);
+    }
+  };
+
   const handleCloseJudgeModal = () => {
     setOpenJudgeModal(false);
   };
@@ -271,11 +320,21 @@ function JudgesTable(props: IJudgesTableProps) {
       return scoreSheets;
     }
 
-    if (judge.journal) scoreSheets.push("Journal");
-    if (judge.presentation) scoreSheets.push("Presentation");
-    if (judge.mdo) scoreSheets.push("Machine Design & Operation");
-    if (judge.otherpenalties) scoreSheets.push("General Penalties");
-    if (judge.runpenalties) scoreSheets.push("Run Penalties");
+    // Use cluster-specific sheet flags if available (from MapJudgeToCluster), 
+    // otherwise fall back to global judge flags
+    const sheetFlags = judge.cluster_sheet_flags || {
+      journal: judge.journal,
+      presentation: judge.presentation,
+      mdo: judge.mdo,
+      runpenalties: judge.runpenalties,
+      otherpenalties: judge.otherpenalties,
+    };
+
+    if (sheetFlags.journal) scoreSheets.push("Journal");
+    if (sheetFlags.presentation) scoreSheets.push("Presentation");
+    if (sheetFlags.mdo) scoreSheets.push("Machine Design & Operation");
+    if (sheetFlags.otherpenalties) scoreSheets.push("General Penalties");
+    if (sheetFlags.runpenalties) scoreSheets.push("Run Penalties");
     return scoreSheets;
   };
 
@@ -302,19 +361,21 @@ function JudgesTable(props: IJudgesTableProps) {
           variant="outlined"
           onClick={(e) => {
             e.stopPropagation();
+            // Use cluster-specific sheet flags for editing
+            const clusterFlags = judge.cluster_sheet_flags || {};
             handleOpenJudgeModal({
               id: judge.id,
               firstName: judge.first_name,
               lastName: judge.last_name,
               cluster: judgeClusters[judge.id],
               role: judge.role,
-              journalSS: judge.journal,
-              presSS: judge.presentation,
-              mdoSS: judge.mdo,
-              runPenSS: judge.runpenalties,
-              genPenSS: judge.otherpenalties,
-              redesignSS: false,
-              championshipSS: false,
+              journalSS: clusterFlags.journal || false,
+              presSS: clusterFlags.presentation || false,
+              mdoSS: clusterFlags.mdo || false,
+              runPenSS: clusterFlags.runpenalties || false,
+              genPenSS: clusterFlags.otherpenalties || false,
+              redesignSS: clusterFlags.redesign || false,
+              championshipSS: clusterFlags.championship || false,
               phoneNumber: judge.phone_number,
             });
           }}
@@ -405,14 +466,14 @@ function JudgesTable(props: IJudgesTableProps) {
         }}
         onClick={(e) => {
           e.stopPropagation();
-          handleOpenAreYouSure(judge.id);
+          handleOpenDeleteOptions(judge.id);
         }}
       >
         Delete
       </Button>,
       isSubmitted
     );
-  }), [judges, submissionStatus, currentCluster?.id, isChampionshipOrRedesignCluster, handleOpenJudgeModal, handleOpenAreYouSure, handleNavigateToJudging, currentCluster, judgeClusters, navigate]);
+  }), [judges, submissionStatus, currentCluster?.id, isChampionshipOrRedesignCluster, handleOpenJudgeModal, handleOpenDeleteOptions, handleNavigateToJudging, currentCluster, judgeClusters, navigate]);
 
   return (
     <TableContainer component={Box}>
@@ -437,13 +498,14 @@ function JudgesTable(props: IJudgesTableProps) {
         mode="edit"
         clusters={clusters}
         judgeData={judgeData}
+        clusterContext={currentCluster}
         contestid={contestid}
         onSuccess={async () => {
-          // Refresh judges for the current cluster
+          clearMappings();
+          
           if (currentCluster?.id) {
             await fetchJudgesByClusterId(currentCluster.id, true);
           }
-          // Also refresh all clusters to handle cluster changes
           if (clusters && clusters.length > 0) {
             await Promise.all(
               clusters.map(cluster => fetchJudgesByClusterId(cluster.id, true))
@@ -452,11 +514,78 @@ function JudgesTable(props: IJudgesTableProps) {
           handleCloseJudgeModal();
         }}
       />
+      {/* Delete Options Modal */}
+      <Modal
+        open={openDeleteOptions}
+        handleClose={() => setOpenDeleteOptions(false)}
+        title="Delete Judge"
+      >
+        <Container
+          sx={{
+            display: "flex",
+            flexDirection: "row",
+            gap: 1.25,
+            alignItems: "center",
+            justifyContent: "center",
+            p: 0,
+            width: "100%",
+          }}
+        >
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setConfirmTitle("Remove judge from this cluster?");
+              setOnConfirm(() => () => handleDelete(judgeId));
+              setOpenDeleteOptions(false);
+              setOpenAreYouSure(true);
+            }}
+            sx={{
+              textTransform: "none",
+              borderRadius: 1.5,
+              py: 1.25,
+              px: 2.5,
+              borderColor: "#9e9e9e",
+              color: "#424242",
+              minWidth: 0,
+              flex: 1,
+              "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
+            }}
+          >
+            Delete from cluster
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              setConfirmTitle("Delete judge completely? This will remove all mappings and data.");
+              setOnConfirm(() => () => handleDeleteCompletely(judgeId));
+              setOpenDeleteOptions(false);
+              setOpenAreYouSure(true);
+            }}
+            sx={{
+              textTransform: "none",
+              borderRadius: 1.5,
+              py: 1.25,
+              px: 2.5,
+              bgcolor: "#d32f2f",
+              color: "#fff",
+              minWidth: 0,
+              flex: 1,
+              "&:hover": { bgcolor: "#b71c1c" },
+            }}
+          >
+            Delete completely
+          </Button>
+        </Container>
+      </Modal>
+
+      {/* Confirm Modal */}
       <AreYouSureModal
         open={openAreYouSure}
         handleClose={() => setOpenAreYouSure(false)}
-        title="Are you sure you want to delete this judge?"
-        handleSubmit={() => handleDelete(judgeId)}
+        title={confirmTitle || "Are you sure?"}
+        handleSubmit={() => {
+          if (onConfirm) onConfirm();
+        }}
       />
     </TableContainer>
   );

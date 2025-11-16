@@ -86,6 +86,10 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
   const handleCreateOrganizer = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
+      // Remove hover/focus from the submit button to avoid lingering hover styles
+      if (typeof window !== "undefined" && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
       // Create organizer with provided information and default password
       await createOrganizer({
         first_name: first_name,
@@ -109,6 +113,10 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
     event.preventDefault();
     if (organizerid) {
       try {
+        // Remove hover/focus from the submit button to avoid lingering hover styles
+        if (typeof window !== "undefined" && document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
         // Update organizer with current form values
         await editOrganizer({
           id: organizerid,
