@@ -25,7 +25,7 @@ export default function Nav() {
   const [openSetShared, setOpenSetShared] = useState(false);
   const [snackOpen, setSnackOpen] = useState(false);
 
-  const { isAuthenticated, role, logout } = useAuthStore();
+  const { isAuthenticated, role, token, logout } = useAuthStore();
   const [logoUrl, setLogoUrl] = useState("/");
   const navigate = useNavigate();
   const location = useLocation();
@@ -250,11 +250,13 @@ export default function Nav() {
         handleSubmit={handleLogout}
       />
 
-      {/* Admin: Set Shared Password */}
-      <SetSharedPasswordDialog
-        open={openSetShared}
-        onClose={() => setOpenSetShared(false)}
-      />
+      {/* Admin: Set Shared Password - Only render for admins */}
+      {isAuthenticated && isAdmin && (
+        <SetSharedPasswordDialog
+          open={openSetShared}
+          onClose={() => setOpenSetShared(false)}
+        />
+      )}
 
       {/* Snackbar (kept, but no shortcut triggers it now) */}
       <Snackbar
