@@ -5,16 +5,52 @@ import {
   MenuItem,
   Alert,
   Box,
+  Typography,
 } from "@mui/material";
 import { api } from "../../lib/api";
 import Modal from "./Modal";
 import theme from "../../theme";
+
+/**
+ * Password validation helper function
+ * Validates password against requirements:
+ * - Minimum 8 characters
+ * - At least one uppercase letter
+ * - At least one lowercase letter
+ * - At least one special character
+ */
+const validatePassword = (pwd: string): { valid: boolean; errors: string[] } => {
+  const errors: string[] = [];
+  if (pwd.length < 8) {
+    errors.push("At least 8 characters");
+  }
+  if (!/[A-Z]/.test(pwd)) {
+    errors.push("One uppercase letter");
+  }
+  if (!/[a-z]/.test(pwd)) {
+    errors.push("One lowercase letter");
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(pwd)) {
+    errors.push("One special character (!@#$%^&*()_+-=[]{}|;:,.<>?)");
+  }
+  return { valid: errors.length === 0, errors };
+};
 
 type Props = {
   open: boolean;
   onClose: () => void;
 };
 
+/**
+ * SetSharedPasswordDialog Component
+ * 
+ * Modal dialog for admins to set/update shared passwords for Organizers (role 2) or Judges (role 3).
+ * Features:
+ * - Real-time password validation with visual feedback
+ * - Password requirements checklist
+ * - Role selection (Organizer/Judge)
+ * - Connects to backend API: /api/auth/set-shared-password/
+ */
 export default function SetSharedPasswordDialog({ open, onClose }: Props) {
   const [role, setRole] = useState<2 | 3>(2); // 2=Organizer, 3=Judge
   const [password, setPassword] = useState("");
@@ -22,22 +58,49 @@ export default function SetSharedPasswordDialog({ open, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
 
+  // Helper variables for password requirements checklist (used in JSX)
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password);
+
+  const handlePasswordChange = (newPassword: string) => {
+    setPassword(newPassword);
+    if (newPassword.length > 0) {
+      const validation = validatePassword(newPassword);
+      setPasswordErrors(validation.errors);
+    } else {
+      setPasswordErrors([]);
+    }
+  };
+
+  /**
+   * Handles form submission to set shared password
+   * Validates password requirements and sends request to backend API
+   */
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr(null);
     setOk(null);
 
-    if (!password || password.length < 8) {
-      setErr("Password must be at least 8 characters.");
+    // Validate password meets all requirements
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      setErr("Please fix password requirements below.");
       return;
     }
+    
+    // Ensure passwords match
     if (password !== confirm) {
       setErr("Passwords do not match.");
       return;
     }
+    
     try {
       setLoading(true);
+      // Send request to backend API endpoint
       const res = await api.post(
         `/api/auth/set-shared-password/`,
         { role, password }
@@ -45,7 +108,8 @@ export default function SetSharedPasswordDialog({ open, onClose }: Props) {
       setOk(res.data?.message || "Shared password set successfully.");
       setPassword("");
       setConfirm("");
-      // Auto-close after success
+      setPasswordErrors([]);
+      // Auto-close modal after successful save (1.5 second delay)
       setTimeout(() => {
         handleClose();
       }, 1500);
@@ -66,6 +130,7 @@ export default function SetSharedPasswordDialog({ open, onClose }: Props) {
     setOk(null);
     setPassword("");
     setConfirm("");
+    setPasswordErrors([]);
     onClose();
   };
 
@@ -98,12 +163,72 @@ export default function SetSharedPasswordDialog({ open, onClose }: Props) {
           type="password"
           label="New shared password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          helperText="Minimum 8 characters"
+          onChange={(e) => handlePasswordChange(e.target.value)}
+          error={passwordErrors.length > 0 && password.length > 0}
+          helperText={password.length > 0 ? undefined : "Minimum 8 characters"}
           variant="outlined"
           sx={{ mt: 3, width: 300 }}
           required
         />
+
+        {password.length > 0 && (
+          <Box sx={{ mt: -1, mb: 1, width: 300 }}>
+            <Typography
+              variant="caption"
+              sx={{ color: "text.secondary", display: "block", mb: 0.5 }}
+            >
+              Password must contain:
+            </Typography>
+            <Box component="ul" sx={{ m: 0, pl: 2, fontSize: "0.75rem" }}>
+              <li
+                style={{
+                  color: hasMinLength
+                    ? "green"
+                    : passwordErrors.includes("At least 8 characters")
+                    ? "red"
+                    : "gray",
+                }}
+              >
+                At least 8 characters
+              </li>
+              <li
+                style={{
+                  color: hasUppercase
+                    ? "green"
+                    : passwordErrors.includes("One uppercase letter")
+                    ? "red"
+                    : "gray",
+                }}
+              >
+                One uppercase letter
+              </li>
+              <li
+                style={{
+                  color: hasLowercase
+                    ? "green"
+                    : passwordErrors.includes("One lowercase letter")
+                    ? "red"
+                    : "gray",
+                }}
+              >
+                One lowercase letter
+              </li>
+              <li
+                style={{
+                  color: hasSpecialChar
+                    ? "green"
+                    : passwordErrors.includes(
+                        "One special character (!@#$%^&*()_+-=[]{}|;:,.<>?)"
+                      )
+                    ? "red"
+                    : "gray",
+                }}
+              >
+                {"One special character (!@#$%^&*()_+-=[]{}|;:,.<>?)"}
+              </li>
+            </Box>
+          </Box>
+        )}
 
         <TextField
           type="password"
