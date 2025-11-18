@@ -105,25 +105,22 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   /**
    * Determines if a preliminary scoresheet should be disabled for judges.
    * Disables if:
-   * 1. Judge has championship assignment in the team's contest, OR
-   * 2. Any team in the team's contest has advanced to championship
+   * 1. Any team in the team's contest has advanced to championship
    */
   const isPreliminaryScoresheet = (_team: Team, sheetType: number) => {
     const teamContest = contestsForTeams[_team.id];
-    const judgeHasChampionship = teamContest ? judgeHasChampionshipByContest.get(teamContest.id) || false : false;
     const anyTeamInContestAdvanced = teamContest ? hasAnyTeamAdvancedByContest.get(teamContest.id) || false : false;
-    
+
     return (
       isJudge &&
       isPreliminarySheet(sheetType) &&
-      (judgeHasChampionship || anyTeamInContestAdvanced)
+      anyTeamInContestAdvanced
     );
   };
 
   /**
    * Determines if a scoresheet is editable based on user role and contest state.
    * Admins/organizers have full access. Judges cannot edit preliminary sheets if:
-   * - Judge has championship assignment in the team's contest, OR
    * - Any team in the team's contest has advanced to championship
    */
   const isScoresheetEditable = (_team: Team, sheetType: number) => {
@@ -133,10 +130,9 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
 
     if (isJudge && isPreliminarySheet(sheetType)) {
       const teamContest = contestsForTeams[_team.id];
-      const judgeHasChampionship = teamContest ? judgeHasChampionshipByContest.get(teamContest.id) || false : false;
       const anyTeamInContestAdvanced = teamContest ? hasAnyTeamAdvancedByContest.get(teamContest.id) || false : false;
-      
-      if (judgeHasChampionship || anyTeamInContestAdvanced) {
+
+      if (anyTeamInContestAdvanced) {
         return false;
       }
     }
@@ -304,49 +300,31 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   const lastFetchedJudgeIdRef = React.useRef<number | null>(null);
   const skipFetchRef = React.useRef(false);
 
+  // Track the last cluster type to detect changes
+  const lastClusterTypeRef = React.useRef<string>('');
+
   /**
-   * Fetches score sheet mappings for the judge, but only if they don't already exist.
-   * This prevents unnecessary refetches when navigating back from multi-scoring pages.
+   * Fetches score sheet mappings for the judge.
+   * Refreshes when judge changes or when cluster type changes (e.g., preliminary → championship).
    */
   useEffect(() => {
     if (!judge?.id) return;
-    
-    if (isLoadingMapScoreSheet) {
-      return;
-    }
+    if (isLoadingMapScoreSheet) return;
 
-    if (hasMappingsForJudge) {
-      lastFetchedJudgeIdRef.current = judge.id;
-      skipFetchRef.current = true;
-      return;
-    }
+    const currentClusterType = currentCluster?.cluster_type || 'preliminary';
+    const clusterTypeChanged = lastClusterTypeRef.current !== currentClusterType;
 
-    if (skipFetchRef.current && lastFetchedJudgeIdRef.current === judge.id) {
-      return;
-    }
-
-    const judgeIdChanged = lastFetchedJudgeIdRef.current !== judge.id;
-    
-    if (judgeIdChanged) {
-      skipFetchRef.current = false;
+    // Always fetch if cluster type changed (e.g., championship advancement)
+    if (clusterTypeChanged || !hasMappingsForJudge) {
       try {
         fetchScoreSheetsByJudge(judge.id);
         lastFetchedJudgeIdRef.current = judge.id;
+        lastClusterTypeRef.current = currentClusterType;
       } catch (error) {
         console.error('Error fetching judge data:', error);
       }
-    } else if (!hasMappingsForJudge) {
-      if (!skipFetchRef.current) {
-      try {
-        fetchScoreSheetsByJudge(judge.id);
-          lastFetchedJudgeIdRef.current = judge.id;
-          skipFetchRef.current = true;
-      } catch (error) {
-          console.error('Error fetching judge data:', error);
-      }
     }
-    }
-  }, [judge?.id, fetchScoreSheetsByJudge, hasMappingsForJudge, isLoadingMapScoreSheet]);
+  }, [judge?.id, currentCluster?.cluster_type, fetchScoreSheetsByJudge, hasMappingsForJudge, isLoadingMapScoreSheet]);
 
 
 
@@ -445,24 +423,21 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   };
 
   // Check if a contest should be disabled for multi-scoring
-  // Disabled if: contest hasn't started, OR any team has advanced, OR judge has championship assignment
+  // Disabled if: contest hasn't started, OR any team has advanced to championship
   //  When championship advancement is undone, this will automatically re-enable contests
-  // because hasAnyTeamAdvancedByContest and judgeHasChampionshipByContest are recalculated
-  // when currentCluster is updated (via championshipUndone event in Judging.tsx)
+  // because hasAnyTeamAdvancedByContest is recalculated when currentCluster is updated
+  // (via championshipUndone event in Judging.tsx)
   const isContestDisabledForMultiScoring = (contest: Contest): boolean => {
     if (!hasContestStarted(contest)) {
       return true; // Contest hasn't started
     }
-    
+
     // Check if any team in this contest has advanced
     const anyTeamAdvanced = hasAnyTeamAdvancedByContest.get(contest.id) || false;
-    
-    // Check if judge has championship assignment in this contest
-    const judgeHasChampionship = judgeHasChampionshipByContest.get(contest.id) || false;
-    
-    // Disable if any team has advanced OR judge has championship assignment
-    // When undone, these values will be false, automatically re-enabling the contest
-    return anyTeamAdvanced || judgeHasChampionship;
+
+    // Disable only if any team has advanced to championship
+    // Judges with championship assignments can still do preliminary multi-scoring
+    return anyTeamAdvanced;
   };
 
   const handleUnsubmitSheet = async () => {
@@ -1108,11 +1083,11 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                         (Not Started)
                       </Typography>
                     )}
-                    {(anyTeamAdvanced || judgeHasChampionship) && hasStarted && (
-                      <Typography 
-                        variant="caption" 
-                        sx={{ 
-                          ml: 1, 
+                    {anyTeamAdvanced && hasStarted && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          ml: 1,
                           fontSize: "0.75rem",
                           opacity: 0.7,
                           color: theme.palette.grey[600]

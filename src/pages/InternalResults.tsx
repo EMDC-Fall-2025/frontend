@@ -105,7 +105,7 @@ const InternalResults: React.FC = () => {
   useEffect(() => {
     if (!parsedContestId) return;
 
-    load(); // initial
+    load({ force: true }); // initial - force refresh to get latest team advancement status
 
     const interval = setInterval(() => {
       if (!document.hidden) {

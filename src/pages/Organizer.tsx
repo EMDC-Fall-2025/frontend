@@ -85,6 +85,7 @@ export default function Organizer() {
         setHasLoaded(true);
         isInitialLoadRef.current = false;
       });
+     
   }, [organizerId, isAuthenticated, role?.user_type]); // Removed contests, fetchContestsByOrganizerId, fetchAllOrganizers from deps to prevent infinite loop
 
   const safeContests = contests ?? [];
@@ -105,6 +106,7 @@ export default function Organizer() {
         console.error('Error checking sheets submission status:', error);
       });
     }
+     
   }, [contestIds, safeContests.length]); // Only depend on contest IDs string and length
 
   const handleChange = (_event: React.SyntheticEvent, newValue: string) => {

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "../../lib/api";
 import { Contest, Cluster } from "../../types";
+import { dispatchDataChange } from "../../utils/dataChangeEvents";
 
 interface RankingsState {
   contests: Contest[];
@@ -159,6 +160,16 @@ export const useRankingsStore = create<RankingsState>()(
             // Refresh the clusters to show the new championship/redesign clusters
             const { fetchClustersWithTeamsForContest } = useRankingsStore.getState();
             await fetchClustersWithTeamsForContest(contestId);
+
+            // Dispatch data change events for all advanced teams
+            championshipTeamIds.forEach(teamId => {
+              dispatchDataChange({
+                type: 'team',
+                action: 'update',
+                id: teamId,
+                contestId: contestId
+              });
+            });
           } else {
             throw new Error(response.data.message || "Failed to advance to championship");
           }
