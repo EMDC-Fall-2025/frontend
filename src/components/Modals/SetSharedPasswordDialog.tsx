@@ -172,7 +172,7 @@ export default function SetSharedPasswordDialog({ open, onClose }: Props) {
         />
 
         {password.length > 0 && (
-          <Box sx={{ mt: -1, mb: 1, width: 300 }}>
+          <Box sx={{ mt: 1.5, mb: 1, width: 300 }}>
             <Typography
               variant="caption"
               sx={{ color: "text.secondary", display: "block", mb: 0.5 }}

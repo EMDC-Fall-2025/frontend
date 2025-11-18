@@ -19,7 +19,9 @@ export default function Home() {
           <img
             src={image}
             alt="Emdc Homepage"
-            loading="lazy"
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
             style={{
               width: "calc(100% + 2px)",
               height: "100%",
