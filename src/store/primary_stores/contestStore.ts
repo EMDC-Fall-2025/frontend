@@ -120,7 +120,6 @@ export const useContestStore = create<ContestState>()(
           const { updateContestInTeams } = useMapContestToTeamStore.getState();
           updateContestInTeams(updatedContest);
 
-          const { updateContestInJudges } = useMapContestToJudgeStore.getState();
           const { updateContestForJudge } = useMapContestJudgeStore.getState();
           updateContestForJudge(updatedContest);
         } catch (contestError) {
