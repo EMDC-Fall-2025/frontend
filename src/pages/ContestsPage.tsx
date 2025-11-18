@@ -1,16 +1,17 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // 
 import Typography from "@mui/material/Typography";
-import { Container } from "@mui/material";
+import { Container, Stack, Button, Box } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../theme";
 import { useContestStore } from "../store/primary_stores/contestStore";
-import ContestTable from "../components/Tables/ContestTable"; 
+import ContestTable from "../components/Tables/ContestTable";
+import InteractiveGrid from "../components/Cube";
+import toast from "react-hot-toast";
+
 // FILE OVERVIEW: page for displaying contests
-
 export default function Contests() {
-  // Zustand store for contests
   const { allContests, fetchAllContests, isLoadingContest } = useContestStore();
-
   const navigate = useNavigate();
 
   // Get all contests
@@ -18,38 +19,140 @@ export default function Contests() {
     fetchAllContests();
   }, []);
 
-  // function to create data row 
-  function createData(id: number, name: string, date: string, is_open: boolean) {
-    return { id, name, date, status: is_open ? "In Progress" : "Finalized" };
+  // function to create data row
+  function createData(
+    id: number,
+    name: string,
+    date: string,
+    is_open: boolean,
+    is_tabulated?: boolean
+  ) {
+    let status = "";
+
+    if (is_open) {
+      status = "In Progress";
+    } else if (is_tabulated) {
+      status = "Finalized";
+    } else {
+      status = "Not Started";
+    }
+
+    return { id, name, date, status };
   }
+
 
   // Navigate to specific contest results
   const handleRowClick = (contestId: number) => {
-    navigate(`/contestresults/${contestId}`);
+    const contest = allContests.find((c: any) => c.id === contestId);
+    if (contest && contest.is_open == false && contest.is_tabulated == true) {
+      navigate(`/contestresults/${contestId}`);
+    } else {
+      toast.success(
+        "🎉 Stay tuned! Results will be available once the contest ends and scores are finalized!",
+        {
+          id: "contest-results-stay-tuned",
+          duration: 4000,
+          style: {
+            background: '#4caf50',
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: '15px',
+            padding: '16px 20px',
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+          },
+          iconTheme: {
+            primary: '#fff',
+            secondary: '#4caf50',
+          },
+        }
+      );
+    }
   };
 
   // transforms array into rows
-  const rows = allContests.map((contest) => createData(contest.id, contest.name, contest.date, contest.is_open));
+  const rows = allContests
+    .map((contest: { id: number; name: string; date: string; is_open: boolean; is_tabulated: boolean }) =>
+      createData(contest.id, contest.name, contest.date, contest.is_open, contest.is_tabulated)
+    )
+
+    .sort((a: { status: string }, b: { status: string }) => {
+      const order = { Finalized: 1, "In Progress": 2, "Not Started": 3 };
+      return order[a.status as keyof typeof order] - order[b.status as keyof typeof order];
+    });
 
   return (
     <>
-      <Typography variant="h1" sx={{ ml: "2%", mt: 4, mb: 4 }}>
-        Contests
-      </Typography>
+      {/* Title Section */}
       <Container
+        maxWidth="lg"
         sx={{
-          width: "90vw",
-          padding: 3,
-          bgcolor: theme.palette.secondary.light,
-          ml: "2%",
-          borderRadius: 5,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
+          px: { xs: 3, sm: 5 },
+          mt: 2,
+          mb: 2,
         }}
       >
-        {/* ContestTable component */}
+        {/* Back to Homepage */}
+        <Box sx={{ mb: 1, mt: { xs: 1, sm: 2 } }}>
+          <Button
+            component={Link}
+            to="/"
+            startIcon={<ArrowBackIcon />}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.success.dark,
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              fontWeight: 500,
+              px: { xs: 1.5, sm: 2 },
+              py: { xs: 0.75, sm: 1 },
+              borderRadius: "8px",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                backgroundColor: "rgba(76, 175, 80, 0.08)",
+                transform: "translateX(-2px)",
+              },
+            }}
+          >
+            Back to Homepage
+          </Button>
+        </Box>
+
+        <Stack 
+          direction="row" 
+          spacing={2} 
+          alignItems="center" 
+          sx={{ mb: 1 }}
+        >
+          <Typography
+            variant="h1"
+            sx={{
+              fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+              fontWeight: 400,
+              color: theme.palette.primary.main,
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
+            }}
+          >
+            Contests
+          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <InteractiveGrid cellSize={16} gap={3} />
+          </Box>
+        </Stack>
+
+      </Container>
+
+      {/* Table Container */}
+      <Container
+        maxWidth="lg"
+        sx={{
+          backgroundColor: "transparent",
+          boxShadow: "none",
+          border: "none",
+          p: 3,
+        }}
+      >
         <ContestTable
           rows={rows}
           isLoading={isLoadingContest}

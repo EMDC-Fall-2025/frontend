@@ -25,5 +25,6 @@ dist-ssr
 
 # env files
 .env
-.env.development
+.env.*
+!.env.example
 !.env.docker.example

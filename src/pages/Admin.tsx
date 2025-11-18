@@ -1,5 +1,4 @@
-// Admin.tsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import useContestStore from "../store/primary_stores/contestStore";
 import useOrganizerStore from "../store/primary_stores/organizerStore";
 import { useEffect } from "react";
@@ -23,57 +22,80 @@ import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import CampaignIcon from "@mui/icons-material/Campaign";
 import GroupIcon from "@mui/icons-material/Group";
-import AssignmentIndIcon from "@mui/icons-material/AssignmentInd";
-
 import theme from "../theme";
 import OrganizerModal from "../components/Modals/OrganizerModal";
 import ContestModal from "../components/Modals/ContestModal";
-import AssignJudgeToContestModal from "../components/Modals/AssignJudgeToContestModal";
 import AdminContestTable from "../components/Tables/AdminContestTable";
 import AdminOrganizerTable from "../components/Tables/AdminOrganizerTable";
+import ContestOverviewTable from "../components/Tables/ContestOverview";
 
 export default function Admin() {
   const [value, setValue] = useState("1");
   const [contestModal, setContestModal] = useState(false);
   const [organizerModal, setOrganizerModal] = useState(false);
-  const [assignJudgeModal, setAssignJudgeModal] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const isInitialLoadRef = useRef(true);
   const navigate = useNavigate();
 
-  const { allContests, fetchAllContests, isLoadingContest } = useContestStore();
-const { allOrganizers, fetchAllOrganizers, isLoadingOrganizer } = useOrganizerStore();
+  const { allContests, isLoadingContest } = useContestStore();
+  const { allOrganizers, isLoadingOrganizer } = useOrganizerStore();
 
-useEffect(() => {
-  if (allContests.length === 0) fetchAllContests();
-  if (allOrganizers.length === 0) fetchAllOrganizers();
+  useEffect(() => {
+    const needsContests = allContests.length === 0;
+    const needsOrganizers = allOrganizers.length === 0;
 
-}, []);
+    if (!needsContests && !needsOrganizers) {
+      setHasLoaded(true);
+      isInitialLoadRef.current = false;
+      return;
+    }
+    Promise.all([
+      needsContests ? useContestStore.getState().fetchAllContests() : Promise.resolve(),
+      needsOrganizers ? useOrganizerStore.getState().fetchAllOrganizers() : Promise.resolve()
+    ]).then(() => {
+      setHasLoaded(true);
+      isInitialLoadRef.current = false;
+    });
+  }, [allContests.length, allOrganizers.length]); // Remove function dependencies to prevent re-runs
 
 
   const handleChange = (_e: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);
   };
 
-  //display cards at the top for contests and organizers
-
-  
   const StatCard = ({ value, label }: { value: number | string; label: string }) => (
     <Card
       elevation={0}
       sx={{
-        borderRadius: 3,
-        border: `1px solid ${theme.palette.grey[300]}`,
-        backgroundColor: "#fff",
+        borderRadius: 2,
+        border: `1px solid ${theme.palette.grey[200]}`,
+        background: `linear-gradient(135deg, #ffffff 0%, #fafafa 100%)`,
+        boxShadow: `0 2px 8px rgba(76, 175, 80, 0.08)`,
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+          boxShadow: `0 4px 16px rgba(76, 175, 80, 0.12)`,
+          transform: 'translateY(-1px)',
+        },
       }}
     >
-      <CardContent sx={{ py: 3, px: 4 }}>
-     
+      <CardContent sx={{ py: 1.5, px: 2, position: 'relative' }}>
+        <Box sx={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          width: 20,
+          height: 20,
+          borderRadius: '50%',
+          backgroundColor: theme.palette.success.light,
+          opacity: 0.1,
+        }} />
         <Typography
           variant="h4"
           sx={{ fontWeight: 700, color: theme.palette.success.dark, lineHeight: 1, mb: 0.5 }}
         >
           {value}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
           {label}
         </Typography>
       </CardContent>
@@ -83,18 +105,38 @@ useEffect(() => {
 
   return (
     <Box sx={{ pb: 8, backgroundColor: "#fafafa", minHeight: "100vh" }}>
-      <Container maxWidth="lg" sx={{ pb: 6 }}>
-        {/* Title in green */}
-        <Stack spacing={1} sx={{ mb: 3 , mt: 3}}>
-          <Typography variant="h4" sx={{ fontWeight: 800, color: theme.palette.success.main}}>
+      <Container maxWidth="lg" sx={{ pb: 6, px: { xs: 2, sm: 3 } }}>
+        <Box
+          sx={{
+            opacity: hasLoaded ? 1 : 0,
+            transition: hasLoaded ? `opacity ${isInitialLoadRef.current ? '0.6s' : '0.1s'} ease-in` : 'none',
+            pointerEvents: hasLoaded ? 'auto' : 'none',
+          }}
+        >
+          <Stack spacing={1} sx={{ mb: 2, mt: 2 }}>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontWeight: 400, 
+              color: theme.palette.success.main,
+              fontSize: { xs: "1.75rem", sm: "2.25rem", md: "2.5rem" },
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
+            }}
+          >
             Admin Dashboard
           </Typography>
-          <Typography variant="subtitle1" color="text.secondary">
+          <Typography 
+            variant="subtitle1" 
+            color="text.secondary"
+            sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
+          >
             Manage contests and organizers
           </Typography>
         </Stack>
 
-        {/* Only two stat cards: Contests & Organizers */}
+        {/* Contests & Organizers */}
       
         <Grid container spacing={2} sx={{ mb: 2 }}>
           <Grid item xs={12} sm={6} md={3}>
@@ -106,17 +148,26 @@ useEffect(() => {
         </Grid>
 
   
-        <Stack direction="row" spacing={2} sx={{ mb: 2, flexWrap: "wrap" }} useFlexGap>
+        <Stack 
+          direction={{ xs: "column", sm: "row" }} 
+          spacing={2} 
+          sx={{ mb: 2, flexWrap: "wrap" }} 
+          useFlexGap
+        >
           <Button
             onClick={() => setContestModal(true)}
             variant="contained"
             startIcon={<AddIcon />}
+            size="small"
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: 2.5,
+              px: { xs: 2, sm: 2 },
+              py: { xs: 1, sm: 1 },
               bgcolor: theme.palette.success.main,
               "&:hover": { bgcolor: theme.palette.success.dark },
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              width: { xs: "100%", sm: "auto" }
             }}
           >
             Create Contest
@@ -126,16 +177,20 @@ useEffect(() => {
             onClick={() => setOrganizerModal(true)}
             variant="outlined"
             startIcon={<PersonAddAlt1Icon />}
+            size="small"
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: 2.5,
+              px: { xs: 2, sm: 2 },
+              py: { xs: 1, sm: 1 },
               borderColor: theme.palette.success.main,
               color: theme.palette.success.main,
               "&:hover": {
                 borderColor: theme.palette.success.dark,
                 backgroundColor: "rgba(46,125,50,0.06)",
               },
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              width: { xs: "100%", sm: "auto" }
             }}
           >
             Create Organizer
@@ -145,38 +200,23 @@ useEffect(() => {
             onClick={() => navigate("/awards")}
             variant="outlined"
             startIcon={<EmojiEventsIcon />}
+            size="small"
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: 2.5,
+              px: { xs: 2, sm: 2 },
+              py: { xs: 1, sm: 1 },
               borderColor: theme.palette.success.main,
               color: theme.palette.success.main,
               "&:hover": {
                 borderColor: theme.palette.success.dark,
                 backgroundColor: "rgba(46,125,50,0.06)",
               },
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              width: { xs: "100%", sm: "auto" }
             }}
           >
             Create Award
-          </Button>
-
-          <Button
-            onClick={() => setAssignJudgeModal(true)}
-            variant="outlined"
-            startIcon={<AssignmentIndIcon />}
-            sx={{
-              textTransform: "none",
-              borderRadius: 2,
-              px: 2.5,
-              borderColor: theme.palette.success.main,
-              color: theme.palette.success.main,
-              "&:hover": {
-                borderColor: theme.palette.success.dark,
-                backgroundColor: "rgba(46,125,50,0.06)",
-              },
-            }}
-          >
-            Assign Judge to Contest
           </Button>
         </Stack>
 
@@ -194,9 +234,22 @@ useEffect(() => {
           >
             <TabList
               onChange={handleChange}
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
               sx={{
-                "& .MuiTab-root": { textTransform: "none", fontWeight: 600, minHeight: 56 },
+                "& .MuiTab-root": { 
+                  textTransform: "none", 
+                  fontWeight: 600, 
+                  minHeight: 56,
+                  minWidth: { xs: "auto", sm: 160 },
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                  px: { xs: 1, sm: 2 },
+                },
                 "& .MuiTabs-indicator": { height: 3, backgroundColor: theme.palette.success.main },
+                "& .MuiTabs-scrollButtons": {
+                  color: theme.palette.success.main,
+                },
               }}
             >
               <Tab
@@ -205,12 +258,12 @@ useEffect(() => {
                 label={
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <span>Contests</span>
-                    
                   </Stack>
                 }
                 value="1"
               />
               <Tab iconPosition="start" icon={<GroupIcon />} label="Manage Organizers" value="2" />
+              <Tab iconPosition="start" icon={<EmojiEventsIcon />} label="Contest Overview" value="3" />
             </TabList>
           </Box>
 
@@ -259,7 +312,31 @@ useEffect(() => {
               <AdminOrganizerTable />
             </Box>
           </TabPanel>
+
+          {/* Contest Overview */}
+          <TabPanel
+            value="3"
+            sx={{
+              p: 0,
+              border: `1px solid ${theme.palette.grey[300]}`,
+              borderTop: 0,
+              borderBottomLeftRadius: 12,
+              borderBottomRightRadius: 12,
+              backgroundColor: "#fff",
+            }}
+          >
+            <Box sx={{ px: 3, py: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                Contest Overview
+              </Typography>
+            </Box>
+            <Divider />
+            <Box sx={{ px: 3, pb: 3 }}>
+              <ContestOverviewTable />
+            </Box>
+          </TabPanel>
         </TabContext>
+        </Box>
       </Container>
 
      
@@ -269,14 +346,6 @@ useEffect(() => {
         mode={"new"}
       />
       <ContestModal open={contestModal} handleClose={() => setContestModal(false)} mode={"new"} />
-      <AssignJudgeToContestModal
-        open={assignJudgeModal}
-        handleClose={() => setAssignJudgeModal(false)}
-        onSuccess={() => {
-          // Refresh data if needed
-          fetchAllContests();
-        }}
-      />
     </Box>
   );
 }

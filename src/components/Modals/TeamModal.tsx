@@ -1,13 +1,4 @@
-/**
- * TeamModal Component
- * 
- * Modal for creating and editing teams with modern theme styling.
- * Features:
- * - Clean white background with subtle borders
- * - Green success theme for buttons
- * - Consistent typography with bold titles
- * - Modern form styling with proper spacing
- */
+// TeamModal Component - Modal for creating and editing teams
 import {
   Button,
   FormControl,
@@ -18,6 +9,8 @@ import {
 } from "@mui/material";
 import Modal from "./Modal";
 import theme from "../../theme";
+import toast from "react-hot-toast";
+import { handleAccountError } from "../../utils/errorHandler";
 import { useEffect, useState } from "react";
 import { useTeamStore } from "../../store/primary_stores/teamStore";
 import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
@@ -28,9 +21,11 @@ export interface ITeamModalProps {
   mode: "new" | "edit";
   clusters?: any[];
   contestId?: number;
+  onSuccess?: () => void;
   teamData?: {
     id: number;
     team_name: string;
+    school_name: string;
     clusterid: number;
     username: string;
     first_name: string;
@@ -40,22 +35,33 @@ export interface ITeamModalProps {
 }
 
 export default function TeamModal(props: ITeamModalProps) {
-  const { handleClose, open, mode, clusters, contestId, teamData } = props;
+  const { handleClose, open, mode, clusters, contestId, teamData, onSuccess } = props;
   const [teamName, setTeamName] = useState("");
+  const [schoolName, setSchoolName] = useState("");
   const [cluster, setCluster] = useState(-1);
   const [coachFirstName, setCoachFirstName] = useState("");
   const [coachLastName, setCoachLastName] = useState("");
   const [coachEmail, setCoachEmail] = useState("");
-  const { createTeam, editTeam, teamError } = useTeamStore();
-  const { getTeamsByClusterId } = useMapClusterTeamStore();
+  const { createTeam, editTeam } = useTeamStore();
+  const addTeamToCluster = useMapClusterTeamStore((s) => s.addTeamToCluster);
+  const removeTeamFromOtherClusters = useMapClusterTeamStore((s) => s.removeTeamFromOtherClusters);
+  const fetchTeamsByClusterId = useMapClusterTeamStore((s) => s.fetchTeamsByClusterId);
 
   const title = mode === "new" ? "New Team" : "Edit Team";
 
+  // Create a new team with coach account and assign to contest/cluster
+  // Initializes all scores to 0 and creates coach login credentials
   const handleCreateTeam = async () => {
     if (contestId) {
       try {
-        await createTeam({
+        // Remove hover/focus from the submit button to avoid lingering hover styles
+        if (typeof window !== "undefined" && document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+        // Create team with initial scores and coach information
+        const createdTeam = await createTeam({
           team_name: teamName,
+          school_name: schoolName || "NA",
           journal_score: 0,
           presentation_score: 0,
           machinedesign_score: 0,
@@ -67,42 +73,80 @@ export default function TeamModal(props: ITeamModalProps) {
           username: coachEmail,
           password: "password",
           first_name: coachFirstName || "n/a",
-          last_name: coachLastName || "n/a",
+          last_name: coachLastName || "",
           contestid: contestId,
         });
-        if (clusters) {
-          for (const cluster of clusters) {
-            await getTeamsByClusterId(cluster.id);
+
+        if (createdTeam) {
+          const allTeamsCluster = clusters?.find((c) => c.cluster_name === "All Teams");
+          // Add to selected cluster first (if not All Teams)
+          if (cluster !== -1 && (!allTeamsCluster || cluster !== allTeamsCluster.id)) {
+            addTeamToCluster(cluster, createdTeam);
           }
+          // Then ensure presence under All Teams (will not remove from other clusters)
+          if (allTeamsCluster) {
+            addTeamToCluster(allTeamsCluster.id, createdTeam);
+          }
+          // Background refresh both lists to ensure UI sync with backend
+          try {
+            if (cluster !== -1) {
+              fetchTeamsByClusterId(cluster, true);
+            }
+            if (allTeamsCluster?.id) {
+              fetchTeamsByClusterId(allTeamsCluster.id, true);
+          }
+          } catch {}
         }
+
+        toast.success("Team created successfully!");
+        onSuccess?.();
         handleCloseModal();
-      } catch (error) {
-        console.error("Failed to create team", error);
+      } catch (error: any) {
+        handleAccountError(error, "create");
       }
     }
   };
 
+  // Update existing team information and coach details
   const handleEditTeam = async () => {
     try {
-      await editTeam({
+      // Remove hover/focus from the submit button to avoid lingering hover styles
+      if (typeof window !== "undefined" && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      // Update team with current form values
+      const updatedTeam = await editTeam({
         id: teamData?.id ?? 0,
         team_name: teamName,
+        school_name: schoolName || "NA",
         clusterid: cluster,
-        username: coachEmail,
+        username: teamData?.username || coachEmail,
         first_name: coachFirstName,
         last_name: coachLastName,
         contestid: contestId ?? 0,
       });
 
-      if (clusters) {
-        for (const cluster of clusters) {
-          await getTeamsByClusterId(cluster.id);
+      if (updatedTeam && cluster !== -1) {
+        const allTeamsCluster = clusters?.find((c) => c.cluster_name === "All Teams");
+        // Remove from all non-AllTeams clusters, then place in selected cluster
+        removeTeamFromOtherClusters(updatedTeam.id, cluster);
+        addTeamToCluster(cluster, updatedTeam);
+        // Ensure presence in All Teams
+        if (allTeamsCluster?.id) {
+          addTeamToCluster(allTeamsCluster.id, updatedTeam);
         }
+        // Refresh both views
+        try {
+          await fetchTeamsByClusterId(cluster, true);
+          if (allTeamsCluster?.id) await fetchTeamsByClusterId(allTeamsCluster.id, true);
+        } catch {}
       }
 
+      toast.success("Team updated successfully!");
+      onSuccess?.();
       handleCloseModal();
-    } catch (error) {
-      console.error("Failed to edit team", error);
+    } catch (error: any) {
+      toast.error("Failed to update team. Please try again.");
     }
   };
 
@@ -113,6 +157,7 @@ export default function TeamModal(props: ITeamModalProps) {
     setCoachFirstName("");
     setCoachLastName("");
     setTeamName("");
+    setSchoolName("");
   };
 
   useEffect(() => {
@@ -121,6 +166,7 @@ export default function TeamModal(props: ITeamModalProps) {
       setCoachLastName(teamData.last_name);
       setCoachEmail(teamData.username);
       setTeamName(teamData.team_name);
+      setSchoolName(teamData.school_name);
       setCluster(teamData.clusterid);
     }
   }, [teamData]);
@@ -137,12 +183,7 @@ export default function TeamModal(props: ITeamModalProps) {
   };
 
   return (
-    <Modal
-      open={open}
-      handleClose={handleCloseModal}
-      title={title}
-      error={teamError}
-    >
+    <Modal open={open} handleClose={handleCloseModal} title={title}>
       <form
         onSubmit={handleSubmit}
         style={{
@@ -160,6 +201,14 @@ export default function TeamModal(props: ITeamModalProps) {
           value={teamName}
           onChange={(e: any) => setTeamName(e.target.value)}
           sx={{ mt: 1, width: 300 }}
+        />
+        <TextField
+          label="School Name"
+          variant="outlined"
+          value={schoolName}
+          onChange={(e: any) => setSchoolName(e.target.value)}
+          sx={{ mt: 3, width: 300 }}
+          placeholder="School Name"
         />
         <FormControl
           required
@@ -202,20 +251,42 @@ export default function TeamModal(props: ITeamModalProps) {
           variant="outlined"
           value={coachEmail}
           onChange={(e: any) => setCoachEmail(e.target.value)}
+          disabled={mode === "edit"}
           sx={{ mt: 3, width: 300 }}
         />
-        {/* Submit button - updated to use modern green success theme */}
+
         <Button
           type="submit"
           sx={{
             width: 150,
-            height: 44,                                    // Consistent height (was 35)
-            bgcolor: theme.palette.success.main,          // Green theme (was primary.main)
-            "&:hover": { bgcolor: theme.palette.success.dark }, // Hover effect
-            color: "#fff",                                // White text (was secondary.main)
+            height: 44,
+            bgcolor: theme.palette.success.main,
+            color: "#fff",
             mt: 3,
-            textTransform: "none",                        // No uppercase transformation
-            borderRadius: 2,                              // Modern border radius
+            textTransform: "none",
+            borderRadius: "12px",
+            boxShadow: `
+              0 4px 12px rgba(76, 175, 80, 0.3),
+              0 2px 4px rgba(76, 175, 80, 0.2),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2)
+            `,
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            "&:hover": {
+              bgcolor: theme.palette.success.dark,
+              transform: "translateY(-2px)",
+              boxShadow: `
+                0 6px 16px rgba(76, 175, 80, 0.4),
+                0 4px 8px rgba(76, 175, 80, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2)
+              `,
+            },
+            "&:active": {
+              transform: "translateY(0px)",
+              boxShadow: `
+                0 2px 8px rgba(76, 175, 80, 0.3),
+                inset 0 2px 4px rgba(0, 0, 0, 0.1)
+              `,
+            },
           }}
         >
           {buttonText}

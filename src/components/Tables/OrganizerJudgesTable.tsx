@@ -11,21 +11,26 @@ import Typography from "@mui/material/Typography";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { Button, Container, CircularProgress } from "@mui/material";
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import JudgeModal from "../Modals/JudgeModal";
 import { useNavigate } from "react-router-dom";
 import { useMapClusterJudgeStore } from "../../store/map_stores/mapClusterToJudgeStore";
 import { useJudgeStore } from "../../store/primary_stores/judgeStore";
+import useContestJudgeStore from "../../store/map_stores/mapContestToJudgeStore";
+import { useMapScoreSheetStore } from "../../store/map_stores/mapScoreSheetStore";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckIcon from "@mui/icons-material/Check";
+import toast from "react-hot-toast";
 import ClusterModal from "../Modals/ClusterModal";
 import { Cluster, Judge, JudgeData } from "../../types";
 import AreYouSureModal from "../Modals/AreYouSureModal";
+import Modal from "../Modals/Modal";
 
 interface IJudgesTableProps {
   judges: any[];
   clusters: any[];
   contestid: number;
+  currentCluster?: Cluster;
 }
 
 interface IOrganizerClustersTeamsTableProps {
@@ -98,7 +103,8 @@ function JudgeRow(props: { row: ReturnType<typeof createDataJudge> }) {
               p: 0,
               display: "flex",
               alignItems: "center",
-              gap: 1.5,
+              gap: { xs: 0.5, sm: 1, md: 1.5 },
+              flexWrap: { xs: "wrap", sm: "nowrap" },
             }}
           >
             {row.viewEditScores}
@@ -145,33 +151,153 @@ function JudgeRow(props: { row: ReturnType<typeof createDataJudge> }) {
 }
 
 function JudgesTable(props: IJudgesTableProps) {
-  const { judges, clusters, contestid } = props;
+  const { judges, clusters, contestid, currentCluster } = props;
   const navigate = useNavigate();
   const [openJudgeModal, setOpenJudgeModal] = useState(false);
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
+  const [openDeleteOptions, setOpenDeleteOptions] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState<string>("");
+  const [onConfirm, setOnConfirm] = useState<(() => void) | null>(null);
   const [judgeData, setJudgeData] = useState<JudgeData | undefined>(undefined);
-  const { submissionStatus } = useJudgeStore();
+  const { submissionStatus, checkAllScoreSheetsSubmitted, deleteJudge } = useJudgeStore();
+  
   const [judgeId, setJudgeId] = useState(0);
-  const { fetchJudgesByClusterId } = useMapClusterJudgeStore();
+  const { fetchJudgesByClusterId, removeJudgeFromCluster, fetchClustersForJudges, judgesByClusterId } = useMapClusterJudgeStore();
+  const { removeJudgeFromContestStoreIfNoOtherClusters, getAllJudgesByContestId } = useContestJudgeStore();
+  const { clearMappings } = useMapScoreSheetStore();
 
   const { judgeClusters } = useMapClusterJudgeStore();
-  const { deleteJudge, judgeError } = useJudgeStore();
 
   const titles = ["Lead", "Technical", "General", "Journal"];
 
-  const handleOpenJudgeModal = (judgeData: JudgeData) => {
+  // Memoize judge IDs to prevent unnecessary re-fetches
+  const judgeIdsString = React.useMemo(() => {
+    return judges.map(j => j.id).sort((a, b) => a - b).join(',');
+  }, [judges]);
+
+  const lastCheckedClusterIdRef = React.useRef<number | null>(null);
+  const lastCheckedJudgeIdsRef = React.useRef<string>("");
+  const lastFetchedJudgeIdsRef = React.useRef<string>("");
+
+  // Check submission status for this specific cluster - only when cluster or judges actually change
+  React.useEffect(() => {
+    if (!currentCluster || !judges || judges.length === 0) return;
+    
+    const clusterChanged = lastCheckedClusterIdRef.current !== currentCluster.id;
+    const judgesChanged = lastCheckedJudgeIdsRef.current !== judgeIdsString;
+    
+    if (clusterChanged || judgesChanged) {
+      lastCheckedClusterIdRef.current = currentCluster.id;
+      lastCheckedJudgeIdsRef.current = judgeIdsString;
+      checkAllScoreSheetsSubmitted(judges as any, currentCluster.id);
+    }
+  }, [currentCluster?.id, judgeIdsString, checkAllScoreSheetsSubmitted, judges]);
+
+  // Fetch clusters for judges - only when judge IDs actually change
+  React.useEffect(() => {
+    if (!judges || judges.length === 0) return;
+    
+    if (lastFetchedJudgeIdsRef.current !== judgeIdsString) {
+      lastFetchedJudgeIdsRef.current = judgeIdsString;
+      fetchClustersForJudges(judges as any).catch(console.error);
+    }
+  }, [judgeIdsString, fetchClustersForJudges, judges]);
+
+  // Memoize the handler to prevent unnecessary re-renders
+  const handleOpenJudgeModal = useCallback((judgeData: JudgeData) => {
     setJudgeData(judgeData);
     setOpenJudgeModal(true);
-  };
+  }, []);
 
-  const handleOpenAreYouSure = (judgeId: number) => {
+  // Open delete options (choose between cluster-only vs complete delete)
+  const handleOpenDeleteOptions = useCallback((judgeId: number) => {
     setJudgeId(judgeId);
-    setOpenAreYouSure(true);
-  };
+    setOpenDeleteOptions(true);
+  }, []);
+
+  // Memoize navigate handler
+  const handleNavigateToJudging = useCallback((judgeId: number) => {
+    navigate(`/judging/${judgeId}/`);
+  }, [navigate]);
 
   const handleDelete = async (judgeId: number) => {
-    await deleteJudge(judgeId);
-    await fetchJudgesByClusterId(judgeClusters[judgeId].id);
+    try {
+      if (!currentCluster) {
+        toast.error("Cluster information not available. Please refresh the page and try again.");
+        return;
+      }
+      
+      // Before removal, check if judge is in any other clusters in this contest
+      // This ensures we check BEFORE removing, so we have accurate data
+      let isInOtherClusters = false;
+      if (contestid) {
+        const otherClusters = clusters.filter(c => c.id !== currentCluster.id);
+        
+        // First check local state
+        isInOtherClusters = otherClusters.some(cluster => {
+          const judgesInCluster = judgesByClusterId[cluster.id] || [];
+          return judgesInCluster.some(j => j.id === judgeId);
+        });
+        
+        // If not found in local state, fetch fresh data for other clusters to be sure
+        if (!isInOtherClusters && otherClusters.length > 0) {
+          // Fetch judges for all other clusters to ensure we have accurate data
+          await Promise.all(
+            otherClusters.map(cluster => fetchJudgesByClusterId(cluster.id, true))
+          );
+          
+          // Check again after fetching
+          isInOtherClusters = otherClusters.some(cluster => {
+            const judgesInCluster = judgesByClusterId[cluster.id] || [];
+            return judgesInCluster.some(j => j.id === judgeId);
+          });
+        }
+      }
+      
+      // Remove judge from cluster
+      await removeJudgeFromCluster(judgeId, currentCluster.id);
+      
+      // Only remove from contest if judge is not in any other clusters
+      if (contestid && !isInOtherClusters) {
+        removeJudgeFromContestStoreIfNoOtherClusters(judgeId, contestid);
+      }
+      
+      toast.success(`Judge removed from ${currentCluster.cluster_name} cluster successfully!`);
+    } catch (error: any) {
+      let errorMessage = "Failed to remove judge from cluster. Please try again.";
+      if (error?.response?.data?.error) {
+        errorMessage = `Failed to remove judge: ${error.response.data.error}`;
+      } else if (error?.response?.data?.detail) {
+        errorMessage = `Failed to remove judge: ${error.response.data.detail}`;
+      } else if (error?.message) {
+        errorMessage = `Failed to remove judge: ${error.message}`;
+      }
+      toast.error(errorMessage);
+    }
+  };
+
+  // Permanently delete judge (system-wide)
+  const handleDeleteCompletely = async (judgeId: number) => {
+    try {
+      await deleteJudge(judgeId);
+
+      // Refresh all clusters in this contest to remove the judge visually
+      if (clusters && clusters.length > 0) {
+        await Promise.all(clusters.map((cluster) => fetchJudgesByClusterId(cluster.id, true)));
+      }
+      // Refresh contest judges list
+      if (contestid) {
+        await getAllJudgesByContestId(contestid, true);
+      }
+
+      toast.success("Judge deleted from system successfully.");
+    } catch (error: any) {
+      const msg = error?.response?.data?.detail || error?.message || "Failed to delete judge.";
+      toast.error(msg);
+    } finally {
+      setOpenAreYouSure(false);
+      setOpenDeleteOptions(false);
+    }
   };
 
   const handleCloseJudgeModal = () => {
@@ -179,52 +305,107 @@ function JudgesTable(props: IJudgesTableProps) {
   };
 
   const getScoreSheets = (judge: any) => {
-    const scoreSheets = [];
-    if (judge.journal) scoreSheets.push("Journal");
-    if (judge.presentation) scoreSheets.push("Presentation");
-    if (judge.mdo) scoreSheets.push("Machine Design & Operation");
-    if (judge.otherpenalties) scoreSheets.push("General Penalties");
-    if (judge.runpenalties) scoreSheets.push("Run Penalties");
+    const scoreSheets: string[] = [];
 
+    // Use the specific cluster row's context if available to avoid stale mappings
+    const clusterType = (currentCluster?.cluster_type || "preliminary").toLowerCase();
+
+    if (clusterType === "redesign") {
+      scoreSheets.push("Redesign");
+      return scoreSheets;
+    }
+
+    if (clusterType === "championship") {
+      scoreSheets.push("Championship");
+      return scoreSheets;
+    }
+
+    // Use cluster-specific sheet flags if available (from MapJudgeToCluster), 
+    // otherwise fall back to global judge flags
+    const sheetFlags = judge.cluster_sheet_flags || {
+      journal: judge.journal,
+      presentation: judge.presentation,
+      mdo: judge.mdo,
+      runpenalties: judge.runpenalties,
+      otherpenalties: judge.otherpenalties,
+    };
+
+    if (sheetFlags.journal) scoreSheets.push("Journal");
+    if (sheetFlags.presentation) scoreSheets.push("Presentation");
+    if (sheetFlags.mdo) scoreSheets.push("Machine Design & Operation");
+    if (sheetFlags.otherpenalties) scoreSheets.push("General Penalties");
+    if (sheetFlags.runpenalties) scoreSheets.push("Run Penalties");
     return scoreSheets;
   };
 
-  // Populate table with store data
-  const rows = judges.map((judge) =>
-    createDataJudge(
+  // Check if current cluster is championship or redesign
+  const isChampionshipOrRedesignCluster = currentCluster && (
+    currentCluster.cluster_type === 'championship' || 
+    currentCluster.cluster_name?.toLowerCase().includes('championship') ||
+    currentCluster.cluster_type === 'redesign' || 
+    currentCluster.cluster_name?.toLowerCase().includes('redesign')
+  );
+
+  // Memoize rows to prevent recreating buttons on every render
+  const rows = useMemo(() => judges.map((judge) => {
+    // Get submission status for this specific cluster
+    const clusterSubmissionStatus = currentCluster?.id && submissionStatus 
+      ? submissionStatus[currentCluster.id] 
+      : null;
+    const isSubmitted = clusterSubmissionStatus ? clusterSubmissionStatus[judge.id] : false;
+    return createDataJudge(
       `${judge.first_name} ${judge.last_name}`,
       `${titles[judge.role - 1]}`,
-      <Button
-        variant="outlined"
-        onClick={(e) => {
-          e.stopPropagation();
-          handleOpenJudgeModal({
-            id: judge.id,
-            firstName: judge.first_name,
-            lastName: judge.last_name,
-            cluster: judgeClusters[judge.id],
-            role: judge.role,
-            journalSS: judge.journal,
-            presSS: judge.presentation,
-            mdoSS: judge.mdo,
-            runPenSS: judge.runpenalties,
-            genPenSS: judge.otherpenalties,
-            redesignSS: false,
-            championshipSS: false,
-            phoneNumber: judge.phone_number,
-          });
-        }}
-        sx={{
-          textTransform: "none",
-          fontWeight: 600,
-          px: 2.25,
-          py: 0.75,
-          borderRadius: 1.5,
-        }}
-      >
-        Edit Judge
-      </Button>,
-      judgeClusters[judge.id]?.cluster_name,
+      isChampionshipOrRedesignCluster ? null : (
+        <Button
+          variant="outlined"
+          onClick={(e) => {
+            e.stopPropagation();
+            // Use cluster-specific sheet flags for editing
+            const clusterFlags = judge.cluster_sheet_flags || {};
+            handleOpenJudgeModal({
+              id: judge.id,
+              firstName: judge.first_name,
+              lastName: judge.last_name,
+              cluster: judgeClusters[judge.id],
+              role: judge.role,
+              journalSS: clusterFlags.journal || false,
+              presSS: clusterFlags.presentation || false,
+              mdoSS: clusterFlags.mdo || false,
+              runPenSS: clusterFlags.runpenalties || false,
+              genPenSS: clusterFlags.otherpenalties || false,
+              redesignSS: clusterFlags.redesign || false,
+              championshipSS: clusterFlags.championship || false,
+              phoneNumber: judge.phone_number,
+            });
+          }}
+          sx={{
+            textTransform: "none",
+            fontWeight: 600,
+            px: { xs: 1.5, sm: 2, md: 2.5 },
+            py: { xs: 0.6, sm: 0.8, md: 1 },
+            borderRadius: 2,
+            fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
+            minWidth: { xs: "90px", sm: "110px", md: "130px" },
+            height: { xs: "32px", sm: "36px", md: "40px" },
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#4caf50",
+            color: "white",
+            "&:hover": {
+              backgroundColor: "#45a049",
+              transform: "translateY(-1px)",
+              boxShadow: "0 4px 8px rgba(76,175,80,0.25)",
+            },
+            transition: "all 0.2s ease-in-out",
+          }}
+        >
+          Edit Judge
+        </Button>
+      ),
+      // Display the specific cluster name for this row
+      currentCluster?.cluster_name || judgeClusters[judge.id]?.cluster_name,
       getScoreSheets(judge),
       <Button
         variant="outlined"
@@ -233,12 +414,27 @@ function JudgesTable(props: IJudgesTableProps) {
           navigate(`/judging/${judge.id}/`);
         }}
         sx={{
-          mr: 2,
+          mr: { xs: 0.5, sm: 1, md: 2 },
           textTransform: "none",
           fontWeight: 600,
-          px: 2.25,
-          py: 0.75,
-          borderRadius: 1.5,
+          px: { xs: 1.5, sm: 2, md: 2.5 },
+          py: { xs: 0.6, sm: 0.8, md: 1 },
+          borderRadius: 2,
+          fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
+          minWidth: { xs: "90px", sm: "110px", md: "130px" },
+          height: { xs: "32px", sm: "36px", md: "40px" },
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderColor: "#4caf50",
+          color: "#4caf50",
+          "&:hover": {
+            backgroundColor: "#4caf50",
+            color: "white",
+            transform: "translateY(-1px)",
+            boxShadow: "0 4px 8px rgba(76,175,80,0.25)",
+          },
+          transition: "all 0.2s ease-in-out",
         }}
       >
         View/Edit Scores
@@ -246,32 +442,50 @@ function JudgesTable(props: IJudgesTableProps) {
       <Button
         variant="outlined"
         sx={{
-          ml: 2,
+          ml: { xs: 0.5, sm: 1, md: 2 },
           textTransform: "none",
           fontWeight: 600,
-          px: 2.25,
-          py: 0.75,
-          borderRadius: 1.5,
+          px: { xs: 1.5, sm: 2, md: 2.5 },
+          py: { xs: 0.6, sm: 0.8, md: 1 },
+          borderRadius: 2,
+          fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
+          minWidth: { xs: "90px", sm: "110px", md: "130px" },
+          height: { xs: "32px", sm: "36px", md: "40px" },
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderColor: "#d32f2f",
+          color: "#d32f2f",
+          "&:hover": {
+            backgroundColor: "#d32f2f",
+            color: "white",
+            transform: "translateY(-1px)",
+            boxShadow: "0 4px 8px rgba(211,47,47,0.25)",
+          },
+          transition: "all 0.2s ease-in-out",
         }}
         onClick={(e) => {
           e.stopPropagation();
-          handleOpenAreYouSure(judge.id);
+          handleOpenDeleteOptions(judge.id);
         }}
       >
         Delete
       </Button>,
-      submissionStatus ? submissionStatus[judge.id] : false
-    )
-  );
+      isSubmitted
+    );
+  }), [judges, submissionStatus, currentCluster?.id, isChampionshipOrRedesignCluster, handleOpenJudgeModal, handleOpenDeleteOptions, handleNavigateToJudging, currentCluster, judgeClusters, navigate]);
 
   return (
     <TableContainer component={Box}>
-      <Table
-        sx={{
-          minWidth: 650,
-          "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 },
-        }}
-      >
+        <Table
+          sx={{
+            "& .MuiTableCell-root": { 
+              fontSize: { xs: "0.7rem", sm: "0.85rem", md: "0.95rem" }, 
+              py: { xs: 0.5, sm: 0.75, md: 1.25 },
+              px: { xs: 0.5, sm: 0.75, md: 1 }
+            },
+          }}
+        >
         <TableBody>
           {rows.map((row, index) => (
             <JudgeRow key={index} row={row} />
@@ -284,20 +498,100 @@ function JudgesTable(props: IJudgesTableProps) {
         mode="edit"
         clusters={clusters}
         judgeData={judgeData}
+        clusterContext={currentCluster}
         contestid={contestid}
+        onSuccess={async () => {
+          clearMappings();
+          
+          if (currentCluster?.id) {
+            await fetchJudgesByClusterId(currentCluster.id, true);
+          }
+          if (clusters && clusters.length > 0) {
+            await Promise.all(
+              clusters.map(cluster => fetchJudgesByClusterId(cluster.id, true))
+            );
+          }
+          handleCloseJudgeModal();
+        }}
       />
+      {/* Delete Options Modal */}
+      <Modal
+        open={openDeleteOptions}
+        handleClose={() => setOpenDeleteOptions(false)}
+        title="Delete Judge"
+      >
+        <Container
+          sx={{
+            display: "flex",
+            flexDirection: "row",
+            gap: 1.25,
+            alignItems: "center",
+            justifyContent: "center",
+            p: 0,
+            width: "100%",
+          }}
+        >
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setConfirmTitle("Remove judge from this cluster?");
+              setOnConfirm(() => () => handleDelete(judgeId));
+              setOpenDeleteOptions(false);
+              setOpenAreYouSure(true);
+            }}
+            sx={{
+              textTransform: "none",
+              borderRadius: 1.5,
+              py: 1.25,
+              px: 2.5,
+              borderColor: "#9e9e9e",
+              color: "#424242",
+              minWidth: 0,
+              flex: 1,
+              "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
+            }}
+          >
+            Delete from cluster
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              setConfirmTitle("Delete judge completely? This will remove all mappings and data.");
+              setOnConfirm(() => () => handleDeleteCompletely(judgeId));
+              setOpenDeleteOptions(false);
+              setOpenAreYouSure(true);
+            }}
+            sx={{
+              textTransform: "none",
+              borderRadius: 1.5,
+              py: 1.25,
+              px: 2.5,
+              bgcolor: "#d32f2f",
+              color: "#fff",
+              minWidth: 0,
+              flex: 1,
+              "&:hover": { bgcolor: "#b71c1c" },
+            }}
+          >
+            Delete completely
+          </Button>
+        </Container>
+      </Modal>
+
+      {/* Confirm Modal */}
       <AreYouSureModal
         open={openAreYouSure}
         handleClose={() => setOpenAreYouSure(false)}
-        title="Are you sure you want to delete this judge?"
-        handleSubmit={() => handleDelete(judgeId)}
-        error={judgeError}
+        title={confirmTitle || "Are you sure?"}
+        handleSubmit={() => {
+          if (onConfirm) onConfirm();
+        }}
       />
     </TableContainer>
   );
 }
 
-export default function OrganizerJudgesTable(
+function OrganizerJudgesTable(
   props: IOrganizerClustersTeamsTableProps
 ) {
   const { clusters, judgesByClusterId, contestid } = props;
@@ -329,7 +623,13 @@ export default function OrganizerJudgesTable(
   };
 
   return judgesByClusterId ? (
-    <TableContainer component={Box}>
+    <TableContainer 
+      component={Box}
+      sx={{
+        overflowAnchor: "none",
+        contain: "layout",
+      }}
+    >
       <Table
         sx={{
           "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 },
@@ -391,19 +691,37 @@ export default function OrganizerJudgesTable(
                 <TableCell
                   style={{ paddingBottom: 0, paddingTop: 0 }}
                   colSpan={5}
+                  sx={{
+                    position: "relative",
+                    overflow: "hidden",
+                    overflowAnchor: "none",
+                    containIntrinsicSize: "auto",
+                  }}
                 >
                   <Collapse
                     in={openClusterIds.includes(cluster.id)}
                     timeout="auto"
                     unmountOnExit
+                    sx={{
+                      willChange: "height",
+                      contain: "layout style",
+                    }}
                   >
-                    {judgesByClusterId[cluster.id] && (
-                      <JudgesTable
-                        judges={judgesByClusterId[cluster.id]}
-                        clusters={clusters}
-                        contestid={contestid}
-                      />
-                    )}
+                    <Box 
+                      sx={{ 
+                        py: 1,
+                        isolation: "isolate",
+                      }}
+                    >
+                      {judgesByClusterId[cluster.id] && (
+                        <JudgesTable
+                          judges={judgesByClusterId[cluster.id]}
+                          clusters={clusters}
+                          contestid={contestid}
+                          currentCluster={cluster}
+                        />
+                      )}
+                    </Box>
                   </Collapse>
                 </TableCell>
               </TableRow>
@@ -422,3 +740,5 @@ export default function OrganizerJudgesTable(
     <CircularProgress />
   );
 }
+
+export default React.memo(OrganizerJudgesTable);

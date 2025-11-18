@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 // FILE OVERVIEW: This file contains a zustand store for managing special awards
 //                Handles API calls and manages loading/error states and persists data in session storage
 
@@ -40,13 +40,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
       getAllAwards: async () => {
         set({ isLoading: true, error: null });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/mapping/awardToTeam/getAllAwards/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          const response = await api.get(`/api/mapping/awardToTeam/getAllAwards/`);
           
           set({ awards: response.data.awards, isLoading: false });
         } catch (error: any) {
@@ -58,13 +52,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
       getAwardsByTeam: async (teamId: number) => {
         set({ isLoading: true, error: null });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/mapping/awardToTeam/getAwardByTeam/${teamId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          const response = await api.get(`/api/mapping/awardToTeam/getAwardByTeam/${teamId}/`);
           set({ awards: response.data, isLoading: false });
         } catch (error: any) {
           set({ error: "Error fetching awards", isLoading: false });
@@ -75,13 +63,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
       AwardsByTeamTable: async (teamId: number) => {
         set({ isLoading: true, error: null });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/mapping/awardToTeam/getAwardByTeam/${teamId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          const response = await api.get(`/api/mapping/awardToTeam/getAwardByTeam/${teamId}/`);
 
           set((state) => ({
             awards: { ...state.awards, [teamId]: response.data },
@@ -96,13 +78,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
       createAward: async (award: SpecialAward) => {
         set({ isLoading: true, error: null });
         try {
-          const token = localStorage.getItem("token");
-          await axios.post(`/api/mapping/awardToTeam/create/`, award, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          await api.post(`/api/mapping/awardToTeam/create/`, award);
           set((state) => ({ awards: [...state.awards, award], isLoading: false }));
         } catch (error: any) {
           set({ error: "Error creating award", isLoading: false });
@@ -113,13 +89,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
       updateAward: async (teamId: number, awardName: string, updatedAward: SpecialAward) => {
         set({ isLoading: true, error: null });
         try {
-          const token = localStorage.getItem("token");
-          await axios.put(`/api/mapping/awardToTeam/update/${teamId}/${awardName}/`, updatedAward, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          await api.put(`/api/mapping/awardToTeam/update/${teamId}/${awardName}/`, updatedAward);
           set((state) => ({
             awards: state.awards.map((award) =>
               award.teamid === teamId && award.award_name === awardName ? updatedAward : award
@@ -135,13 +105,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
       getAwardsByRole: async (isJudge: string) => {
         set({ isLoading: true, error: null });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/mapping/awardToTeam/getAwardByRole/${isJudge}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          const response = await api.get(`/api/mapping/awardToTeam/getAwardByRole/${isJudge}/`);
           set({ awards: response.data, isLoading: false });
         } catch (error: any) {
           set({ error: "Error fetching awards", isLoading: false });
@@ -152,13 +116,7 @@ const useSpecialAwardStore = create<SpecialAwardState>()(
       deleteAward: async (teamId: number, awardName: string) => {
         set({ isLoading: true, error: null });
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/mapping/awardToTeam/delete/${teamId}/${awardName}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          await api.delete(`/api/mapping/awardToTeam/delete/${teamId}/${awardName}/`);
           set((state) => ({
             awards: state.awards.filter(
               (award) => !(award.teamid === teamId && award.award_name === awardName)

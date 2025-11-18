@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import {
   Contest,
   ScoreSheet,
@@ -22,11 +22,17 @@ interface MapScoreSheetState {
     teamId: number,
     sheetType: number
   ) => Promise<void>;
+  fetchScoreSheetWithData: (
+    judgeId: number,
+    teamId: number,
+    sheetType: number
+  ) => Promise<ScoreSheet>;
   createScoreSheetMapping: (
     mapping: Partial<ScoreSheetMapping>
   ) => Promise<number | null>;
   deleteScoreSheetMapping: (mapId: number) => Promise<void>;
   fetchScoreSheetsByJudge: (judgeId: number) => Promise<void>;
+  fetchScoreSheetsByJudgeAndCluster: (judgeId: number, clusterId: number) => Promise<void>;
   allSheetsSubmittedForContests: (contests: Contest[]) => Promise<void>;
   clearMappings: () => void;
   submitAllPenalties: (judgeId: number) => Promise<void>;
@@ -83,15 +89,39 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
       fetchScoreSheetsByJudge: async (judgeId: number) => {
         set({ isLoadingMapScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/scoreSheet/getSheetsByJudge/${judgeId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
+          const response = await api.get(
+            `/api/mapping/scoreSheet/getSheetsByJudge/${judgeId}/`
+          );
+
+          const fetchedMappings: Record<
+            string,
+            { scoresheet: ScoreSheet | null; total: number | null }
+          > = {};
+          response.data.ScoreSheets.forEach(
+            (item: ScoreSheetMappingWithSheet) => {
+              const key = `${item.mapping.teamid}-${item.mapping.judgeid}-${item.mapping.sheetType}`;
+              fetchedMappings[key] = {
+                scoresheet: item.scoresheet,
+                total: item.total,
+              };
             }
+          );
+          set({ mappings: fetchedMappings });
+          set({ mapScoreSheetError: null });
+        } catch (error: any) {
+          const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || "Failed to fetch score sheets by judge";
+          set({ mapScoreSheetError: errorMessage });
+          throw new Error(errorMessage);
+        } finally {
+          set({ isLoadingMapScoreSheet: false });
+        }
+      },
+
+      fetchScoreSheetsByJudgeAndCluster: async (judgeId: number, clusterId: number) => {
+        set({ isLoadingMapScoreSheet: true });
+        try {
+          const response = await api.get(
+            `/api/mapping/scoreSheet/getSheetsByJudgeAndCluster/${judgeId}/${clusterId}/`
           );
 
           const fetchedMappings: Record<
@@ -110,7 +140,7 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
           set({ mappings: fetchedMappings });
           set({ mapScoreSheetError: null });
         } catch (error) {
-          const errorMessage = "Failed to fetch score sheets by judge";
+          const errorMessage = "Failed to fetch score sheets by judge and cluster";
           set({ mapScoreSheetError: errorMessage });
           throw new Error(errorMessage);
         } finally {
@@ -125,15 +155,8 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
       ) => {
         set({ isLoadingMapScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/scoreSheet/getByTeamJudge/${sheetType}/${judgeId}/${teamId}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+          const response = await api.get(
+            `/api/mapping/scoreSheet/getByTeamJudge/${sheetType}/${judgeId}/${teamId}/`
           );
           const fetchedScoreSheetId = response.data.ScoreSheet.id;
           set({ scoreSheetId: fetchedScoreSheetId });
@@ -147,19 +170,38 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
         }
       },
 
+      // Optimized method that fetches both mapping and scoresheet data in one call
+      fetchScoreSheetWithData: async (
+        judgeId: number,
+        teamId: number,
+        sheetType: number
+      ) => {
+        set({ isLoadingMapScoreSheet: true });
+        try {
+          const response = await api.get(
+            `/api/mapping/scoreSheet/getByTeamJudge/${sheetType}/${judgeId}/${teamId}/`
+          );
+          const fetchedScoreSheetId = response.data.ScoreSheet.id;
+          set({ scoreSheetId: fetchedScoreSheetId });
+          set({ mapScoreSheetError: null });
+          
+          // Return the scoresheet data directly to avoid second API call
+          return response.data.ScoreSheet;
+        } catch (error) {
+          const errorMessage = "Failed to fetch score sheet data";
+          set({ mapScoreSheetError: errorMessage });
+          throw new Error(errorMessage);
+        } finally {
+          set({ isLoadingMapScoreSheet: false });
+        }
+      },
+
       allSheetsSubmittedForContests: async (contests: Contest[]) => {
         set({ isLoadingMapScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(
+          const response = await api.post(
             `/api/mapping/scoreSheet/allSheetsSubmittedForContests/`,
-            contests,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+            contests
           );
 
           const submissionStatus = response.data;
@@ -178,16 +220,9 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
       createScoreSheetMapping: async (mapping: Partial<ScoreSheetMapping>) => {
         set({ isLoadingMapScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(
+          const response = await api.post(
             `/api/scoreSheet/mapping/create/`,
-            mapping,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+            mapping
           );
           const newScoreSheetId = response.data.scoresheetid;
           set({ scoreSheetId: newScoreSheetId });
@@ -206,12 +241,7 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
       deleteScoreSheetMapping: async (mapId: number) => {
         set({ isLoadingMapScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/scoreSheet/mapping/delete/${mapId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-            },
-          });
+          await api.delete(`/api/scoreSheet/mapping/delete/${mapId}/`);
           set({ scoreSheetId: null });
           set({ mapScoreSheetError: null });
         } catch (error) {
@@ -226,15 +256,9 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
       submitAllPenalties: async (judgeId: number) => {
         set({ isLoadingMapScoreSheet: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.post(
+          await api.post(
             `/api/mapping/scoreSheet/submitAllPenalties/`,
-            { judge_id: judgeId },
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-              },
-            }
+            { judge_id: judgeId }
           );
         } catch (error) {
           const errorMessage = "Failed to submit all penalties";

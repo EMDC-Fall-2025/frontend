@@ -17,10 +17,15 @@ import {
   FormControlLabel,
   Checkbox,
 } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import theme from "../theme";
 import useSpecialAwardStore, { SpecialAward } from "../store/map_stores/mapAwardToTeamStore";
 import { useTeamStore } from "../store/primary_stores/teamStore";
+import { useNavigate } from "react-router-dom";
+
 
 export default function OrganizerSpecialAwards() {
+  const navigate = useNavigate();
   const {
     awards,
     isLoading,
@@ -135,7 +140,40 @@ export default function OrganizerSpecialAwards() {
 
   return (
     <Container>
-      <Typography variant="h4" sx={{ my: 4 }}>
+      <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 }, ml: { xs: 2, sm: 3 } }}>
+        <Button
+          onClick={() => navigate(-1)}
+          startIcon={<ArrowBackIcon />}
+          sx={{
+            textTransform: "none",
+            color: theme.palette.success.dark,
+            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+            fontWeight: 500,
+            px: { xs: 1.5, sm: 2 },
+            py: { xs: 0.75, sm: 1 },
+            borderRadius: "8px",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              backgroundColor: "rgba(76, 175, 80, 0.08)",
+              transform: "translateX(-2px)",
+            },
+          }}
+        >
+          Back to Organizer
+        </Button>
+      </Box>
+      <Typography 
+        variant="h4" 
+        sx={{ 
+          my: 4, 
+          ml: 2,
+          fontSize: { xs: "1.75rem", sm: "2.25rem", md: "2.5rem" },
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontWeight: 400,
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
+        }}
+      >
         Organizer Awards Management
       </Typography>
 

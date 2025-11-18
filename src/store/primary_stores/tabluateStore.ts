@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 
 interface TabulateState {
   tabulateContest: (contest_id: number) => Promise<void>;
@@ -22,16 +22,9 @@ export const useTabulateStore = create<TabulateState>()(
       tabulateContest: async (contest_id: number) => {
         set({ isLoadingTabulate: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.put(
+          await api.put(
             `/api/tabulation/tabulateScores/`,
-            { contestid: contest_id },
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+            { contestid: contest_id }
           );
           set({ tabulateError: null });
         } catch (tabulateError: any) {

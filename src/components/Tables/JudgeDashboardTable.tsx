@@ -10,10 +10,8 @@ import {
   Box,
   Collapse,
   IconButton,
-  CircularProgress,
   Container,
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   FormControl,
@@ -21,40 +19,245 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
+  Typography,
+  Alert,
+  Skeleton,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { useJudgeStore } from "../../store/primary_stores/judgeStore";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useMapScoreSheetStore } from "../../store/map_stores/mapScoreSheetStore";
 import AreYouSureModal from "../Modals/AreYouSureModal";
 import { useScoreSheetStore } from "../../store/primary_stores/scoreSheetStore";
 import theme from "../../theme";
-import useMapContestJudgeStore from "../../store/map_stores/mapContestToJudgeStore";
-import { Team } from "../../types";
+import { useMapContestToTeamStore } from "../../store/map_stores/mapContestToTeamStore";
+import { useAuthStore } from "../../store/primary_stores/authStore";
+import { Team, Contest } from "../../types";
+import { api } from "../../lib/api";
+
+import { ClusterWithContest } from "../../types";
 
 interface IJudgeDashboardProps {
   teams: Team[];
+  currentCluster?: (ClusterWithContest & {
+    judgeHasChampionshipByContest?: { [key: number]: boolean };
+    hasAnyTeamAdvancedByContest?: { [key: number]: boolean };
+  }) | null;
 }
 
-export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
-  const { teams } = props;
+const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudgeDashboardProps) {
+  const { teams, currentCluster } = props;
 
   const navigate = useNavigate();
 
-  const { judge, clearJudge } = useJudgeStore();
+  const { judge } = useJudgeStore();
+  const { mappings, fetchScoreSheetsByJudge, isLoadingMapScoreSheet } = useMapScoreSheetStore();
+  const { contestsForTeams } = useMapContestToTeamStore();
+  const { editScoreSheetField, multipleScoreSheets } = useScoreSheetStore();
+  const { role } = useAuthStore();
 
-  const {
-    mappings,
-    fetchScoreSheetsByJudge,
-    isLoadingMapScoreSheet,
-    clearMappings,
-  } = useMapScoreSheetStore();
+  const isOrganizerOrAdmin = role?.user_type === 1 || role?.user_type === 2;
+  const isJudge = role?.user_type === 3;
 
-  const { getContestByJudgeId, contest } = useMapContestJudgeStore();
+  const isPreliminarySheet = (sheetType: number) => sheetType >= 1 && sheetType <= 5;
 
-  const { editScoreSheetField, scoreSheetError } = useScoreSheetStore();
+  /**
+   * Maps contest IDs to whether the judge has championship assignment in that contest.
+   * Used to determine if preliminary scoresheets should be disabled.
+   */
+  const judgeHasChampionshipByContest = useMemo(() => {
+    const map = new Map<number, boolean>();
+    if (currentCluster) {
+      const championshipObj = (currentCluster as any).judgeHasChampionshipByContest;
+      if (championshipObj && typeof championshipObj === 'object') {
+        Object.keys(championshipObj).forEach((key) => {
+          const contestId = parseInt(key, 10);
+          map.set(contestId, championshipObj[key] === true);
+        });
+      }
+    }
+    return map;
+  }, [currentCluster]);
+
+  /**
+   * Maps contest IDs to whether any team has advanced to championship in that contest.
+   * If any team in a contest has advanced, all preliminary scoresheets for all teams
+   * in that contest should be disabled.
+   */
+  const hasAnyTeamAdvancedByContest = useMemo(() => {
+    const map = new Map<number, boolean>();
+    if (currentCluster) {
+      const hasAdvancedObj = (currentCluster as any).hasAnyTeamAdvancedByContest;
+      if (hasAdvancedObj && typeof hasAdvancedObj === 'object') {
+        Object.keys(hasAdvancedObj).forEach((key) => {
+          const contestId = parseInt(key, 10);
+          map.set(contestId, hasAdvancedObj[key] === true);
+        });
+      }
+    }
+    return map;
+  }, [currentCluster]);
+
+  /**
+   * Determines if a preliminary scoresheet should be disabled for judges.
+   * Disables if:
+   * 1. Judge has championship assignment in the team's contest, OR
+   * 2. Any team in the team's contest has advanced to championship
+   */
+  const isPreliminaryScoresheet = (_team: Team, sheetType: number) => {
+    const teamContest = contestsForTeams[_team.id];
+    const judgeHasChampionship = teamContest ? judgeHasChampionshipByContest.get(teamContest.id) || false : false;
+    const anyTeamInContestAdvanced = teamContest ? hasAnyTeamAdvancedByContest.get(teamContest.id) || false : false;
+    
+    return (
+      isJudge &&
+      isPreliminarySheet(sheetType) &&
+      (judgeHasChampionship || anyTeamInContestAdvanced)
+    );
+  };
+
+  /**
+   * Determines if a scoresheet is editable based on user role and contest state.
+   * Admins/organizers have full access. Judges cannot edit preliminary sheets if:
+   * - Judge has championship assignment in the team's contest, OR
+   * - Any team in the team's contest has advanced to championship
+   */
+  const isScoresheetEditable = (_team: Team, sheetType: number) => {
+    if (isOrganizerOrAdmin) {
+      return true;
+    }
+
+    if (isJudge && isPreliminarySheet(sheetType)) {
+      const teamContest = contestsForTeams[_team.id];
+      const judgeHasChampionship = teamContest ? judgeHasChampionshipByContest.get(teamContest.id) || false : false;
+      const anyTeamInContestAdvanced = teamContest ? hasAnyTeamAdvancedByContest.get(teamContest.id) || false : false;
+      
+      if (judgeHasChampionship || anyTeamInContestAdvanced) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  /**
+   * Filters teams to only show those from active contests.
+   * Hides teams whose contest has ended (closed & tabulated) for all roles.
+   */
+  const visibleTeams: Team[] = useMemo(() => {
+    if (!teams || teams.length === 0) return [];
+
+    return teams.filter((team) => {
+      const contestForTeam = contestsForTeams[team.id] as Contest | undefined;
+
+      if (!contestForTeam) return true;
+
+      if (contestForTeam.is_open === false && contestForTeam.is_tabulated === true) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [teams, contestsForTeams, isOrganizerOrAdmin]);
+
+  const getIsSubmitted = useCallback((
+    judgeId: number,
+    teamId: number,
+    sheetType: number
+  ) => {
+    const key = `${teamId}-${judgeId}-${sheetType}`;
+    const data = mappings[key] || null;
+    return !!data?.scoresheet?.isSubmitted;
+  }, [mappings]);
+
+  /**
+   * Checks if a scoresheet exists for the given judge, team, and sheet type.
+   */
+  const hasScoresheet = useCallback((
+    judgeId: number,
+    teamId: number,
+    sheetType: number
+  ) => {
+    const key = `${teamId}-${judgeId}-${sheetType}`;
+    return !!mappings[key];
+  }, [mappings]);
+
+  /**
+   * Checks if all preliminary scoresheets (types 1-5) are completed for a team.
+   * Returns true only if all existing preliminary scoresheets have been submitted.
+   */
+  const checkAllPreliminaryScoresheetsCompleted = (teamId: number) => {
+    if (!judge) return false;
+    
+    const preliminaryTypes = [1, 2, 3, 4, 5];
+    let allCompleted = true;
+    
+    for (const sheetType of preliminaryTypes) {
+      if (hasScoresheet(judge.id, teamId, sheetType)) {
+        const scoresheet = multipleScoreSheets?.find(sheet => 
+          sheet.teamId === teamId && 
+          sheet.judgeId === judge.id && 
+          sheet.sheetType === sheetType
+        );
+        
+        if (scoresheet && !scoresheet.isSubmitted) {
+          allCompleted = false;
+          break;
+        }
+      }
+    }
+    
+    return allCompleted;
+  };
+
+  /**
+   * Determines if a team should have grey styling applied.
+   * Only applies in championship/redesign clusters when:
+   * - Team has advanced to championship AND
+   * - All preliminary scoresheets are completed (if no championship sheets exist) OR
+   * - All championship scoresheets are completed (if they exist)
+   */
+  const hasOnlyPreliminaryScoresheets = useCallback((teamId: number) => {
+    const isInChampionshipOrRedesignCluster = currentCluster && (
+      currentCluster.cluster_type === 'championship' ||
+      currentCluster.cluster_type === 'redesign' ||
+      currentCluster.cluster_name?.toLowerCase().includes('championship') ||
+      currentCluster.cluster_name?.toLowerCase().includes('redesign')
+    );
+    
+    if (!isInChampionshipOrRedesignCluster) {
+      return false;
+    }
+
+    const teamInChampionshipCluster = teams.some(team =>
+      team.id === teamId && team.advanced_to_championship === true
+    );
+
+    if (teamInChampionshipCluster) {
+      const hasChampionshipScoresheets = judge && (
+        hasScoresheet(judge.id, teamId, 6) ||
+        hasScoresheet(judge.id, teamId, 7)
+      );
+
+      if (hasChampionshipScoresheets) {
+        const hasIncompleteChampionshipScoresheets = judge && (
+          (hasScoresheet(judge.id, teamId, 6) && !getIsSubmitted(judge.id, teamId, 6)) ||
+          (hasScoresheet(judge.id, teamId, 7) && !getIsSubmitted(judge.id, teamId, 7))
+        );
+
+        return !hasIncompleteChampionshipScoresheets;
+      } else {
+        const allPreliminaryCompleted = checkAllPreliminaryScoresheetsCompleted(teamId);
+        return allPreliminaryCompleted;
+      }
+    }
+    
+    return false;
+  }, [currentCluster, teams, judge, hasScoresheet, getIsSubmitted]);
 
   const [openRows, setOpenRows] = React.useState<{ [key: number]: boolean }>(
     {}
@@ -65,11 +268,13 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
   const [currentTeam, setCurrentTeam] = useState(-1);
   const [currentSheetType, setCurrentSheetType] = useState(-1);
 
-  // NEW: multi-team scoring dialog state
-  const [openMultiDialog, setOpenMultiDialog] = useState(false);
+  const [openContestDialog, setOpenContestDialog] = useState(false);
+  const [openSheetTypeDialog, setOpenSheetTypeDialog] = useState(false);
   const [multiType, setMultiType] = useState<
-    "presentation" | "journal" | "machine-design"
+    "presentation" | "journal" | "machine-design" | "general-penalties" | "run-penalties"
   >("presentation");
+  const [allContests, setAllContests] = useState<Contest[]>([]);
+  const [selectedContest, setSelectedContest] = useState<Contest | null>(null);
 
   const handleToggle = (teamId: number) => {
     setOpenRows((prevState) => ({
@@ -86,41 +291,75 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     setOpenRows(allExpanded);
   };
 
+  /**
+   * Checks if mappings already exist for the current judge.
+   * Mapping keys follow the format: "teamId-judgeId-sheetType"
+   */
+  const hasMappingsForJudge = React.useMemo(() => {
+    if (!judge?.id || Object.keys(mappings).length === 0) return false;
+    const judgeIdStr = `-${judge.id}-`;
+    return Object.keys(mappings).some(key => key.includes(judgeIdStr));
+  }, [mappings, judge?.id]);
+
+  const lastFetchedJudgeIdRef = React.useRef<number | null>(null);
+  const skipFetchRef = React.useRef(false);
+
+  /**
+   * Fetches score sheet mappings for the judge, but only if they don't already exist.
+   * This prevents unnecessary refetches when navigating back from multi-scoring pages.
+   */
   useEffect(() => {
-    if (judge) {
-      fetchScoreSheetsByJudge(judge.id);
-      getContestByJudgeId(judge.id);
+    if (!judge?.id) return;
+    
+    if (isLoadingMapScoreSheet) {
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [judge]);
 
-  useEffect(() => {
-    const handlePageHide = () => {
-      clearMappings();
-      clearJudge();
-    };
+    if (hasMappingsForJudge) {
+      lastFetchedJudgeIdRef.current = judge.id;
+      skipFetchRef.current = true;
+      return;
+    }
 
-    window.addEventListener("pagehide", handlePageHide);
-    return () => window.removeEventListener("pagehide", handlePageHide);
-  }, [clearMappings, clearJudge]);
+    if (skipFetchRef.current && lastFetchedJudgeIdRef.current === judge.id) {
+      return;
+    }
 
-  const getIsSubmitted = (
-    judgeId: number,
-    teamId: number,
-    sheetType: number
-  ) => {
-    const key = `${teamId}-${judgeId}-${sheetType}`;
-    const data = mappings[key] || null;
-    return !!data?.scoresheet?.isSubmitted;
-  };
+    const judgeIdChanged = lastFetchedJudgeIdRef.current !== judge.id;
+    
+    if (judgeIdChanged) {
+      skipFetchRef.current = false;
+      try {
+        fetchScoreSheetsByJudge(judge.id);
+        lastFetchedJudgeIdRef.current = judge.id;
+      } catch (error) {
+        console.error('Error fetching judge data:', error);
+      }
+    } else if (!hasMappingsForJudge) {
+      if (!skipFetchRef.current) {
+      try {
+        fetchScoreSheetsByJudge(judge.id);
+          lastFetchedJudgeIdRef.current = judge.id;
+          skipFetchRef.current = true;
+      } catch (error) {
+          console.error('Error fetching judge data:', error);
+      }
+    }
+    }
+  }, [judge?.id, fetchScoreSheetsByJudge, hasMappingsForJudge, isLoadingMapScoreSheet]);
 
-  const getTotal = (judgeId: number, teamId: number, sheetType: number) => {
+
+
+
+
+
+  const getTotal = useCallback((judgeId: number, teamId: number, sheetType: number) => {
     const key = `${teamId}-${judgeId}-${sheetType}`;
     const data = mappings[key] || null;
     return data?.total;
-  };
+  }, [mappings]);
 
-  const getScoreSheetId = (
+  const getScoreSheetId = useCallback((
     judgeId: number,
     teamId: number,
     sheetType: number
@@ -128,26 +367,102 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
     const key = `${teamId}-${judgeId}-${sheetType}`;
     const data = mappings[key] || null;
     return data?.scoresheet?.id;
+  }, [mappings]);
+
+  
+
+  /**
+   * Opens the multi-team scoring dialog and fetches open contests for the judge.
+   * Only shows contests where is_open === true.
+   */
+  const handleMultiTeamScore = async () => {
+    if (judge?.id) {
+      try {
+        const response = await api.get(`/api/mapping/contestToJudge/judge-contests/${judge.id}/`);
+        const contests = response.data?.contests || [];
+        const openContests = contests.filter((contest: Contest) => contest.is_open === true);
+        setAllContests(openContests);
+      } catch (error) {
+        console.error('Error fetching contests for judge:', error);
+        setAllContests([]);
+      }
+    }
+    setOpenContestDialog(true);
+  };
+  
+  const handleCancelContestDialog = () => {
+    setOpenContestDialog(false);
+    setSelectedContest(null);
+  };
+  
+  /**
+   * Handles contest selection in multi-team scoring dialog.
+   * Prevents selection if contest is disabled.
+   */
+  const handleSelectContest = (contest: Contest) => {
+    if (isContestDisabledForMultiScoring(contest)) return;
+    setSelectedContest(contest);
+    setOpenContestDialog(false);
+    setOpenSheetTypeDialog(true);
+  };
+  
+  const handleCancelSheetTypeDialog = () => {
+    setOpenSheetTypeDialog(false);
+    setSelectedContest(null);
   };
 
-  // NEW: open/close multi-team dialog
-  const handleMultiTeamScore = () => {
-    console.log("Multi-team score button clicked"); // Debug log
-    setOpenMultiDialog(true);
-  };
-  const handleCancelMulti = () => setOpenMultiDialog(false);
+  const handleConfirmSheetType = () => {
+    if (!judge || !selectedContest?.id) return;
 
-  // NEW: confirm multi-team selection → route
-  const handleConfirmMulti = () => {
-    if (!judge || !contest?.id) return;
-
-    // keep slugs consistent with your routes
-    const typePath = multiType === "machine-design" ? "machinedesign" : multiType;
-    const route = `/multi-team-${typePath}-score/${judge.id}/${contest.id}/`;
+    let route = "";
+    switch (multiType) {
+      case "presentation":
+        route = `/multi-team-presentation-score/${judge.id}/${selectedContest.id}/`;
+        break;
+      case "journal":
+        route = `/multi-team-journal-score/${judge.id}/${selectedContest.id}/`;
+        break;
+      case "machine-design":
+        route = `/multi-team-machinedesign-score/${judge.id}/${selectedContest.id}/`;
+        break;
+      case "general-penalties":
+        route = `/multi-team-general-penalties/${judge.id}/${selectedContest.id}/`;
+        break;
+      case "run-penalties":
+        route = `/multi-team-run-penalties/${judge.id}/${selectedContest.id}/`;
+        break;
+      default:
+        return; 
+    }
     
-    console.log("Navigating to:", route); // Debug log
     navigate(route);
-    setOpenMultiDialog(false);
+    setOpenSheetTypeDialog(false);
+    setSelectedContest(null);
+  };
+
+  const hasContestStarted = (contest: Contest): boolean => {
+    return contest.is_open === true;
+  };
+
+  // Check if a contest should be disabled for multi-scoring
+  // Disabled if: contest hasn't started, OR any team has advanced, OR judge has championship assignment
+  //  When championship advancement is undone, this will automatically re-enable contests
+  // because hasAnyTeamAdvancedByContest and judgeHasChampionshipByContest are recalculated
+  // when currentCluster is updated (via championshipUndone event in Judging.tsx)
+  const isContestDisabledForMultiScoring = (contest: Contest): boolean => {
+    if (!hasContestStarted(contest)) {
+      return true; // Contest hasn't started
+    }
+    
+    // Check if any team in this contest has advanced
+    const anyTeamAdvanced = hasAnyTeamAdvancedByContest.get(contest.id) || false;
+    
+    // Check if judge has championship assignment in this contest
+    const judgeHasChampionship = judgeHasChampionshipByContest.get(contest.id) || false;
+    
+    // Disable if any team has advanced OR judge has championship assignment
+    // When undone, these values will be false, automatically re-enabling the contest
+    return anyTeamAdvanced || judgeHasChampionship;
   };
 
   const handleUnsubmitSheet = async () => {
@@ -181,7 +496,7 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
           break;
       }
     } catch {
-      // noop – error is surfaced by scoreSheetError in the modal
+    
     }
   };
 
@@ -206,54 +521,111 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
   }) {
     const { team, type, url, buttonText } = props;
 
+    if (type === 7) {
+      const inChampionshipCluster =
+        currentCluster &&
+        (currentCluster.cluster_type === 'championship' ||
+          currentCluster.cluster_name?.toLowerCase().includes('championship'));
+      if (team.advanced_to_championship !== true && !inChampionshipCluster) {
+      return null;
+      }
+    }
+
+    if (!judge || !hasScoresheet(judge.id, team.id, type)) {
+      return null;
+    }
+
+    const isPreliminary = isPreliminaryScoresheet(team, type);
+    const isEditable = isScoresheetEditable(team, type);
+    const isSubmitted = getIsSubmitted(judge?.id, team.id, type);
+
     return (
-      judge && (
-        <>
-          {!getIsSubmitted(judge?.id, team.id, type) ? (
-            <Button
-              variant="contained"
-              onClick={() => navigate(`/${url}/${judge.id}/${team.id}/`)}
-              sx={{
-                mb: 1,
-                textTransform: "none",
-                borderRadius: 2,
-                px: 2.25,
-                bgcolor: theme.palette.success.main,
-                "&:hover": { bgcolor: theme.palette.success.dark },
-              }}
-            >
-              {buttonText}
-            </Button>
-          ) : (
-            <Button
-              variant="contained"
-              sx={{
-                mb: 1,
-                textTransform: "none",
-                borderRadius: 2,
-                px: 2.25,
-                bgcolor: theme.palette.grey[500],
-                "&:hover": { bgcolor: theme.palette.grey[600] },
-              }}
-              onClick={() =>
-                handleOpenAreYouSure(
-                  getScoreSheetId(judge?.id, team.id, type),
-                  team.id,
-                  type
-                )
-              }
-            >
-              {buttonText} {getTotal(judge?.id, team.id, type)}
-            </Button>
-          )}
-        </>
-      )
+      <>
+        {!isSubmitted ? (
+          <Button
+            variant="contained"
+            onClick={() => isEditable ? navigate(`/${url}/${judge.id}/${team.id}/`) : null}
+            disabled={!isEditable}
+            sx={{
+              mb: { xs: 0.5, sm: 1 },
+              textTransform: "none",
+              borderRadius: 2,
+              px: { xs: 0.75, sm: 2.25 },
+              py: { xs: 0.4, sm: 0.75 },
+              bgcolor: isPreliminary ? theme.palette.grey[600] : theme.palette.success.main,
+              color: isPreliminary ? theme.palette.grey[300] : "white",
+              "&:hover": { 
+                bgcolor: isPreliminary ? theme.palette.grey[600] : theme.palette.success.dark,
+                cursor: isPreliminary ? "not-allowed" : "pointer",
+              },
+              "&:disabled": {
+                bgcolor: `${theme.palette.grey[600]} !important`,
+                color: `${theme.palette.grey[300]} !important`,
+                opacity: 0.7,
+                cursor: "not-allowed",
+              },
+              fontSize: { xs: "0.65rem", sm: "0.875rem" },
+              fontWeight: 600,
+              minWidth: { xs: "100px", sm: "auto" },
+              maxWidth: { xs: "150px", sm: "none" },
+              width: { xs: "100%", sm: "auto" },
+              opacity: isPreliminary ? 0.7 : 1,
+              pointerEvents: isPreliminary ? "none" : "auto",
+            }}
+          >
+            {isPreliminary ? `${buttonText} (Preliminary)` : buttonText} {getTotal(judge?.id, team.id, type)}
+
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            disabled={!isEditable}
+            sx={{
+              mb: { xs: 0.5, sm: 1 },
+              textTransform: "none",
+              borderRadius: 2,
+              px: { xs: 0.75, sm: 2.25 },
+              py: { xs: 0.4, sm: 0.75 },
+              bgcolor: isPreliminary ? theme.palette.grey[600] : theme.palette.grey[500],
+              color: isPreliminary ? theme.palette.grey[300] : "white",
+              "&:hover": { 
+                bgcolor: isPreliminary ? theme.palette.grey[600] : theme.palette.grey[600],
+                cursor: isPreliminary ? "not-allowed" : "pointer",
+              },
+              "&:disabled": {
+                bgcolor: `${theme.palette.grey[600]} !important`,
+                color: `${theme.palette.grey[300]} !important`,
+                opacity: 0.7,
+                cursor: "not-allowed",
+              },
+              fontSize: { xs: "0.65rem", sm: "0.875rem" },
+              fontWeight: 600,
+              minWidth: { xs: "100px", sm: "auto" },
+              maxWidth: { xs: "150px", sm: "none" },
+              width: { xs: "100%", sm: "auto" },
+              opacity: isPreliminary ? 0.7 : 1,
+              pointerEvents: isPreliminary ? "none" : "auto",
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (!isEditable) return;
+              handleOpenAreYouSure(
+                getScoreSheetId(judge?.id, team.id, type),
+                team.id,
+                type
+              );
+            }}
+          >
+            {isPreliminary ? `${buttonText} (Preliminary)` : buttonText} {getTotal(judge?.id, team.id, type)}
+          </Button>
+        )}
+      </>
     );
   }
 
-  return isLoadingMapScoreSheet ? (
-    <CircularProgress />
-  ) : (
+
+  return (
     <>
       <Container
         sx={{
@@ -272,39 +644,51 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
           justifyContent: "center",
         }}
       >
-        <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", mb: 2 }}>
+        <Box sx={{ 
+          display: "flex", 
+          gap: { xs: 1, sm: 1.5 }, 
+          flexWrap: "wrap", 
+          mb: { xs: 1.5, sm: 2 },
+          flexDirection: { xs: "column", sm: "row" },
+          alignItems: { xs: "stretch", sm: "flex-start" }
+        }}>
           <Button
             variant="contained"
             onClick={handleExpandAll}
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: 2.5,
+              px: { xs: 2, sm: 2.5 },
+              py: { xs: 1, sm: 1.25 },
               bgcolor: theme.palette.success.main,
               color: theme.palette.common.white,
               "&:hover": { bgcolor: theme.palette.success.dark },
-              width: 220,
-              height: 44,
+              width: { xs: "100%", sm: 220 },
+              height: { xs: 40, sm: 44 },
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              fontWeight: 600,
             }}
           >
             Expand All Teams
           </Button>
 
-          {/* NEW: Score Multiple Teams – styled to match your success button theme */}
           <Button
             variant="contained"
             onClick={handleMultiTeamScore}
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: 2.5,
+              px: { xs: 2, sm: 2.5 },
+              py: { xs: 1, sm: 1.25 },
               bgcolor: theme.palette.success.main,
               color: theme.palette.common.white,
               "&:hover": { bgcolor: theme.palette.success.dark },
-              width: 220,
-              height: 44,
+              width: { xs: "100%", sm: 220 },
+              height: { xs: 40, sm: 44 },
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              fontWeight: 600,
             }}
-            disabled={!contest?.id} // prevent bad route if contest not loaded
+            disabled={!judge?.id}
           >
             Score Multiple Teams
           </Button>
@@ -323,19 +707,31 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
         >
           <Table
             sx={{
-              tableLayout: "fixed",
-              "& .MuiTableCell-root": { fontSize: "0.95rem", py: 1.25 },
+              tableLayout: "auto",
+              width: "100%",
+              "& .MuiTableCell-root": { 
+                fontSize: { xs: "0.8rem", sm: "0.95rem" }, 
+                py: { xs: 0.75, sm: 1.25 },
+                px: { xs: 0.75, sm: 1.5 }
+              },
             }}
           >
             <TableBody>
-              {teams.map((team: Team) => (
+              {visibleTeams.map((team: Team) => {
+                const isPreliminaryTeam = hasOnlyPreliminaryScoresheets(team.id);
+                return (
                 <React.Fragment key={team.id}>
                   <TableRow
                     onClick={() => handleToggle(team.id)}
                     sx={{
                       cursor: "pointer",
-                      "&:hover": { backgroundColor: "rgba(46,125,50,0.06)" },
+                      "&:hover": { backgroundColor: isPreliminaryTeam ? "rgba(0,0,0,0.01)" : "rgba(46,125,50,0.06)" },
                       borderBottom: `1px solid ${theme.palette.grey[200]}`,
+                      backgroundColor: isPreliminaryTeam ? theme.palette.grey[100] : "inherit",
+                      opacity: isPreliminaryTeam ? 0.7 : 1,
+                      "& .MuiTableCell-root": {
+                        color: isPreliminaryTeam ? theme.palette.grey[600] : "inherit"
+                      }
                     }}
                   >
                     <TableCell sx={{ width: 56 }}>
@@ -360,17 +756,100 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                       component="th"
                       scope="row"
                       sx={(t) => ({
-                        pl: 2,
+                        pl: { xs: 1, sm: 2 },
                         textAlign: "left",
                         mr: 1,
                         fontWeight: 600,
                         fontFamily: t.typography.h1.fontFamily,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
+                        width: { xs: "60%", sm: "50%", md: "45%" }, 
+                        minWidth: { xs: 200, sm: 250, md: 300 },
+                        verticalAlign: "top",
+                        alignItems: "flex-start"
                       })}
                     >
-                      {team.team_name}
+                      <Box sx={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: { xs: 0.5, sm: 1 },
+                        flexWrap: { xs: "wrap", sm: "nowrap" },
+                        width: "100%",
+                        justifyContent: { xs: "flex-start", sm: "flex-start" }
+                      }}>
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            fontWeight: 600,
+                            fontSize: { xs: "0.85rem", sm: "1rem" },
+                            flex: { xs: "1 1 100%", sm: "0 0 auto" },
+                            minWidth: 0,
+                            textAlign: "left"
+                          }}
+                          >
+                            {team.team_name}
+                          </Typography>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: theme.palette.grey[600], 
+                            ml: { xs: 0.5, sm: 1 },
+                            fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                            flex: { xs: "1 1 100%", sm: "0 0 auto" },
+                            minWidth: 0,
+                            textAlign: "left"
+                          }}
+                        >
+                          ({team.school_name || 'N/A'})
+                        </Typography>
+                        {contestsForTeams[team.id] ? (
+                          <Box sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: { xs: 0.25, sm: 0.5 },
+                            ml: { xs: 0.5, sm: 1 },
+                            flexShrink: 0,
+                            minWidth: 0,
+                            flex: { xs: "1 1 100%", sm: "0 0 auto" }
+                          }}>
+                            <EmojiEventsIcon
+                              sx={{
+                                fontSize: { xs: 14, sm: 16 },
+                                color: theme.palette.success.main,
+                                opacity: 0.8
+                              }}
+                            />
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: theme.palette.success.main,
+                                fontWeight: 500,
+                                opacity: 0.8,
+                                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                                whiteSpace: "nowrap",
+                                maxWidth: { xs: "200px", sm: "300px", md: "400px" },
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                flex: 1,
+                                textAlign: "left"
+                              }}
+                                title={contestsForTeams[team.id]?.name}
+                            >
+                              {contestsForTeams[team.id]?.name}
+                            </Typography>
+                            </Box>
+                        ) : (
+                          <Box sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: { xs: 0.5, sm: 1 },
+                            ml: { xs: 0.5, sm: 1 },
+                            flexShrink: 0,
+                            minWidth: 0,
+                            flex: { xs: "1 1 100%", sm: "0 0 auto" },
+                          }}>
+                            <Skeleton variant="text" width={120} height={16} sx={{ my: 0.5 }} />
+                          </Box>
+                        )}
+                      </Box>
                     </TableCell>
 
                     {team.judge_disqualified && team.organizer_disqualified && (
@@ -397,82 +876,91 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
                           sx={{
                             borderTop: `1px dashed ${theme.palette.grey[200]}`,
                             backgroundColor: theme.palette.grey[50],
-                            px: 2,
-                            py: 2,
+                            px: { xs: 1.5, sm: 2 },
+                            py: { xs: 1.5, sm: 2 },
                           }}
                         >
-                          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                            {/* keep original gating: journal not tied to contest.is_open in your current UI */}
-                            {judge?.journal && (
-                              <ScoreSheetButton
-                                team={team}
-                                type={2}
-                                url="journal-score"
-                                buttonText="Journal"
-                              />
-                            )}
+                          <Box sx={{ 
+                            display: "flex", 
+                            flexWrap: "wrap", 
+                            gap: { xs: 0.5, sm: 1 },
+                            flexDirection: { xs: "column", sm: "row" },
+                            justifyContent: { xs: "center", sm: "flex-start" },
+                            alignItems: { xs: "center", sm: "flex-start" }
+                          }}>
+                            {(() => {
+                               const teamContest = contestsForTeams[team.id];
+                               if (!teamContest) {
+                                 return (
+                                   <Box sx={{ width: "100%", mb: 1 }}>
+                                     <Alert severity="info">No contest information available.</Alert>
+                                   </Box>
+                                 );
+                               }
 
-                            {judge?.presentation && contest?.is_open && (
-                              <ScoreSheetButton
-                                team={team}
-                                type={1}
-                                url="presentation-score"
-                                buttonText="Presentation"
-                              />
-                            )}
+                               if (!hasContestStarted(teamContest)) {
+                                 return (
+                                   <Box sx={{ width: "100%", mb: 1 }}>
+                                     <Alert severity="info">Contest has not started yet.</Alert>
+                                   </Box>
+                                 );
+                               }
 
-                            {judge?.mdo && contest?.is_open && (
-                              <ScoreSheetButton
-                                team={team}
-                                type={3}
-                                url="machine-score"
-                                buttonText="Machine Design and Operation"
-                              />
-                            )}
-
-                            {/* NEW: Redesign & Championship (follow your feature flags & is_open gating) */}
-                            {judge?.redesign && contest?.is_open && (
-                              <ScoreSheetButton
-                                team={team}
-                                type={6}
-                                url="redesign-score"
-                                buttonText="Redesign"
-                              />
-                            )}
-
-                            {judge?.championship && contest?.is_open && (
-                              <ScoreSheetButton
-                                team={team}
-                                type={7}
-                                url="championship-score"
-                                buttonText="Championship"
-                              />
-                            )}
-
-                            {judge?.runpenalties && (
-                              <ScoreSheetButton
-                                team={team}
-                                type={4}
-                                url="run-penalties"
-                                buttonText="Run Penalties"
-                              />
-                            )}
-
-                            {judge?.otherpenalties && (
-                              <ScoreSheetButton
-                                team={team}
-                                type={5}
-                                url="general-penalties"
-                                buttonText="General Penalties"
-                              />
-                            )}
+                               return (
+                                <>
+                                  <ScoreSheetButton
+                                    team={team}
+                                    type={2}
+                                    url="journal-score"
+                                    buttonText="Journal"
+                                  />
+                                  <ScoreSheetButton
+                                    team={team}
+                                    type={1}
+                                    url="presentation-score"
+                                    buttonText="Presentation"
+                                  />
+                                  <ScoreSheetButton
+                                    team={team}
+                                    type={3}
+                                    url="machine-score"
+                                    buttonText="Machine Design and Operation"
+                                  />
+                                  <ScoreSheetButton
+                                    team={team}
+                                    type={6}
+                                    url="redesign-score"
+                                    buttonText="Redesign"
+                                  />
+                                  <ScoreSheetButton
+                                    team={team}
+                                    type={7}
+                                    url="championship-score"
+                                    buttonText="Championship"
+                                  />
+                                  <ScoreSheetButton
+                                    team={team}
+                                    type={4}
+                                    url="run-penalties"
+                                    buttonText="Run Penalties"
+                                  />
+                                  <ScoreSheetButton
+                                    team={team}
+                                    type={5}
+                                    url="general-penalties"
+                                    buttonText="General Penalties"
+                                  />
+                                </>
+                              );
+                            })()}
                           </Box>
                         </Box>
                       </Collapse>
                     </TableCell>
                   </TableRow>
                 </React.Fragment>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </TableContainer>
@@ -484,40 +972,379 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
         handleClose={() => setOpenAreYouSure(false)}
         title="Are you sure you want to unsubmit this score sheet?"
         handleSubmit={handleUnsubmitSheet}
-        error={scoreSheetError}
       />
 
-      {/* NEW: multi-team dialog (kept simple, matches theme) */}
-      <Dialog open={openMultiDialog} onClose={handleCancelMulti}>
-        <DialogTitle>Score Multiple Teams</DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          <FormControl component="fieldset" sx={{ mt: 1 }}>
-            <FormLabel component="legend">Select sheet type</FormLabel>
+      {/* Contest Selection Dialog */}
+      <Dialog
+        open={openContestDialog}
+        onClose={handleCancelContestDialog}
+        maxWidth="sm"
+        fullWidth
+        sx={{
+          textAlign: "center",
+          "& .MuiDialog-paper": {
+            borderRadius: { xs: "16px", sm: "24px" },
+            boxShadow: `
+              0 8px 32px rgba(0, 0, 0, 0.12),
+              0 4px 16px rgba(76, 175, 80, 0.08),
+              0 0 0 1px rgba(76, 175, 80, 0.05)
+            `,
+            overflow: "hidden",
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            background: "linear-gradient(135deg, #ffffff 0%, #fafafa 100%)",
+          }
+        }}
+        TransitionProps={{
+          timeout: 300,
+        }}
+      >
+        <Box
+          sx={{
+            position: "relative",
+            padding: { xs: "20px 16px", sm: "24px 20px" },
+            background: "linear-gradient(135deg, rgba(76, 175, 80, 0.03) 0%, rgba(76, 175, 80, 0.01) 100%)",
+            borderBottom: "1px solid rgba(76, 175, 80, 0.1)",
+          }}
+        >
+          <IconButton
+            aria-label="close"
+            onClick={handleCancelContestDialog}
+            sx={{
+              position: "absolute",
+              right: { xs: "8px", sm: "12px" },
+              top: { xs: "8px", sm: "12px" },
+              color: theme.palette.grey[600],
+              fontSize: { xs: "1.2rem", sm: "1.5rem" },
+              transition: "all 0.2s ease",
+              "&:hover": {
+                color: theme.palette.success.main,
+                transform: "rotate(90deg)",
+                backgroundColor: "rgba(76, 175, 80, 0.08)",
+              },
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+          <Typography
+            sx={{
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              fontSize: { xs: "1.5rem", sm: "1.75rem" },
+              fontWeight: 400,
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
+              color: theme.palette.success.dark,
+              textShadow: "0 2px 8px rgba(76, 175, 80, 0.2)",
+              textAlign: "center",
+              padding: { xs: "0 40px", sm: "0 48px" },
+            }}
+          >
+            Select Contest
+          </Typography>
+        </Box>
+        <DialogContent
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            padding: { xs: "20px 16px", sm: "28px 24px" },
+            "&.MuiDialogContent-root": {
+              paddingTop: { xs: "16px", sm: "20px" },
+            }
+          }}
+        >
+          {allContests.length > 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1, width: '100%', maxWidth: '400px' }}>
+              {allContests.map((contest) => {
+                const hasStarted = hasContestStarted(contest);
+                const isDisabled = isContestDisabledForMultiScoring(contest);
+                const anyTeamAdvanced = hasAnyTeamAdvancedByContest.get(contest.id) || false;
+                const judgeHasChampionship = judgeHasChampionshipByContest.get(contest.id) || false;
+                
+                return (
+                  <Button
+                    key={contest.id}
+                    variant="outlined"
+                    onClick={() => handleSelectContest(contest)}
+                    disabled={isDisabled}
+                    sx={{
+                      bgcolor: isDisabled ? 'transparent' : 'transparent',
+                      color: isDisabled 
+                        ? theme.palette.grey[500]
+                        : theme.palette.success.main,
+                      borderColor: isDisabled 
+                        ? theme.palette.grey[400]
+                        : theme.palette.success.main,
+                      '&:hover': {
+                        bgcolor: isDisabled 
+                          ? 'transparent'
+                          : theme.palette.success.light,
+                        color: isDisabled ? theme.palette.grey[500] : 'white',
+                      },
+                      '&:disabled': {
+                        borderColor: theme.palette.grey[400],
+                        color: theme.palette.grey[500],
+                        opacity: 0.7,
+                        cursor: 'not-allowed',
+                      },
+                      textTransform: 'none',
+                      borderRadius: 2,
+                      px: { xs: 2, sm: 3 },
+                      py: { xs: 1.5, sm: 2 },
+                      fontSize: { xs: "0.875rem", sm: "1rem" },
+                      justifyContent: 'flex-start',
+                      textAlign: 'left',
+                    }}
+                  >
+                    {contest.name || `Contest ${contest.id}`}
+                    {!hasStarted && (
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          ml: 1, 
+                          fontSize: "0.75rem",
+                          opacity: 0.7
+                        }}
+                      >
+                        (Not Started)
+                      </Typography>
+                    )}
+                    {(anyTeamAdvanced || judgeHasChampionship) && hasStarted && (
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          ml: 1, 
+                          fontSize: "0.75rem",
+                          opacity: 0.7,
+                          color: theme.palette.grey[600]
+                        }}
+                      >
+                        (Advanced to Championship)
+                      </Typography>
+                    )}
+                  </Button>
+                );
+              })}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              No contests available for this judge.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions
+          sx={{
+            padding: { xs: "16px 20px", sm: "20px 24px" },
+            borderTop: "1px solid rgba(76, 175, 80, 0.1)",
+            background: "linear-gradient(135deg, rgba(76, 175, 80, 0.01) 0%, rgba(76, 175, 80, 0.02) 100%)",
+            justifyContent: "center",
+          }}
+        >
+          <Button
+            onClick={handleCancelContestDialog}
+            sx={{
+              textTransform: "none",
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              px: { xs: 2, sm: 3 },
+              py: { xs: 1, sm: 1.25 },
+              borderRadius: "8px",
+              color: theme.palette.grey[600],
+              "&:hover": {
+                color: theme.palette.success.main,
+                backgroundColor: "rgba(76, 175, 80, 0.08)",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Sheet Type Selection Dialog */}
+      <Dialog
+        open={openSheetTypeDialog}
+        onClose={handleCancelSheetTypeDialog}
+        maxWidth="sm"
+        fullWidth
+        sx={{
+          textAlign: "center",
+          "& .MuiDialog-paper": {
+            borderRadius: { xs: "16px", sm: "24px" },
+            boxShadow: `
+              0 8px 32px rgba(0, 0, 0, 0.12),
+              0 4px 16px rgba(76, 175, 80, 0.08),
+              0 0 0 1px rgba(76, 175, 80, 0.05)
+            `,
+            overflow: "hidden",
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            background: "linear-gradient(135deg, #ffffff 0%, #fafafa 100%)",
+          }
+        }}
+        TransitionProps={{
+          timeout: 300,
+        }}
+      >
+        <Box
+          sx={{
+            position: "relative",
+            padding: { xs: "20px 16px", sm: "24px 20px" },
+            background: "linear-gradient(135deg, rgba(76, 175, 80, 0.03) 0%, rgba(76, 175, 80, 0.01) 100%)",
+            borderBottom: "1px solid rgba(76, 175, 80, 0.1)",
+          }}
+        >
+          <IconButton
+            aria-label="close"
+            onClick={handleCancelSheetTypeDialog}
+            sx={{
+              position: "absolute",
+              right: { xs: "8px", sm: "12px" },
+              top: { xs: "8px", sm: "12px" },
+              color: theme.palette.grey[600],
+              fontSize: { xs: "1.2rem", sm: "1.5rem" },
+              transition: "all 0.2s ease",
+              "&:hover": {
+                color: theme.palette.success.main,
+                transform: "rotate(90deg)",
+                backgroundColor: "rgba(76, 175, 80, 0.08)",
+              },
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+          <Typography
+            sx={{
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              fontSize: { xs: "1.5rem", sm: "1.75rem" },
+              fontWeight: 400,
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
+              color: theme.palette.success.dark,
+              textShadow: "0 2px 8px rgba(76, 175, 80, 0.2)",
+              textAlign: "center",
+              padding: { xs: "0 40px", sm: "0 48px" },
+            }}
+          >
+            Select Sheet Type
+          </Typography>
+        </Box>
+        <DialogContent
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            padding: { xs: "20px 16px", sm: "28px 24px" },
+            "&.MuiDialogContent-root": {
+              paddingTop: { xs: "16px", sm: "20px" },
+            }
+          }}
+        >
+          <FormControl component="fieldset" sx={{ mt: { xs: 0.5, sm: 1 }, width: "100%", maxWidth: "400px" }}>
+            <FormLabel 
+              component="legend" 
+              sx={{ 
+                fontSize: { xs: "1rem", sm: "1.25rem" },
+                fontWeight: 600,
+                mb: { xs: 1, sm: 1.5 }
+              }}
+            >
+              Select sheet type
+            </FormLabel>
             <RadioGroup
               value={multiType}
               onChange={(e) => setMultiType(e.target.value as any)}
+              sx={{ gap: { xs: 0.5, sm: 1 } }}
             >
-              <FormControlLabel value="presentation" control={<Radio />} label="Presentation" />
-              <FormControlLabel value="journal" control={<Radio />} label="Journal" />
-              <FormControlLabel value="machine-design" control={<Radio />} label="Machine Design" />
+              <FormControlLabel 
+                value="presentation" 
+                control={<Radio />} 
+                label="Presentation" 
+                sx={{ 
+                  "& .MuiFormControlLabel-label": { 
+                    fontSize: { xs: "0.9rem", sm: "1rem" } 
+                  } 
+                }}
+              />
+              <FormControlLabel 
+                value="journal" 
+                control={<Radio />} 
+                label="Journal" 
+                sx={{ 
+                  "& .MuiFormControlLabel-label": { 
+                    fontSize: { xs: "0.9rem", sm: "1rem" } 
+                  } 
+                }}
+              />
+              <FormControlLabel 
+                value="machine-design" 
+                control={<Radio />} 
+                label="Machine Design" 
+                sx={{ 
+                  "& .MuiFormControlLabel-label": { 
+                    fontSize: { xs: "0.9rem", sm: "1rem" } 
+                  } 
+                }}
+              />
+              <FormControlLabel 
+                value="general-penalties"
+                control={<Radio />} 
+                label="General Penalties" 
+                sx={{ 
+                  "& .MuiFormControlLabel-label": { 
+                    fontSize: { xs: "0.9rem", sm: "1rem" } 
+                  } 
+                }}
+              />
+              <FormControlLabel 
+                value="run-penalties" 
+                control={<Radio />} 
+                label="Run Penalties" 
+                sx={{ 
+                  "& .MuiFormControlLabel-label": { 
+                    fontSize: { xs: "0.9rem", sm: "1rem" } 
+                  } 
+                }}
+              />
             </RadioGroup>
           </FormControl>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleCancelMulti} sx={{ textTransform: "none" }}>
+        <DialogActions
+          sx={{
+            padding: { xs: "16px 20px", sm: "20px 24px" },
+            borderTop: "1px solid rgba(76, 175, 80, 0.1)",
+            background: "linear-gradient(135deg, rgba(76, 175, 80, 0.01) 0%, rgba(76, 175, 80, 0.02) 100%)",
+            justifyContent: "center",
+            flexDirection: { xs: "column", sm: "row" },
+            gap: { xs: 1, sm: 1.5 }
+          }}
+        >
+          <Button
+            onClick={handleCancelSheetTypeDialog}
+            sx={{
+              textTransform: "none",
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              px: { xs: 2, sm: 3 },
+              py: { xs: 1, sm: 1.25 },
+              borderRadius: "8px",
+              color: theme.palette.grey[600],
+              "&:hover": {
+                color: theme.palette.success.main,
+                backgroundColor: "rgba(76, 175, 80, 0.08)",
+              },
+            }}
+          >
             Cancel
           </Button>
           <Button
-            onClick={handleConfirmMulti}
+            onClick={handleConfirmSheetType}
             variant="contained"
             sx={{
               textTransform: "none",
               borderRadius: 2,
-              px: 2.25,
+              px: { xs: 2, sm: 2.25 },
+              py: { xs: 1, sm: 1.25 },
               bgcolor: theme.palette.success.main,
               "&:hover": { bgcolor: theme.palette.success.dark },
+              fontSize: { xs: "0.9rem", sm: "1rem" },
             }}
-            disabled={!contest?.id}
           >
             Go
           </Button>
@@ -525,4 +1352,6 @@ export default function JudgeDashboardTable(props: IJudgeDashboardProps) {
       </Dialog>
     </>
   );
-}
+});
+
+export default JudgeDashboardTable

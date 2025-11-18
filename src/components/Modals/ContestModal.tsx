@@ -12,6 +12,7 @@ import { Button, TextField } from "@mui/material";
 import Modal from "./Modal";
 import theme from "../../theme";
 import React, { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { useContestStore } from "../../store/primary_stores/contestStore";
 import dayjs, { Dayjs } from "dayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -37,8 +38,10 @@ export default function ContestModal(props: IContestModalProps) {
   const [contestName, setContestName] = useState("");
   //const [contestDate, setContestDate] = useState("2024-11-13");
   const contestid = contestData?.contestid;
-  const { createContest, editContest, fetchAllContests, contestError } =
-    useContestStore();
+  // Use selectors to subscribe only to needed state
+  const createContest = useContestStore((state) => state.createContest);
+  const editContest = useContestStore((state) => state.editContest);
+  const allContests = useContestStore((state) => state.allContests);
   const { fetchOrganizerNamesByContests } = useMapContestOrganizerStore();
 
   const [contestDate, setContestDate] = React.useState<Dayjs | null>(null);
@@ -59,11 +62,12 @@ export default function ContestModal(props: IContestModalProps) {
         is_open: false,
         is_tabulated: false,
       });
-      await fetchAllContests();
       await fetchOrganizerNamesByContests();
+      toast.success("Contest created successfully!");
       handleClose();
     } catch (error) {
       console.error("Failed to create contest: ", error);
+      toast.error("Failed to create contest. Please try again.");
     }
   };
 
@@ -71,17 +75,26 @@ export default function ContestModal(props: IContestModalProps) {
     event.preventDefault();
     if (contestid) {
       try {
+        // Get the current contest data to preserve is_open and is_tabulated
+        const currentContest = allContests.find((c) => c.id === contestid);
+        if (!currentContest) {
+          toast.error("Contest not found. Please refresh and try again.");
+          return;
+        }
+        
         await editContest({
           id: contestid,
           name: contestName,
           date: contestDate ? contestDate.format("YYYY-MM-DD") : "",
-          is_open: false,
-          is_tabulated: false,
+          // Preserve existing is_open and is_tabulated values
+          is_open: currentContest.is_open,
+          is_tabulated: currentContest.is_tabulated,
         });
-        await fetchAllContests();
+        toast.success("Contest updated successfully!");
         handleClose();
       } catch (error) {
         console.error("Failed to edit contest: ", error);
+        toast.error("Failed to update contest. Please try again.");
       }
     }
   };
@@ -94,7 +107,6 @@ export default function ContestModal(props: IContestModalProps) {
       open={open}
       handleClose={handleClose}
       title={title}
-      error={contestError}
     >
       <form
         onSubmit={handleSubmit}
@@ -122,18 +134,39 @@ export default function ContestModal(props: IContestModalProps) {
             sx={{ mt: 2, width: 300 }}
           />
         </LocalizationProvider>
-        {/* Submit button - updated to use modern green success theme */}
+        {/* Submit button - updated with smooth 3D effect and green glow */}
         <Button
           type="submit"
           sx={{
             width: 170,
-            height: 44,                                    // Consistent height (was 35)
-            bgcolor: theme.palette.success.main,          // Green theme (was primary.main)
-            "&:hover": { bgcolor: theme.palette.success.dark }, // Hover effect
-            color: "#fff",                                // White text (was secondary.main)
+            height: 44,
+            bgcolor: theme.palette.success.main,
+            color: "#fff",
             mt: 4,
-            textTransform: "none",                        // No uppercase transformation
-            borderRadius: 2,                              // Modern border radius
+            textTransform: "none",
+            borderRadius: "12px",
+            boxShadow: `
+              0 4px 12px rgba(76, 175, 80, 0.3),
+              0 2px 4px rgba(76, 175, 80, 0.2),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2)
+            `,
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            "&:hover": { 
+              bgcolor: theme.palette.success.dark,
+              transform: "translateY(-2px)",
+              boxShadow: `
+                0 6px 16px rgba(76, 175, 80, 0.4),
+                0 4px 8px rgba(76, 175, 80, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2)
+              `,
+            },
+            "&:active": {
+              transform: "translateY(0px)",
+              boxShadow: `
+                0 2px 8px rgba(76, 175, 80, 0.3),
+                inset 0 2px 4px rgba(0, 0, 0, 0.1)
+              `,
+            },
           }}
         >
           {buttonText}

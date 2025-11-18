@@ -14,6 +14,8 @@ import theme from "../../theme";
 import React, { useEffect, useState } from "react";
 import { useOrganizerStore } from "../../store/primary_stores/organizerStore";
 import useUserRoleStore from "../../store/map_stores/mapUserToRoleStore";
+import toast from "react-hot-toast";
+import { handleAccountError } from "../../utils/errorHandler";
 
 export interface IOrganizerModalProps {
   open: boolean;
@@ -38,50 +40,84 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
   const organizerid = organizerData?.id;
   const { user, getUserByRole } = useUserRoleStore();
 
-  const { createOrganizer, editOrganizer, fetchAllOrganizers, organizerError } =
-    useOrganizerStore();
+  const { createOrganizer, editOrganizer } = useOrganizerStore();
 
+  // Fetch user data when editing organizer
   useEffect(() => {
-    if (organizerData) {
-      getUserByRole(organizerData.id, 2);
+    if (mode === "edit" && organizerData && organizerData.id) {
+      getUserByRole(organizerData.id, 2).catch((error) => {
+        // Silently handle 404 - organizer might not have a user mapping yet
+        console.warn("Failed to fetch user by role for organizer:", error);
+      });
     }
-  }, [organizerData, getUserByRole]);
+  }, [mode, organizerData, getUserByRole]);
 
+  // Update form fields based on mode and data
   useEffect(() => {
-    if (organizerData && user) {
-      setFirstName(organizerData.first_name);
-      setLastName(organizerData.last_name);
-      setUsername(user.username);
+    if (mode === "new") {
+      // Reset fields when creating new organizer
+      setFirstName("");
+      setLastName("");
+      setUsername("");
+    } else if (mode === "edit") {
+      if (organizerData) {
+        // Set fields from organizer data
+        setFirstName(organizerData.first_name || "");
+        setLastName(organizerData.last_name || "");
+        // Use user.username if available, otherwise keep current username
+        if (user?.username) {
+          setUsername(user.username);
+        }
+      }
     }
-  }, [organizerData, user]);
+  }, [mode, organizerData, user]);
 
   const handleCloseModal = () => {
-    handleClose();
     setFirstName("");
     setLastName("");
     setUsername("");
+    handleClose();
   };
 
+  /**
+   * Create a new organizer account with admin privileges
+   * Sets default password and creates user role mapping
+   */
   const handleCreateOrganizer = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
+      // Remove hover/focus from the submit button to avoid lingering hover styles
+      if (typeof window !== "undefined" && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      // Create organizer with provided information and default password
       await createOrganizer({
         first_name: first_name,
         last_name: last_name,
         username: username,
         password: "password",
       });
-      await fetchAllOrganizers();
-      handleClose();
-    } catch (error) {
-      console.error("Failed to create organizer: ", error);
+      
+      toast.success("Organizer created successfully!");
+      handleCloseModal(); // Use handleCloseModal to reset fields
+    } catch (error: any) {
+      handleAccountError(error, "create");
     }
   };
 
+  /**
+   * Update existing organizer information
+   * Preserves organizer ID while updating personal details and credentials
+   */
   const handleEditOrganizer = async (event: React.FormEvent) => {
     event.preventDefault();
     if (organizerid) {
       try {
+        // Remove hover/focus from the submit button to avoid lingering hover styles
+        if (typeof window !== "undefined" && document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+        // Update organizer with current form values
         await editOrganizer({
           id: organizerid,
           first_name,
@@ -89,10 +125,11 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
           username,
           password: "password",
         });
-        await fetchAllOrganizers();
-        handleClose();
-      } catch (error) {
-        console.error("Failed to edit organizer: ", error);
+        
+        toast.success("Organizer updated successfully!");
+        handleCloseModal(); // Use handleCloseModal to reset fields
+      } catch (error: any) {
+        handleAccountError(error, "update");
       }
     }
   };
@@ -113,7 +150,6 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
       open={open}
       handleClose={handleCloseModal}
       title={title}
-      error={organizerError}
     >
       <form
         onSubmit={onSubmitHandler}
@@ -155,18 +191,39 @@ export default function OrganizerModal(props: IOrganizerModalProps) {
           }
           sx={{ mt: 3, width: 300 }}
         />
-        {/* Submit button - updated to use modern green success theme */}
+        {/* Submit button - updated with smooth 3D effect and green glow */}
         <Button
           type="submit"
           sx={{
             width: 170,
-            height: 44,                                    // Consistent height (was 35)
-            bgcolor: theme.palette.success.main,          // Green theme (was primary.main)
-            "&:hover": { bgcolor: theme.palette.success.dark }, // Hover effect
-            color: "#fff",                                // White text (was secondary.main)
+            height: 44,
+            bgcolor: theme.palette.success.main,
+            color: "#fff",
             mt: 4,
-            textTransform: "none",                        // No uppercase transformation
-            borderRadius: 2,                              // Modern border radius
+            textTransform: "none",
+            borderRadius: "12px",
+            boxShadow: `
+              0 4px 12px rgba(76, 175, 80, 0.3),
+              0 2px 4px rgba(76, 175, 80, 0.2),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2)
+            `,
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            "&:hover": { 
+              bgcolor: theme.palette.success.dark,
+              transform: "translateY(-2px)",
+              boxShadow: `
+                0 6px 16px rgba(76, 175, 80, 0.4),
+                0 4px 8px rgba(76, 175, 80, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2)
+              `,
+            },
+            "&:active": {
+              transform: "translateY(0px)",
+              boxShadow: `
+                0 2px 8px rgba(76, 175, 80, 0.3),
+                inset 0 2px 4px rgba(0, 0, 0, 0.1)
+              `,
+            },
           }}
         >
           {buttonText}

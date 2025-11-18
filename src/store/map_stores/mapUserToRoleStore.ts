@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { User, UserRoleMapping } from "../../types";
 
 interface MapUserRoleState {
@@ -52,15 +52,8 @@ const useUserRoleStore = create<MapUserRoleState>()(
       ): Promise<void> => {
         set({ isLoadingUserRole: true, userRoleError: null });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(
-            `/api/mapping/userToRole/getUserByRole/${relatedId}/${roleType}/`,
-            {
-              headers: {
-                Authorization: `Token ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
+          const response = await api.get(
+            `/api/mapping/userToRole/getUserByRole/${relatedId}/${roleType}/`
           );
           set({ user: response.data.User, isLoadingUserRole: false });
           set({ userRoleError: null });

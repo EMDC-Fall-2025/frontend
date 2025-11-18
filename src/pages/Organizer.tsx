@@ -5,7 +5,7 @@ import Tab from "@mui/material/Tab";
 import TabContext from "@mui/lab/TabContext";
 import TabList from "@mui/lab/TabList";
 import TabPanel from "@mui/lab/TabPanel";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
   Container,
   Typography,
@@ -14,36 +14,98 @@ import {
   Card,
   CardContent,
   Grid,
+  Button,
 } from "@mui/material";
 import theme from "../theme";
 import OrganizerContestTable from "../components/Tables/OrganizerContestTable";
+import ContestOverviewTable from "../components/Tables/ContestOverview";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import useMapContestOrganizerStore from "../store/map_stores/mapContestToOrganizerStore";
 import useMapScoreSheetStore from "../store/map_stores/mapScoreSheetStore";
+import useOrganizerStore from "../store/primary_stores/organizerStore";
 
 // icons
 import CampaignIcon from "@mui/icons-material/Campaign";
 import HistoryIcon from "@mui/icons-material/History";
+import GavelIcon from "@mui/icons-material/Gavel";
+import Ranking from "../components/Tables/Rankings";
+import { AwardIcon, Trophy } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 
 export default function Organizer() {
   const [value, setValue] = useState("1");
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const isInitialLoadRef = useRef(true);
   const { fetchContestsByOrganizerId, contests } = useMapContestOrganizerStore();
   const { allSheetsSubmittedForContests } = useMapScoreSheetStore();
-  const { role } = useAuthStore();
+  const { role, isAuthenticated } = useAuthStore();
+  // Use selector to subscribe to allOrganizers changes
+  const allOrganizers = useOrganizerStore((state) => state.allOrganizers);
+  const fetchAllOrganizers = useOrganizerStore((state) => state.fetchAllOrganizers);
+  const navigate = useNavigate()
 
   const organizerId = role ? role.user.id : null;
 
-  useEffect(() => {
-    if (organizerId) {
-      fetchContestsByOrganizerId(organizerId);
-    }
-  }, [organizerId, fetchContestsByOrganizerId]);
+  // Get organizer name from organizer store 
+  // This will automatically update when allOrganizers changes (e.g., when admin edits organizer)
+  // Using useMemo to ensure it recalculates when allOrganizers changes
+  const currentOrganizer = useMemo(() => {
+    if (!organizerId) return null;
+    return allOrganizers.find((org: any) => org.id === organizerId);
+  }, [organizerId, allOrganizers]);
+  
+  const organizerFirstName = currentOrganizer?.first_name || role?.user?.first_name || "";
+  const organizerLastName = currentOrganizer?.last_name || role?.user?.last_name || "";
 
   useEffect(() => {
-    if (contests.length > 0) {
-      allSheetsSubmittedForContests(contests);
+    // Only fetch if user is authenticated and has organizer role
+    if (!isAuthenticated || !organizerId || role?.user_type !== 2) {
+      setHasLoaded(true);
+      isInitialLoadRef.current = false;
+      return;
     }
-  }, [contests]);
+
+    // Check if we already have contests cached - if so, show immediately
+    const hasCachedContests = contests && contests.length > 0;
+    if (hasCachedContests) {
+      setHasLoaded(true);
+      isInitialLoadRef.current = false;
+    }
+
+    // Fetch data (will use cache if available and refresh in background)
+      Promise.all([
+        fetchContestsByOrganizerId(organizerId),
+        fetchAllOrganizers()
+      ]).then(() => {
+        setHasLoaded(true);
+        isInitialLoadRef.current = false;
+    }).catch((error) => {
+      console.error('Error loading organizer data:', error);
+        setHasLoaded(true);
+        isInitialLoadRef.current = false;
+      });
+  }, [organizerId, isAuthenticated, role?.user_type]); // Removed contests, fetchContestsByOrganizerId, fetchAllOrganizers from deps to prevent infinite loop
+
+  const safeContests = contests ?? [];
+  
+  // Memoize contest IDs to prevent unnecessary re-renders
+  const contestIds = useMemo(() => {
+    return safeContests.map(c => c.id).sort().join(',');
+  }, [safeContests]);
+  
+  // Track previous contest IDs to only call API when contests actually change
+  const prevContestIdsRef = useRef<string>('');
+
+  useEffect(() => {
+    // Only call API if contests actually changed (not just on every render)
+    if (safeContests.length > 0 && contestIds !== prevContestIdsRef.current) {
+      prevContestIdsRef.current = contestIds;
+      allSheetsSubmittedForContests(safeContests).catch((error) => {
+        console.error('Error checking sheets submission status:', error);
+      });
+    }
+  }, [contestIds, safeContests.length]); // Only depend on contest IDs string and length
 
   const handleChange = (_event: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);
@@ -53,19 +115,35 @@ export default function Organizer() {
     <Card
       elevation={0}
       sx={{
-        borderRadius: 3,
-        border: `1px solid ${theme.palette.grey[300]}`,
-        backgroundColor: "#fff",
+        borderRadius: 2,
+        border: `1px solid ${theme.palette.grey[200]}`,
+        background: `linear-gradient(135deg, #ffffff 0%, #fafafa 100%)`,
+        boxShadow: `0 2px 8px rgba(76, 175, 80, 0.08)`,
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+          boxShadow: `0 4px 16px rgba(76, 175, 80, 0.12)`,
+          transform: 'translateY(-1px)',
+        },
       }}
     >
-      <CardContent sx={{ py: 3, px: 4 }}>
+      <CardContent sx={{ py: 1.5, px: 2, position: 'relative' }}>
+        <Box sx={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          width: 20,
+          height: 20,
+          borderRadius: '50%',
+          backgroundColor: theme.palette.success.light,
+          opacity: 0.1,
+        }} />
         <Typography
           variant="h4"
           sx={{ fontWeight: 700, color: theme.palette.success.main, lineHeight: 1, mb: 0.5 }}
         >
           {value}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
           {label}
         </Typography>
       </CardContent>
@@ -74,30 +152,64 @@ export default function Organizer() {
 
   return (
     <Box sx={{ pb: 8, backgroundColor: "#fafafa", minHeight: "100vh" }}>
-      <Container maxWidth="lg">
-        {/* Heading */}
-        <Stack spacing={1} sx={{ mt: 4, mb: 3 }}>
+      <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 } }}>
+        <Box
+          sx={{
+            opacity: hasLoaded ? 1 : 0,
+            transition: hasLoaded ? `opacity ${isInitialLoadRef.current ? '0.6s' : '0.1s'} ease-in` : 'none',
+            pointerEvents: hasLoaded ? 'auto' : 'none',
+          }}
+        >
+          <Stack spacing={1} sx={{ mt: 2, mb: 2 }}>
           <Typography
             variant="h4"
-            sx={{ fontWeight: 800, color: theme.palette.success.main }}
+            sx={{
+              fontWeight: 400,
+              color: theme.palette.success.main,
+              fontSize: { xs: "1.75rem", sm: "2.25rem", md: "2.5rem" },
+              fontFamily: '"DM Serif Display", "Georgia", serif',
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
+            }}
           >
             Organizer Dashboard
           </Typography>
-          <Typography variant="subtitle1" color="text.secondary">
-            {role?.user?.first_name} {role?.user?.last_name}
+          <Typography
+            variant="subtitle1"
+            color="text.secondary"
+            sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
+          >
+            {organizerFirstName} {organizerLastName}
           </Typography>
         </Stack>
 
-        {/* Stat Cards */}
-        <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid container spacing={2} sx={{ mb: 2 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard value={contests.length} label="Total Contests" />
+            <StatCard value={safeContests.length} label="Total Contests" />
           </Grid>
         </Grid>
+        <Button
+          onClick={() => navigate('/organizerAwards/')}
+          variant="contained"
+          startIcon={<AwardIcon />}
+          sx={{
+            textTransform: "none",
+            borderRadius: 2,
+            px: { xs: 2, sm: 2.5 },
+            py: { xs: 1, sm: 1.5 },
+            mb: 2,
+            bgcolor: theme.palette.success.main,
+            "&:hover": { bgcolor: theme.palette.success.dark },
+            fontSize: { xs: "0.875rem", sm: "1rem" },
+            width: { xs: "100%", sm: "auto" }
+          }}
+        >
+          Assign Awards
+        </Button>
 
         {/* Tab Section */}
         <TabContext value={value}>
-          {/* Tab Header (styled like a white card top) */}
+          {/* Tab Header  */}
           <Box
             sx={{
               border: `1px solid ${theme.palette.grey[300]}`,
@@ -110,15 +222,24 @@ export default function Organizer() {
           >
             <TabList
               onChange={handleChange}
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
               sx={{
                 "& .MuiTab-root": {
                   textTransform: "none",
                   fontWeight: 600,
                   minHeight: 56,
+                  minWidth: { xs: "auto", sm: 160 },
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                  px: { xs: 1, sm: 2 },
                 },
                 "& .MuiTabs-indicator": {
                   height: 3,
                   backgroundColor: theme.palette.success.main,
+                },
+                "& .MuiTabs-scrollButtons": {
+                  color: theme.palette.success.main,
                 },
               }}
             >
@@ -133,6 +254,18 @@ export default function Organizer() {
                 iconPosition="start"
                 icon={<HistoryIcon />}
                 label="Past Contests"
+              />
+              <Tab
+                value="3"
+                iconPosition="start"
+                icon={<GavelIcon />}
+                label="Contest Overview"
+              />
+              <Tab
+                value="4"
+                iconPosition="start"
+                icon={<Trophy />}
+                label="Team Rankings"
               />
             </TabList>
           </Box>
@@ -182,8 +315,56 @@ export default function Organizer() {
               <OrganizerContestTable type="past" organizers={[]} />
             </Box>
           </TabPanel>
+
+          {/* Panel 3: Contest Management */}
+          <TabPanel
+            value="3"
+            sx={{
+              p: 0,
+              border: `1px solid ${theme.palette.grey[300]}`,
+              borderTop: 0,
+              borderBottomLeftRadius: 12,
+              borderBottomRightRadius: 12,
+              backgroundColor: "#fff",
+            }}
+          >
+            <Box sx={{ px: 3, py: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                Overall stats
+              </Typography>
+            </Box>
+            <Divider />
+            <Box sx={{ px: 3, pb: 3 }}>
+              <ContestOverviewTable contests={safeContests} />
+            </Box>
+          </TabPanel>
+
+          {/* Team Rankings */}
+          <TabPanel
+            value="4"
+            sx={{
+              p: 0,
+              border: `1px solid ${theme.palette.grey[300]}`,
+              borderTop: 0,
+              borderBottomLeftRadius: 12,
+              borderBottomRightRadius: 12,
+              backgroundColor: "#fff",
+            }}
+          >
+            <Box sx={{ px: 3, py: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                Team Rankings
+              </Typography>
+            </Box>
+            <Divider />
+            <Box sx={{ px: 3, pb: 3 }}>
+              <Ranking />
+            </Box>
+          </TabPanel>
         </TabContext>
+        </Box>
       </Container>
+
     </Box>
   );
 }

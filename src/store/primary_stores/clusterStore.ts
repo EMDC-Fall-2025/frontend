@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { Cluster } from "../../types";
+import { dispatchDataChange } from "../../utils/dataChangeEvents";
 
 interface ClusterState {
   cluster: Cluster | null;
@@ -10,9 +11,10 @@ interface ClusterState {
   fetchClusterById: (clusterId: number) => Promise<void>;
   createCluster: (data: {
     cluster_name: string;
+    cluster_type?: string;
     contestid: number;
-  }) => Promise<void>;
-  editCluster: (data: { id: number; cluster_name: string }) => Promise<void>;
+  }) => Promise<Cluster>;
+  editCluster: (data: { id: number; cluster_name: string; cluster_type?: string }) => Promise<Cluster>;
   deleteCluster: (clusterId: number) => Promise<void>;
   clearCluster: () => void;
 }
@@ -36,14 +38,9 @@ export const useClusterStore = create<ClusterState>()(
       fetchClusterById: async (clusterId: number) => {
         set({ isLoadingCluster: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.get(`/api/cluster/get/${clusterId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-          set({ cluster: response.data });
+          const response = await api.get(`/api/cluster/get/${clusterId}/`);
+          // API returns { Cluster: {...} }
+          set({ cluster: (response.data as any)?.Cluster ?? null });
           set({ clusterError: null });
         } catch (error) {
           const errorMessage = "Failed to fetch cluster";
@@ -56,19 +53,20 @@ export const useClusterStore = create<ClusterState>()(
 
       createCluster: async (data: {
         cluster_name: string;
+        cluster_type?: string;
         contestid: number;
       }) => {
         set({ isLoadingCluster: true });
         try {
-          const token = localStorage.getItem("token");
-          const response = await axios.post(`/api/cluster/create/`, data, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-          set({ cluster: response.data });
+          const response = await api.post(`/api/cluster/create/`, data);
+          const createdCluster = (response.data as any)?.cluster || response.data;
+          set({ cluster: createdCluster });
           set({ clusterError: null });
+          // Dispatch event to notify other components
+          if (createdCluster?.id) {
+            dispatchDataChange({ type: 'cluster', action: 'create', id: createdCluster.id, contestId: data.contestid });
+          }
+          return createdCluster;
         } catch (error) {
           const errorMessage = "Failed to create cluster";
           set({ clusterError: errorMessage });
@@ -78,21 +76,24 @@ export const useClusterStore = create<ClusterState>()(
         }
       },
 
-      editCluster: async (data: { id: number; cluster_name: string }) => {
+      editCluster: async (data: { id: number; cluster_name: string; cluster_type?: string }) => {
         set({ isLoadingCluster: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.post(`/api/cluster/edit/`, data, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          const res = await api.post(`/api/cluster/edit/`, data);
+          if (res.status !== 200) {
+            throw new Error(`Unexpected status ${res.status}`);
+          }
           set({ clusterError: null });
-        } catch (error) {
-          const errorMessage = "Failed to edit cluster";
-          set({ clusterError: errorMessage });
-          throw new Error(errorMessage);
+          const updatedCluster = (res.data as any)?.cluster;
+          // Dispatch event to notify other components
+          if (updatedCluster?.id) {
+            dispatchDataChange({ type: 'cluster', action: 'update', id: updatedCluster.id });
+          }
+          return updatedCluster;
+        } catch (error: any) {
+          const msg = error?.response?.data?.detail || error?.message || "Failed to edit cluster";
+          set({ clusterError: msg });
+          throw new Error(msg);
         } finally {
           set({ isLoadingCluster: false });
         }
@@ -101,15 +102,11 @@ export const useClusterStore = create<ClusterState>()(
       deleteCluster: async (clusterId: number) => {
         set({ isLoadingCluster: true });
         try {
-          const token = localStorage.getItem("token");
-          await axios.delete(`/api/cluster/delete/${clusterId}/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
+          await api.delete(`/api/cluster/delete/${clusterId}/`);
           set({ cluster: null });
           set({ clusterError: null });
+          // Dispatch event to notify other components
+          dispatchDataChange({ type: 'cluster', action: 'delete', id: clusterId });
         } catch (error) {
           const errorMessage = "Failed to delete cluster";
           set({ clusterError: errorMessage });

@@ -10,8 +10,6 @@ import {
   Typography,
   Link,
   Alert,
-  CircularProgress,
-  Backdrop,
 } from "@mui/material";
 import TriangleBackground from "../components/TriangleBackground";
 import { useEffect, useState } from "react";
@@ -82,13 +80,18 @@ export default function Login() {
           alignItems: "center",
         }}
       >
-        <Backdrop
-          sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-          open={isLoadingAuth}
+        <Typography 
+          variant="h1"
+          sx={{
+            fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+            fontFamily: '"DM Serif Display", "Georgia", serif',
+            fontWeight: 400,
+            letterSpacing: "0.02em",
+            lineHeight: 1.2,
+          }}
         >
-          <CircularProgress color="inherit" />
-        </Backdrop>
-        <Typography variant="h1">Login</Typography>
+          Login
+        </Typography>
         <form
           onSubmit={handleLogin}
           style={{

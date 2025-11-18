@@ -1,13 +1,3 @@
-/**
- * JudgeModal Component
- * 
- * Modal for creating and editing judges with modern theme styling.
- * Features:
- * - Clean white background with subtle borders
- * - Green success theme for buttons
- * - Consistent typography with bold titles
- * - Modern form styling with proper spacing
- */
 import {
   Button,
   Container,
@@ -23,13 +13,17 @@ import {
   Box,
   Chip,
   IconButton,
+  Typography,
 } from "@mui/material";
 import Modal from "./Modal";
 import theme from "../../theme";
+import toast from "react-hot-toast";
+import { handleAccountError } from "../../utils/errorHandler";
 import { useEffect, useState } from "react";
 import useUserRoleStore from "../../store/map_stores/mapUserToRoleStore";
 import { useJudgeStore } from "../../store/primary_stores/judgeStore";
 import useContestJudgeStore from "../../store/map_stores/mapContestToJudgeStore";
+import { useMapClusterJudgeStore } from "../../store/map_stores/mapClusterToJudgeStore";
 import CloseIcon from "@mui/icons-material/Close";
 import { Cluster, JudgeData } from "../../types";
 
@@ -40,30 +34,37 @@ export interface IJudgeModalProps {
   contestid?: number;
   clusters?: Cluster[];
   judgeData?: JudgeData;
+  clusterContext?: Cluster;
+  onSuccess?: () => void;
 }
 
+/**
+ * Modal component for creating or editing judges.
+ * Handles judge creation, updates, and assignment to clusters and contests.
+ */
 export default function JudgeModal(props: IJudgeModalProps) {
-  const { handleClose, open, mode, judgeData, clusters, contestid } = props;
+  const { handleClose, open, mode, judgeData, clusters, contestid, clusterContext, onSuccess } = props;
+
+  const { addJudgeToContest, updateJudgeInContest } = useContestJudgeStore();
+  const { updateJudgeInAllClusters, addJudgeToCluster, judgesByClusterId, fetchAllClustersByJudgeId } = useMapClusterJudgeStore();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [clusterId, setClusterId] = useState<number>(-1);
   const { user, getUserByRole } = useUserRoleStore();
-  const { createJudge, editJudge, judgeError } = useJudgeStore();
-  const { getAllJudgesByContestId } = useContestJudgeStore();
+  const { createJudge, editJudge } = useJudgeStore();
   const [scoreSheetsSelectIsOpen, setScoreSheetsSelectIsOpen] = useState(false);
   const [selectedTitle, setSelectedTitle] = useState(0);
 
   const scoringSheetOptions = [
-    { label: "Journal", value: "journalSS" },
-    { label: "Presentation", value: "presSS" },
-    { label: "Machine Design & Operation", value: "mdoSS" },
-    { label: "Run Penalties", value: "runPenSS" },
-    { label: "General Penalties", value: "genPenSS" },
-    { label: "Redesign", value: "redesignSS" },
-    //TODO: undetermined if need two score sheets
-    { label: "Championship", value: "championshipSS" },
+    { label: "Journal", value: "journalSS", isPreliminary: true },
+    { label: "Presentation", value: "presSS", isPreliminary: true },
+    { label: "Machine Design & Operation", value: "mdoSS", isPreliminary: true },
+    { label: "Run Penalties", value: "runPenSS", isPreliminary: true },
+    { label: "General Penalties", value: "genPenSS", isPreliminary: true },
+    { label: "Redesign", value: "redesignSS", isPreliminary: false },
+    { label: "Championship", value: "championshipSS", isPreliminary: false },
   ];
 
   const titleOptions = [
@@ -79,6 +80,45 @@ export default function JudgeModal(props: IJudgeModalProps) {
     scoreSheets: false,
     titles: false,
   });
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const currentCluster = clusters?.find(cluster => cluster.id === clusterId);
+  // For edit mode, use clusterContext as the original cluster (the one being edited from)
+  // For create mode, there is no original cluster
+  const originalCluster = mode === "edit" ? clusterContext : judgeData?.cluster;
+  
+  /**
+   * Determines the cluster type based on cluster properties.
+   * Checks cluster_type field and cluster name for championship/redesign indicators.
+   */
+  const getClusterType = (cluster: typeof currentCluster) => {
+    if (!cluster) return 'preliminary';
+    if (cluster.cluster_type === 'championship' || cluster.cluster_name?.toLowerCase().includes('championship')) return 'championship';
+    if (cluster.cluster_type === 'redesign' || cluster.cluster_name?.toLowerCase().includes('redesign')) return 'redesign';
+    return 'preliminary';
+  };
+  
+  const currentClusterType = getClusterType(currentCluster);
+  const originalClusterType = getClusterType(originalCluster);
+  
+  const isChampionshipCluster = currentClusterType === 'championship';
+  const isRedesignCluster = currentClusterType === 'redesign';
+  const isPreliminaryCluster = currentClusterType === 'preliminary';
+  
+  const isChampionshipOrRedesignJudge = mode === "edit" && (
+    originalClusterType === 'championship' || originalClusterType === 'redesign'
+  );
+
+  const isScoresheetDisabled = (option: typeof scoringSheetOptions[0]) => {
+    if (isChampionshipCluster) {
+      return option.value !== "championshipSS";
+    } else if (isRedesignCluster) {
+      return option.value !== "redesignSS";
+    } else if (isPreliminaryCluster) {
+      return !option.isPreliminary;
+    }
+    return false;
+  };
 
   useEffect(() => {
     if (judgeData) {
@@ -87,19 +127,21 @@ export default function JudgeModal(props: IJudgeModalProps) {
   }, [judgeData, getUserByRole]);
 
   useEffect(() => {
-    if (judgeData && user) {
-      setFirstName(judgeData.firstName);
-      setLastName(judgeData.lastName);
-      setEmail(user.username);
-      setClusterId(judgeData.cluster.id);
-      setPhoneNumber(judgeData.phoneNumber);
+    if (judgeData) {
+      setFirstName(judgeData.firstName || '');
+      setLastName(judgeData.lastName || '');
+      setEmail(judgeData.firstName ? user?.username || '' : '');
+      setClusterId(judgeData.cluster?.id || -1);
+      setPhoneNumber(judgeData.phoneNumber || '');
       const initialSheets = scoringSheetOptions
         .filter((option) => judgeData[option.value as keyof typeof judgeData])
         .map((option) => option.value);
+      
+      
       setSelectedSheets(initialSheets);
-      setSelectedTitle(judgeData.role);
+      setSelectedTitle(Number(judgeData.role) || 0);
     }
-  }, [user, judgeData]);
+  }, [judgeData, user]);
 
   const handleCloseModal = () => {
     handleClose();
@@ -111,21 +153,36 @@ export default function JudgeModal(props: IJudgeModalProps) {
     setSelectedSheets([]);
     setSelectedTitle(0);
     setErrors({ cluster: false, scoreSheets: false, titles: false });
+    setErrorMessage(null);
   };
 
   const validateForm = () => {
     const isClusterInvalid = clusterId === -1;
-    //const areScoreSheetsInvalid = selectedSheets.length === 0;
     const areTitlesInvalid = selectedTitle === 0;
+    
+    const hasPreliminarySheets = selectedSheets.some(sheet => 
+      scoringSheetOptions.find(opt => opt.value === sheet)?.isPreliminary
+    );
+    const hasRedesignSheets = selectedSheets.includes("redesignSS");
+    const hasChampionshipSheets = selectedSheets.includes("championshipSS");
+    
+    let areScoreSheetsInvalid = false;
+    
+    if (isChampionshipCluster && (hasPreliminarySheets || hasRedesignSheets)) {
+      areScoreSheetsInvalid = true;
+    } else if (isRedesignCluster && (hasPreliminarySheets || hasChampionshipSheets)) {
+      areScoreSheetsInvalid = true;
+    } else if (isPreliminaryCluster && (hasRedesignSheets || hasChampionshipSheets)) {
+      areScoreSheetsInvalid = true;
+    }
 
     setErrors({
       cluster: isClusterInvalid,
-      //scoreSheets: areScoreSheetsInvalid,
-      scoreSheets: false,
+      scoreSheets: areScoreSheetsInvalid,
       titles: areTitlesInvalid,
     });
-    //&& !areScoreSheetsInvalid
-    return !isClusterInvalid && !areTitlesInvalid;
+
+    return !isClusterInvalid && !areTitlesInvalid && !areScoreSheetsInvalid;
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -133,6 +190,11 @@ export default function JudgeModal(props: IJudgeModalProps) {
 
     if (!validateForm()) {
       return;
+    }
+
+    // Remove hover/focus from the submit button to avoid lingering hover styles
+    if (typeof window !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
     }
 
     if (mode === "new") {
@@ -147,7 +209,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
       try {
         const judgeData = {
           first_name: firstName || "n/a",
-          last_name: lastName || "n/a",
+          last_name: lastName || "",
           phone_number: phoneNumber || "n/a",
           presentation: selectedSheets.includes("presSS"),
           mdo: selectedSheets.includes("mdoSS"),
@@ -163,11 +225,20 @@ export default function JudgeModal(props: IJudgeModalProps) {
           role: selectedTitle,
         };
 
-        await createJudge(judgeData);
-        getAllJudgesByContestId(contestid);
+        const createdJudge = await createJudge(judgeData);
+        if (createdJudge && contestid) {
+          addJudgeToContest(contestid, createdJudge);
+          if (clusterId !== -1) {
+            addJudgeToCluster(clusterId, createdJudge);
+          }
+        }
+
+        onSuccess?.();
+
+        toast.success("Judge created successfully!");
         handleCloseModal();
-      } catch (error) {
-        console.error("Failed to create judge", error);
+      } catch (error: any) {
+        handleAccountError(error, "create");
       }
     }
   };
@@ -175,35 +246,153 @@ export default function JudgeModal(props: IJudgeModalProps) {
   const handleEditJudge = async () => {
     if (contestid && judgeData) {
       try {
+        // Prioritize dropdown selection over context
+        const selectedClusterFromProps = clusterContext || judgeData.cluster;
+
+        // Simple logic: if user selected something in dropdown, use it; otherwise use context
+        const selectedClusterId = clusterId !== -1 ? clusterId : selectedClusterFromProps?.id || -1;
+
+        const selectedCluster = clusters?.find(c => c.id === selectedClusterId) || selectedClusterFromProps;
+        const selectedClusterType = getClusterType(selectedCluster);
+
+        let allowedSheets = selectedSheets;
+        if (selectedClusterType === 'championship') {
+              allowedSheets = ["championshipSS"];
+        } else if (selectedClusterType === 'redesign') {
+              allowedSheets = ["redesignSS"];
+              }
+
+        // Get all existing cluster assignments for this judge
+        const existingClusters = await fetchAllClustersByJudgeId(judgeData.id);
+
+        // Build the complete cluster assignments list
+        const clusterAssignments = [];
+
+        // Add/update the preliminary cluster assignment (the one being edited)
+        clusterAssignments.push({
+          clusterid: selectedClusterId,
+          contestid: contestid,
+          presentation: allowedSheets.includes("presSS"),
+          journal: allowedSheets.includes("journalSS"),
+          mdo: allowedSheets.includes("mdoSS"),
+          runpenalties: allowedSheets.includes("runPenSS"),
+          otherpenalties: allowedSheets.includes("genPenSS"),
+          redesign: allowedSheets.includes("redesignSS"),
+          championship: allowedSheets.includes("championshipSS"),
+        });
+
+        // Add all existing championship/redesign assignments (preserve them)
+        for (const existingCluster of existingClusters as any) {
+          const clusterType = getClusterType(existingCluster);
+          if (clusterType === 'championship' || clusterType === 'redesign') {
+            // Keep championship/redesign assignments
+            clusterAssignments.push({
+              clusterid: existingCluster.id,
+              contestid: existingCluster.contest_id,
+              presentation: existingCluster.sheet_flags?.presentation || false,
+              journal: existingCluster.sheet_flags?.journal || false,
+              mdo: existingCluster.sheet_flags?.mdo || false,
+              runpenalties: existingCluster.sheet_flags?.runpenalties || false,
+              otherpenalties: existingCluster.sheet_flags?.otherpenalties || false,
+              redesign: existingCluster.sheet_flags?.redesign || false,
+              championship: existingCluster.sheet_flags?.championship || false,
+            });
+          }
+          // Skip preliminary clusters - we'll replace with the new one
+        }
+
         const updatedData = {
           id: judgeData.id,
           first_name: firstName,
           last_name: lastName,
           phone_number: phoneNumber,
-          presentation: selectedSheets.includes("presSS"),
-          mdo: selectedSheets.includes("mdoSS"),
-          journal: selectedSheets.includes("journalSS"),
-          runpenalties: selectedSheets.includes("runPenSS"),
-          otherpenalties: selectedSheets.includes("genPenSS"),
-          redesign: selectedSheets.includes("redesignSS"),
-          championship: selectedSheets.includes("championshipSS"),
+          presentation: allowedSheets.includes("presSS"),
+          journal: allowedSheets.includes("journalSS"),
+          mdo: allowedSheets.includes("mdoSS"),
+          runpenalties: allowedSheets.includes("runPenSS"),
+          otherpenalties: allowedSheets.includes("genPenSS"),
+          clusterid: selectedClusterId,
           username: email,
-          clusterid: clusterId,
           role: selectedTitle,
+          clusters: clusterAssignments, // Send ALL cluster assignments
         };
 
-        await editJudge(updatedData);
-        getAllJudgesByContestId(contestid);
+        const updatedJudge = await editJudge(updatedData as any);
+
+        if (updatedJudge && contestid) {
+          updateJudgeInContest(contestid, updatedJudge);
+
+          // Handle cluster movement in frontend state
+          const originalPreliminaryCluster = existingClusters.find((cluster: any) => getClusterType(cluster) === 'preliminary');
+
+          if (originalPreliminaryCluster && originalPreliminaryCluster.id !== selectedClusterId) {
+            // Judge is moving between clusters
+            const oldClusterJudges = judgesByClusterId[originalPreliminaryCluster.id] || [];
+            const newClusterJudges = judgesByClusterId[selectedClusterId] || [];
+
+            useMapClusterJudgeStore.setState({
+              judgesByClusterId: {
+                ...judgesByClusterId,
+                [originalPreliminaryCluster.id]: oldClusterJudges.filter(j => j.id !== judgeData.id),
+                [selectedClusterId]: [
+                  ...newClusterJudges.filter(j => j.id !== judgeData.id),
+                  updatedJudge
+                ]
+              }
+            });
+          } else {
+            // Just updating judge info within same cluster
+            updateJudgeInAllClusters(updatedJudge);
+          }
+        }
+
+        toast.success("Judge updated successfully!");
+        onSuccess?.();
         handleCloseModal();
-      } catch (error) {
-        console.error("Failed to edit judge", error);
+      } catch (error: any) {
+        console.error("Judge update error:", error);
+        const errorMessage = handleAccountError(error, "update");
+        setErrorMessage(errorMessage || null);
+        setErrors({
+          ...errors,
+          cluster: errorMessage ? true : false,
+        });
       }
     }
   };
 
   const handleScoringSheetsChange = (event: any) => {
-    setSelectedSheets(event.target.value);
+    const value = event.target.value as string[];
+
+    const hasPreliminarySheets = value.some(sheet =>
+      scoringSheetOptions.find(opt => opt.value === sheet)?.isPreliminary
+    );
+    const hasRedesignSheets = value.includes("redesignSS");
+    const hasChampionshipSheets = value.includes("championshipSS");
+
+    let finalValue = value;
+    if (hasRedesignSheets || hasChampionshipSheets) {
+      finalValue = value.filter(sheet =>
+        !scoringSheetOptions.find(opt => opt.value === sheet)?.isPreliminary
+      );
+    } else if (hasPreliminarySheets) {
+      finalValue = value.filter(sheet =>
+        scoringSheetOptions.find(opt => opt.value === sheet)?.isPreliminary
+      );
+    }
+
+    setSelectedSheets(finalValue);
   };
+
+  useEffect(() => {
+    if (clusterId !== -1) {
+      if (isChampionshipCluster) {
+        setSelectedSheets(["championshipSS"]);
+      } else if (isRedesignCluster) {
+        setSelectedSheets(["redesignSS"]);
+      }
+    }
+  }, [clusterId, isChampionshipCluster, isRedesignCluster]);
 
   const handleCloseDropdown = (type: string, e?: any) => {
     e.stopPropagation();
@@ -220,9 +409,11 @@ export default function JudgeModal(props: IJudgeModalProps) {
       open={open}
       handleClose={handleCloseModal}
       title={title}
-      error={judgeError}
     >
-      <Container>
+      <Container sx={{ 
+        p: { xs: 2, sm: 3 }, 
+        maxWidth: { xs: "100%", sm: "500px" }
+      }}>
         <form
           onSubmit={handleSubmit}
           style={{
@@ -236,14 +427,24 @@ export default function JudgeModal(props: IJudgeModalProps) {
           <TextField
             label="First Name"
             variant="outlined"
-            sx={{ mt: 1, width: 350 }}
+            sx={{ 
+              mt: { xs: 1, sm: 1 }, 
+              width: { xs: "100%", sm: 350 },
+              "& .MuiInputLabel-root": { fontSize: { xs: "0.9rem", sm: "1rem" } },
+              "& .MuiOutlinedInput-input": { fontSize: { xs: "0.9rem", sm: "1rem" } }
+            }}
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
           />
           <TextField
             label="Last Name"
             variant="outlined"
-            sx={{ mt: 3, width: 350 }}
+            sx={{ 
+              mt: { xs: 2, sm: 3 }, 
+              width: { xs: "100%", sm: 350 },
+              "& .MuiInputLabel-root": { fontSize: { xs: "0.9rem", sm: "1rem" } },
+              "& .MuiOutlinedInput-input": { fontSize: { xs: "0.9rem", sm: "1rem" } }
+            }}
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
           />
@@ -251,43 +452,102 @@ export default function JudgeModal(props: IJudgeModalProps) {
             required
             label="Email"
             variant="outlined"
-            sx={{ mt: 3, width: 350 }}
+            sx={{ 
+              mt: { xs: 2, sm: 3 }, 
+              width: { xs: "100%", sm: 350 },
+              "& .MuiInputLabel-root": { fontSize: { xs: "0.9rem", sm: "1rem" } },
+              "& .MuiOutlinedInput-input": { fontSize: { xs: "0.9rem", sm: "1rem" } }
+            }}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <TextField
             label="Phone Number"
             variant="outlined"
-            sx={{ mt: 3, width: 350 }}
+            sx={{ 
+              mt: { xs: 2, sm: 3 }, 
+              width: { xs: "100%", sm: 350 },
+              "& .MuiInputLabel-root": { fontSize: { xs: "0.9rem", sm: "1rem" } },
+              "& .MuiOutlinedInput-input": { fontSize: { xs: "0.9rem", sm: "1rem" } }
+            }}
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value)}
           />
           <FormControl
             required
             sx={{
-              width: 350,
-              mt: 3,
+              width: { xs: "100%", sm: 350 },
+              mt: { xs: 2, sm: 3 },
             }}
           >
-            <InputLabel>Cluster</InputLabel>
+            <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Cluster</InputLabel>
             <Select
               value={clusterId}
               label="Cluster"
-              sx={{ textAlign: "left" }}
+              disabled={isChampionshipOrRedesignJudge}
+              sx={{ 
+                textAlign: "left",
+                fontSize: { xs: "0.9rem", sm: "1rem" }
+              }}
               onChange={(e) => setClusterId(Number(e.target.value))}
             >
-              {clusters?.map((clusterItem) => (
-                <MenuItem key={clusterItem.id} value={clusterItem.id}>
+              {clusters
+                ?.filter(cluster => {
+                  // In edit mode, only show preliminary clusters (never show championship/redesign)
+                  if (mode === "edit") {
+                    return getClusterType(cluster) === 'preliminary';
+                  }
+                  return true;
+                })
+                ?.map((clusterItem) => (
+                <MenuItem key={clusterItem.id} value={clusterItem.id} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
                   {clusterItem.cluster_name}
                 </MenuItem>
               ))}
             </Select>
-            {errors.cluster && (
-              <FormHelperText>Please select a cluster.</FormHelperText>
+            {errors.cluster && !errorMessage && (
+              <FormHelperText error sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                {isChampionshipOrRedesignJudge 
+                  ? "Cannot change cluster type for championship/redesign judges."
+                  : "Please select a cluster."}
+              </FormHelperText>
+            )}
+            {errorMessage && (
+              <FormHelperText error sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                {errorMessage}
+              </FormHelperText>
+            )}
+            {isChampionshipOrRedesignJudge && (
+              <FormHelperText sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" }, color: "text.secondary" }}>
+                Cluster type cannot be changed for championship/redesign judges.
+              </FormHelperText>
             )}
           </FormControl>
-          <FormControl sx={{ mt: 3, width: 350, position: "relative" }}>
-            <InputLabel>Score Sheets</InputLabel>
+          {(isChampionshipCluster || isRedesignCluster) && (
+            <Box sx={{ 
+              mt: { xs: 2, sm: 3 },
+              mb: 2,
+              p: 1.5, 
+              bgcolor: isChampionshipCluster ? 'success.light' : 'warning.light',
+              borderRadius: 1,
+              fontSize: '0.875rem',
+              color: isChampionshipCluster ? 'success.dark' : 'warning.dark',
+              fontWeight: 500,
+              border: `1px solid ${isChampionshipCluster ? theme.palette.success.main : theme.palette.warning.main}`,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              width: { xs: "100%", sm: 350 }
+            }}>
+              {isChampionshipCluster ? 'Championship Cluster: Only Championship scoresheets are allowed' : 
+               'Redesign Cluster: Only Redesign scoresheets are allowed'}
+            </Box>
+          )}
+          
+          <FormControl sx={{ 
+            mt: { xs: 1, sm: 2 }, 
+            width: { xs: "100%", sm: 350 }, 
+            position: "relative" 
+          }}>
+            <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Score Sheets</InputLabel>
             <Select
               multiple
               value={selectedSheets}
@@ -295,9 +555,9 @@ export default function JudgeModal(props: IJudgeModalProps) {
               onClose={() => setScoreSheetsSelectIsOpen(false)}
               onOpen={() => setScoreSheetsSelectIsOpen(true)}
               onChange={handleScoringSheetsChange}
-              input={<OutlinedInput label="Scoring Sheets" />}
+              input={<OutlinedInput label="Scoring Sheets" sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }} />}
               renderValue={(selected) => (
-                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: { xs: 0.25, sm: 0.5 } }}>
                   {selected.map((value) => (
                     <Chip
                       key={value}
@@ -305,6 +565,10 @@ export default function JudgeModal(props: IJudgeModalProps) {
                         scoringSheetOptions.find((o) => o.value === value)
                           ?.label
                       }
+                      sx={{ 
+                        fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                        height: { xs: "24px", sm: "32px" }
+                      }}
                     />
                   ))}
                 </Box>
@@ -321,57 +585,147 @@ export default function JudgeModal(props: IJudgeModalProps) {
                   <CloseIcon />
                 </IconButton>
               </Box>
-              {scoringSheetOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  <Checkbox checked={selectedSheets.includes(option.value)} />
-                  <ListItemText primary={option.label} />
-                </MenuItem>
-              ))}
+              {scoringSheetOptions.map((option) => {
+                const isDisabled = isScoresheetDisabled(option);
+                let disabledReason = "";
+                
+                if (isChampionshipCluster && option.value !== "championshipSS") {
+                  disabledReason = "Championship clusters can only have Championship scoresheets";
+                } else if (isRedesignCluster && option.value !== "redesignSS") {
+                  disabledReason = "Redesign clusters can only have Redesign scoresheets";
+                } else if (isPreliminaryCluster && !option.isPreliminary) {
+                  disabledReason = "Preliminary clusters cannot have Redesign or Championship scoresheets";
+                }
+                
+                return (
+                  <MenuItem 
+                    key={option.value} 
+                    value={option.value} 
+                    disabled={isDisabled}
+                    sx={{ 
+                      fontSize: { xs: "0.9rem", sm: "1rem" },
+                      opacity: isDisabled ? 0.5 : 1,
+                      "&.Mui-disabled": {
+                        color: theme.palette.grey[500]
+                      }
+                    }}
+                  >
+                    <Checkbox 
+                      checked={selectedSheets.includes(option.value)} 
+                      disabled={isDisabled}
+                      sx={{ 
+                        padding: { xs: 0.5, sm: 1 },
+                        "& .MuiSvgIcon-root": { 
+                          fontSize: { xs: "1.2rem", sm: "1.5rem" } 
+                        },
+                        "&.Mui-disabled": {
+                          color: theme.palette.grey[400]
+                        }
+                      }}
+                    />
+                    <ListItemText 
+                      primary={
+                        <Box>
+                          <Typography variant="body2" sx={{ 
+                            fontSize: { xs: "0.9rem", sm: "1rem" },
+                            color: isDisabled ? theme.palette.grey[500] : "inherit"
+                          }}>
+                            {option.label}
+                          </Typography>
+                          {isDisabled && (
+                            <Typography 
+                              variant="caption" 
+                              sx={{ 
+                                display: "block", 
+                                color: theme.palette.error.main,
+                                fontSize: "0.75rem",
+                                mt: 0.5
+                              }}
+                            >
+                              {disabledReason}
+                            </Typography>
+                          )}
+                        </Box>
+                      }
+                    />
+                  </MenuItem>
+                );
+              })}
             </Select>
             {errors.scoreSheets && (
-              <FormHelperText error>
-                Please select at least one scoring sheet.
+              <FormHelperText error sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                {isChampionshipCluster 
+                  ? "Championship clusters can only have Championship scoresheets"
+                  : isRedesignCluster 
+                  ? "Redesign clusters can only have Redesign scoresheets"
+                  : "Preliminary clusters cannot have Redesign or Championship scoresheets"
+                }
               </FormHelperText>
             )}
-            <FormHelperText>Select one or more scoring sheets</FormHelperText>
+            <FormHelperText sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>Select one or more scoring sheets</FormHelperText>
           </FormControl>
           <FormControl
             required
             sx={{
-              width: 350,
-              mt: 3,
+              width: { xs: "100%", sm: 350 },
+              mt: { xs: 2, sm: 3 },
             }}
           >
-            <InputLabel>Title</InputLabel>
+            <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Title</InputLabel>
             <Select
               value={selectedTitle}
               label="Title"
-              sx={{ textAlign: "left" }}
+              sx={{ 
+                textAlign: "left",
+                fontSize: { xs: "0.9rem", sm: "1rem" }
+              }}
               onChange={(e) => setSelectedTitle(Number(e.target.value))}
             >
               {titleOptions?.map((title) => (
-                <MenuItem key={title.value} value={title.value}>
+                <MenuItem key={title.value} value={title.value} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
                   {title.label}
                 </MenuItem>
               ))}
             </Select>
             {errors.titles && (
-              <FormHelperText>Please select a title.</FormHelperText>
+              <FormHelperText sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>Please select a title.</FormHelperText>
             )}
           </FormControl>
 
-          {/* Submit button - updated to use modern green success theme */}
           <Button
             type="submit"
             sx={{
-              width: 130,
-              height: 44,                                    // Consistent height (was 35)
-              bgcolor: theme.palette.success.main,          // Green theme (was primary.main)
-              "&:hover": { bgcolor: theme.palette.success.dark }, // Hover effect
-              color: "#fff",                                // White text (was secondary.main)
-              mt: 3,
-              textTransform: "none",                        // No uppercase transformation
-              borderRadius: 2,                              // Modern border radius
+              width: { xs: "100%", sm: 130 },
+              height: { xs: 40, sm: 44 },
+              bgcolor: theme.palette.success.main,
+              color: "#fff",
+              mt: { xs: 2, sm: 3 },
+              textTransform: "none",
+              borderRadius: "12px",
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              fontWeight: 600,
+              boxShadow: `
+                0 4px 12px rgba(76, 175, 80, 0.3),
+                0 2px 4px rgba(76, 175, 80, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2)
+              `,
+              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              "&:hover": { 
+                bgcolor: theme.palette.success.dark,
+                transform: "translateY(-2px)",
+                boxShadow: `
+                  0 6px 16px rgba(76, 175, 80, 0.4),
+                  0 4px 8px rgba(76, 175, 80, 0.3),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.2)
+                `,
+              },
+              "&:active": {
+                transform: "translateY(0px)",
+                boxShadow: `
+                  0 2px 8px rgba(76, 175, 80, 0.3),
+                  inset 0 2px 4px rgba(0, 0, 0, 0.1)
+                `,
+              },
             }}
           >
             {buttonText}

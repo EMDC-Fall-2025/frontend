@@ -1,9 +1,11 @@
-import { CircularProgress, Link, Typography } from "@mui/material";
+import { Link, Typography, Button, Box, Skeleton } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import theme from "../theme";
 import ScoreBreakdownTableStandard from "../components/Tables/ScoreBreakdownTableStandard";
 import { journalQuestions } from "../data/journalQuestions";
 import { presentationQuestions } from "../data/presentationQuestions";
 import { machineDesignQuestions } from "../data/machineDesignQuestions";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useScoreSheetStore } from "../store/primary_stores/scoreSheetStore";
 import { useParams } from "react-router-dom";
 import ScoreBreakdownTableGeneralPenalties from "../components/Tables/ScoreBreakdownTableGeneralPenalties";
@@ -19,7 +21,10 @@ export default function ScoreBreakdown() {
   const { role } = useAuthStore();
   const navigate = useNavigate();
 
+  const fetchedRef = useRef(false);
   useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true; // guard against React 18 StrictMode double-invoke
     if (parsedTeamId) {
       getScoreSheetBreakdown(parsedTeamId);
     }
@@ -41,52 +46,178 @@ export default function ScoreBreakdown() {
   }, []);
 
   return isLoadingScoreSheet ? (
-    <CircularProgress />
+    <>
+      <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 }, ml: { xs: 2, sm: 3 } }}>
+        <Skeleton variant="rectangular" width={180} height={36} sx={{ borderRadius: 1 }} />
+      </Box>
+
+      <Skeleton variant="text" sx={{ ml: { xs: 2, sm: 5 }, mt: { xs: 2, sm: 5 }, mr: { xs: 2, sm: 5 } }} width={280} height={48} />
+      
+      <Skeleton variant="text" sx={{ m: { xs: 2, sm: 5 } }} width={200} height={36} />
+      <Box sx={{ mx: { xs: 2, sm: 5 }, mb: 2 }}>
+        <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 2 }} />
+      </Box>
+
+      <Skeleton variant="text" sx={{ m: { xs: 2, sm: 5 } }} width={200} height={36} />
+      <Box sx={{ mx: { xs: 2, sm: 5 }, mb: 2 }}>
+        <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 2 }} />
+      </Box>
+
+      <Skeleton variant="text" sx={{ m: { xs: 2, sm: 5 } }} width={320} height={36} />
+      <Box sx={{ mx: { xs: 2, sm: 5 }, mb: 2 }}>
+        <Skeleton variant="rectangular" height={150} sx={{ borderRadius: 2 }} />
+      </Box>
+
+      <Skeleton variant="text" sx={{ mt: { xs: 2, sm: 5 }, ml: { xs: 2, sm: 5 }, mr: { xs: 2, sm: 5 } }} width={220} height={36} />
+      <Box sx={{ mx: { xs: 2, sm: 5 }, mb: 2 }}>
+        <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 2 }} />
+      </Box>
+
+      <Skeleton variant="text" sx={{ mt: { xs: 2, sm: 5 }, ml: { xs: 2, sm: 5 }, mr: { xs: 2, sm: 5 } }} width={200} height={36} />
+      <Box sx={{ mx: { xs: 2, sm: 5 } }}>
+        <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 2 }} />
+      </Box>
+    </>
   ) : (
     <>
-      {role?.user_type == 4 && (
-        <Link href="/coach/" sx={{ textDecoration: "none" }}>
-          <Typography variant="body2" sx={{ ml: 2, mt: 2 }}>
-            {"<"} Back to Dashboard{" "}
-          </Typography>
-        </Link>
-      )}
-      {role?.user_type != 4 && (
-        <Link
-          onClick={() => navigate(-1)}
-          sx={{ textDecoration: "none", cursor: "pointer" }}
-        >
-          <Typography variant="body2" sx={{ ml: 2, mt: 2 }}>
-            {"<"} Back to Results{" "}
-          </Typography>
-        </Link>
-      )}
-      <Typography variant="h1" sx={{ ml: 5, mt: 5, mr: 5, mb: 2 }}>
+      <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 }, ml: { xs: 2, sm: 3 } }}>
+        {role?.user_type == 4 && (
+          <Button
+            component={Link}
+            href="/coach/"
+            startIcon={<ArrowBackIcon />}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.success.dark,
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              fontWeight: 500,
+              px: { xs: 1.5, sm: 2 },
+              py: { xs: 0.75, sm: 1 },
+              borderRadius: "8px",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                backgroundColor: "rgba(76, 175, 80, 0.08)",
+                transform: "translateX(-2px)",
+              },
+            }}
+          >
+            Back to Dashboard
+          </Button>
+        )}
+        {role?.user_type != 4 && (
+          <Button
+            onClick={() => navigate(-1)}
+            startIcon={<ArrowBackIcon />}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.success.dark,
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              fontWeight: 500,
+              px: { xs: 1.5, sm: 2 },
+              py: { xs: 0.75, sm: 1 },
+              borderRadius: "8px",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                backgroundColor: "rgba(76, 175, 80, 0.08)",
+                transform: "translateX(-2px)",
+              },
+            }}
+          >
+            Back to Results
+          </Button>
+        )}
+      </Box>
+      <Typography 
+        variant="h1" 
+        sx={{ 
+          ml: { xs: 2, sm: 5 }, 
+          mt: { xs: 2, sm: 5 }, 
+          mr: { xs: 2, sm: 5 }, 
+          mb: { xs: 1, sm: 2 },
+          fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontWeight: 400,
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
+        }}
+      >
         Score Breakdown
       </Typography>
-      <Typography sx={{ ml: 5 }}>
-        *For best printing results print landscape
-      </Typography>
-      <Typography variant="h2" sx={{ m: 5 }}>
+      
+      <Typography 
+        variant="h2" 
+        sx={{ 
+          m: { xs: 2, sm: 5 },
+          fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem" },
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontWeight: 400,
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
+        }}
+      >
         Journal
       </Typography>
       <ScoreBreakdownTableStandard type={2} questions={journalQuestions} />
-      <Typography variant="h2" sx={{ m: 5 }}>
+      <Typography 
+        variant="h2" 
+        sx={{ 
+          m: { xs: 2, sm: 5 },
+          fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem" },
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontWeight: 400,
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
+        }}
+      >
         Presentation
       </Typography>
       <ScoreBreakdownTableStandard type={1} questions={presentationQuestions} />
-      <Typography variant="h2" sx={{ m: 5 }}>
+      <Typography 
+        variant="h2" 
+        sx={{ 
+          m: { xs: 2, sm: 5 },
+          fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem" },
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontWeight: 400,
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
+        }}
+      >
         Machine Design and Operation
       </Typography>
       <ScoreBreakdownTableStandard
         type={3}
         questions={machineDesignQuestions}
       />
-      <Typography variant="h2" sx={{ mt: 5, ml: 5, mr: 5 }}>
+      <Typography 
+        variant="h2" 
+        sx={{ 
+          mt: { xs: 2, sm: 5 }, 
+          ml: { xs: 2, sm: 5 }, 
+          mr: { xs: 2, sm: 5 },
+          fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem" },
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontWeight: 400,
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
+        }}
+      >
         General Penalties
       </Typography>
       <ScoreBreakdownTableGeneralPenalties />
-      <Typography variant="h2" sx={{ mt: 5, ml: 5, mr: 5 }}>
+      <Typography 
+        variant="h2" 
+        sx={{ 
+          mt: { xs: 2, sm: 5 }, 
+          ml: { xs: 2, sm: 5 }, 
+          mr: { xs: 2, sm: 5 },
+          fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem" },
+          fontFamily: '"DM Serif Display", "Georgia", serif',
+          fontWeight: 400,
+          letterSpacing: "0.02em",
+          lineHeight: 1.2,
+        }}
+      >
         Run Penalties
       </Typography>
       <ScoreBreakdownTableRunPenalties />
