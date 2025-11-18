@@ -37,7 +37,7 @@ const validatePassword = (pwd: string): { valid: boolean; errors: string[] } => 
   if (!/[a-z]/.test(pwd)) {
     errors.push("One lowercase letter");
   }
-  if (!/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(pwd)) {
+  if (!/[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(pwd)) {
     errors.push("One special character (!@#$%^&*()_+-=[]{}|;:,.<>?)");
   }
   return { valid: errors.length === 0, errors };
@@ -108,7 +108,7 @@ export default function Signup() {
   const hasMinLength = password.length >= 8;
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
-  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(password);
 
   return (
     <>
