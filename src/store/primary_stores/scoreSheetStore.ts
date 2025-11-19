@@ -222,7 +222,7 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
 
       // Update scores in the score sheet
       updateScores: async (data: Partial<ScoreSheet>) => {
-        set({ isLoadingScoreSheet: true });
+        // Removed: set({ isLoadingScoreSheet: true });
         try {
           const response = await api.post(
             `/api/scoreSheet/edit/updateScores/`,
@@ -237,9 +237,8 @@ export const useScoreSheetStore = create<ScoreSheetState>()(
           set({ scoreSheetError: "Failed to update score sheet" });
           toast.error("Failed to save scoresheet. Please try again.");
           throw new Error("Failed to update score sheet");
-        } finally {
-          set({ isLoadingScoreSheet: false });
         }
+        // Removed: set({ isLoadingScoreSheet: false });
       },
 
       // Edit a specific field in the score sheet

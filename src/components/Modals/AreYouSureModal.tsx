@@ -40,6 +40,7 @@ export default function AreYouSureModal(props: IAreYouSureModalProps) {
       >
         {/* Yes button - updated with smooth 3D effect and green glow */}
         <Button
+          type="button"
           onClick={handleSubmitModal}
           sx={{
             width: 90,
@@ -77,6 +78,7 @@ export default function AreYouSureModal(props: IAreYouSureModalProps) {
         </Button>
         {/* No button - updated with smooth 3D effect */}
         <Button
+          type="button"
           onClick={handleClose}
           sx={{
             width: 90,
