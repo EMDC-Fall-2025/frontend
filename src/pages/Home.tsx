@@ -18,11 +18,12 @@ export default function Home() {
         >
           <img
             src={image}
-            alt="Emdc Homepage"
+            alt="Engineering Machine Design Contest Hero Image"
+            width={1200}
+            height={800}
             loading="eager"
-            fetchPriority="high"
-            decoding="sync"
             style={{
+              display: "block",
               width: "calc(100% + 2px)",
               height: "100%",
               objectFit: "cover",
