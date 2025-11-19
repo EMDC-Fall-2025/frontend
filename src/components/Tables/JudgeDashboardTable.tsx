@@ -298,7 +298,6 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   }, [mappings, judge?.id]);
 
   const lastFetchedJudgeIdRef = React.useRef<number | null>(null);
-  const skipFetchRef = React.useRef(false);
 
   // Track the last cluster type to detect changes
   const lastClusterTypeRef = React.useRef<string>('');
@@ -1033,7 +1032,6 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                 const hasStarted = hasContestStarted(contest);
                 const isDisabled = isContestDisabledForMultiScoring(contest);
                 const anyTeamAdvanced = hasAnyTeamAdvancedByContest.get(contest.id) || false;
-                const judgeHasChampionship = judgeHasChampionshipByContest.get(contest.id) || false;
                 
                 return (
                   <Button

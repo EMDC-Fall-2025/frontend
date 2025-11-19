@@ -1,7 +1,16 @@
 import { Box, Container, Typography, Paper } from "@mui/material";
+import { useRef, useEffect } from "react";
 import image from "../assets/group.png";
 
 export default function Home() {
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    if (imgRef.current) {
+      imgRef.current.setAttribute("fetchpriority", "high");
+    }
+  }, []);
+
   return (
     <Box sx={{ bgcolor: "#fafafa", minHeight: "100vh" }}>
       {/* Hero Image Section */}
@@ -17,10 +26,10 @@ export default function Home() {
           }}
         >
           <img
+            ref={imgRef}
             src={image}
             alt="Emdc Homepage"
             loading="eager"
-            fetchpriority="high"
             decoding="async"
             style={{
               width: "calc(100% + 2px)",
