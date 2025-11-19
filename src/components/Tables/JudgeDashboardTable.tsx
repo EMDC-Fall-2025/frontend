@@ -66,24 +66,6 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   const isPreliminarySheet = (sheetType: number) => sheetType >= 1 && sheetType <= 5;
 
   /**
-   * Maps contest IDs to whether the judge has championship assignment in that contest.
-   * Used to determine if preliminary scoresheets should be disabled.
-   */
-  const judgeHasChampionshipByContest = useMemo(() => {
-    const map = new Map<number, boolean>();
-    if (currentCluster) {
-      const championshipObj = (currentCluster as any).judgeHasChampionshipByContest;
-      if (championshipObj && typeof championshipObj === 'object') {
-        Object.keys(championshipObj).forEach((key) => {
-          const contestId = parseInt(key, 10);
-          map.set(contestId, championshipObj[key] === true);
-        });
-      }
-    }
-    return map;
-  }, [currentCluster]);
-
-  /**
    * Maps contest IDs to whether any team has advanced to championship in that contest.
    * If any team in a contest has advanced, all preliminary scoresheets for all teams
    * in that contest should be disabled.
