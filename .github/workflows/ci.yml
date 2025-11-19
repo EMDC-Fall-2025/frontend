@@ -22,11 +22,9 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        working-directory: ./frontend
         run: npm ci
 
       - name: Run ESLint
-        working-directory: ./frontend
         run: npm run lint
         continue-on-error: false
 
@@ -46,11 +44,9 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        working-directory: ./frontend
         run: npm ci
 
       - name: Build frontend
-        working-directory: ./frontend
         run: npm run build
         env:
           VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL || 'http://localhost:7004' }}
@@ -59,6 +55,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
-          path: frontend/dist
+          path: dist
           retention-days: 1
 
