@@ -4,9 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import "./lib/axiosSetup";
 import heroImage from "./assets/group.png";
 
-// Aggressive image caching for homepage hero image
 if (typeof document !== "undefined") {
-  // Use the image URL as cache key for automatic cache busting when image changes
   const cacheKey = `heroImageCached_${heroImage}`;
   const isCached = sessionStorage.getItem(cacheKey);
 
@@ -25,7 +23,7 @@ if (typeof document !== "undefined") {
     img.loading = "eager";
     img.decoding = "sync";
 
-    // Also prefetch for future navigations (helps with browser preloading)
+    // Also prefetch for future navigations 
     const prefetchLink = document.createElement("link");
     prefetchLink.rel = "prefetch";
     prefetchLink.href = heroImage;

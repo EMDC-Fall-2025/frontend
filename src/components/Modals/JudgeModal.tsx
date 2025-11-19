@@ -207,17 +207,31 @@ export default function JudgeModal(props: IJudgeModalProps) {
   const handleCreateJudge = async () => {
     if (contestid) {
       try {
+        // Apply cluster type filtering to scoresheets
+        let allowedSheets = selectedSheets;
+        if (clusterId !== -1 && clusters) {
+          const selectedCluster = clusters.find(c => c.id === clusterId);
+          if (selectedCluster) {
+            const clusterType = getClusterType(selectedCluster);
+            if (clusterType === 'championship') {
+              allowedSheets = ["championshipSS"];
+            } else if (clusterType === 'redesign') {
+              allowedSheets = ["redesignSS"];
+            }
+          }
+        }
+
         const judgeData = {
           first_name: firstName || "n/a",
           last_name: lastName || "",
           phone_number: phoneNumber || "n/a",
-          presentation: selectedSheets.includes("presSS"),
-          mdo: selectedSheets.includes("mdoSS"),
-          journal: selectedSheets.includes("journalSS"),
-          runpenalties: selectedSheets.includes("runPenSS"),
-          otherpenalties: selectedSheets.includes("genPenSS"),
-          redesign: selectedSheets.includes("redesignSS"),
-          championship: selectedSheets.includes("championshipSS"),
+          presentation: allowedSheets.includes("presSS"),
+          mdo: allowedSheets.includes("mdoSS"),
+          journal: allowedSheets.includes("journalSS"),
+          runpenalties: allowedSheets.includes("runPenSS"),
+          otherpenalties: allowedSheets.includes("genPenSS"),
+          redesign: allowedSheets.includes("redesignSS"),
+          championship: allowedSheets.includes("championshipSS"),
           username: email,
           password: "password",
           contestid: contestid,
@@ -489,7 +503,32 @@ export default function JudgeModal(props: IJudgeModalProps) {
                 textAlign: "left",
                 fontSize: { xs: "0.9rem", sm: "1rem" }
               }}
-              onChange={(e) => setClusterId(Number(e.target.value))}
+              onChange={(e) => {
+                const newClusterId = Number(e.target.value);
+                setClusterId(newClusterId);
+
+                // Update scoresheet options based on cluster type
+                if (newClusterId !== -1 && clusters) {
+                  const selectedCluster = clusters.find(c => c.id === newClusterId);
+                  if (selectedCluster) {
+                    const clusterType = getClusterType(selectedCluster);
+
+                    if (clusterType === 'championship') {
+                      // Championship clusters can only have championship scoresheets
+                      setSelectedSheets(["championshipSS"]);
+                    } else if (clusterType === 'redesign') {
+                      // Redesign clusters can only have redesign scoresheets
+                      setSelectedSheets(["redesignSS"]);
+                    } else {
+                      // Preliminary clusters - allow multiple scoresheets, default to common ones
+                      setSelectedSheets(["presSS", "journalSS", "mdoSS"]);
+                    }
+                  }
+                } else if (newClusterId === -1) {
+                  // Reset when no cluster selected
+                  setSelectedSheets([]);
+                }
+              }}
             >
               {clusters
                 ?.filter(cluster => {

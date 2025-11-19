@@ -40,7 +40,6 @@ export default function Judging() {
   const fetchTeamsByClusterId = useClusterTeamStore((state) => state.fetchTeamsByClusterId);
   const [teams, setTeams] = useState<Team[]>([]);
   const [currentCluster, setCurrentCluster] = useState<(ClusterWithContest & {
-    judgeHasChampionshipByContest?: { [key: number]: boolean };
     hasAnyTeamAdvancedByContest?: { [key: number]: boolean };
   }) | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);

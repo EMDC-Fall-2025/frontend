@@ -8,7 +8,7 @@ export default function Preloader() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 1500); // Reduced from 2500ms to 1500ms for faster loading
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, []);
