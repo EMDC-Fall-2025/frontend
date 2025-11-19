@@ -20,7 +20,7 @@ export default function Home() {
             src={image}
             alt="Emdc Homepage"
             loading="eager"
-            fetchpriority="high"
+            fetchPriority="high"
             decoding="sync"
             style={{
               width: "calc(100% + 2px)",

@@ -65,23 +65,6 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
 
   const isPreliminarySheet = (sheetType: number) => sheetType >= 1 && sheetType <= 5;
 
-  /**
-   * Maps contest IDs to whether the judge has championship assignment in that contest.
-   * Used to determine if preliminary scoresheets should be disabled.
-   */
-  const judgeHasChampionshipByContest = useMemo(() => {
-    const map = new Map<number, boolean>();
-    if (currentCluster) {
-      const championshipObj = (currentCluster as any).judgeHasChampionshipByContest;
-      if (championshipObj && typeof championshipObj === 'object') {
-        Object.keys(championshipObj).forEach((key) => {
-          const contestId = parseInt(key, 10);
-          map.set(contestId, championshipObj[key] === true);
-        });
-      }
-    }
-    return map;
-  }, [currentCluster]);
 
   /**
    * Maps contest IDs to whether any team has advanced to championship in that contest.
@@ -298,7 +281,6 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   }, [mappings, judge?.id]);
 
   const lastFetchedJudgeIdRef = React.useRef<number | null>(null);
-  const skipFetchRef = React.useRef(false);
 
   // Track the last cluster type to detect changes
   const lastClusterTypeRef = React.useRef<string>('');
@@ -1033,7 +1015,6 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                 const hasStarted = hasContestStarted(contest);
                 const isDisabled = isContestDisabledForMultiScoring(contest);
                 const anyTeamAdvanced = hasAnyTeamAdvancedByContest.get(contest.id) || false;
-                const judgeHasChampionship = judgeHasChampionshipByContest.get(contest.id) || false;
                 
                 return (
                   <Button
