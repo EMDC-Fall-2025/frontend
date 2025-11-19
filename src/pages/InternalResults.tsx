@@ -105,7 +105,7 @@ const InternalResults: React.FC = () => {
   useEffect(() => {
     if (!parsedContestId) return;
 
-    load({ force: true }); // initial - force refresh to get latest team advancement status
+    load({ force: true });
 
     const interval = setInterval(() => {
       if (!document.hidden) {
@@ -144,13 +144,6 @@ const InternalResults: React.FC = () => {
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("championshipUndone", handleChampionshipUndo);
       unsubscribeDataChange();
-
-      // ----------- 
-      // KEY OPTIMIZATION:
-      // DO NOT clearTeamsByContest() here! 
-      // This allows cached team data for the contest to survive across navigation.
-      // Only clear cache on explicit contest switch/log out/hard reload if desired.
-      // -----------
     };
   }, [parsedContestId, load]);
 

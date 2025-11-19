@@ -10,9 +10,11 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoadingAuth: boolean;
   showPreloader: boolean; // Track if we should show preloader after login
+  preloaderProgress: string; // Progress message to show in preloader
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   setShowPreloader: (show: boolean) => void;
+  setPreloaderProgress: (progress: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -24,13 +26,18 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoadingAuth: false,
       showPreloader: false,
+      preloaderProgress: '',
 
       setShowPreloader: (show: boolean) => {
         set({ showPreloader: show });
       },
 
+      setPreloaderProgress: (progress: string) => {
+        set({ preloaderProgress: progress });
+      },
+
       login: async (username, password) => {
-        set({ isLoadingAuth: true });
+        set({ isLoadingAuth: true, showPreloader: true }); // Show preloader immediately
         set({ authError: null });
 
         try {
@@ -44,11 +51,10 @@ export const useAuthStore = create<AuthState>()(
             role: data.role ?? null,
             isAuthenticated: true,
             isLoadingAuth: false,
-            showPreloader: true,
           });
           set({ authError: null });
         } catch (authError: any) {
-          set({ isLoadingAuth: false });
+          set({ isLoadingAuth: false, showPreloader: false });
           set({ authError: "Login Unsuccessful" });
           throw authError;
         }
@@ -56,7 +62,7 @@ export const useAuthStore = create<AuthState>()(
 
       logout: async () => {
         // Clear authentication state immediately for instant UI update
-        set({ user: null, role: null, isAuthenticated: false, showPreloader: false });
+        set({ user: null, role: null, isAuthenticated: false, showPreloader: false, preloaderProgress: '' });
         sessionStorage.clear();
 
         try {

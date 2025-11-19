@@ -36,10 +36,11 @@ import { useNavigate } from "react-router-dom";
 export default function Organizer() {
   const [value, setValue] = useState("1");
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const isInitialLoadRef = useRef(true);
   const { fetchContestsByOrganizerId, contests } = useMapContestOrganizerStore();
   const { allSheetsSubmittedForContests } = useMapScoreSheetStore();
-  const { role, isAuthenticated } = useAuthStore();
+  const { role, isAuthenticated, setShowPreloader, setPreloaderProgress } = useAuthStore();
   // Use selector to subscribe to allOrganizers changes
   const allOrganizers = useOrganizerStore((state) => state.allOrganizers);
   const fetchAllOrganizers = useOrganizerStore((state) => state.fetchAllOrganizers);
@@ -87,6 +88,27 @@ export default function Organizer() {
       });
      
   }, [organizerId, isAuthenticated, role?.user_type]); // Removed contests, fetchContestsByOrganizerId, fetchAllOrganizers from deps to prevent infinite loop
+
+  /**
+   * Start minimum 1.5 second timer when component mounts
+   */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinTimeElapsed(true);
+    }, 1500); // 1.5 seconds minimum
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  /**
+   * Hide preloader when both data is loaded AND minimum time has elapsed
+   */
+  useEffect(() => {
+    if (hasLoaded && minTimeElapsed) {
+      setShowPreloader(false);
+      setPreloaderProgress(''); // Clear progress when hiding preloader
+    }
+  }, [hasLoaded, minTimeElapsed, setShowPreloader, setPreloaderProgress]);
 
   const safeContests = contests ?? [];
   

@@ -138,8 +138,7 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
             });
           }
           
-          // Dispatch data change event for contest update (organizer assignment changed)
-          console.log('🚀 Dispatching contest update event for organizer assignment:', contestId);
+          // Dispatch data change event for contest update 
           dispatchDataChange({ type: 'contest', action: 'update', id: contestId });
           
           set({ mapContestOrganizerError: null });

@@ -4,24 +4,54 @@ import { BrowserRouter } from "react-router-dom";
 import "./lib/axiosSetup";
 import heroImage from "./assets/group.png";
 
-// Preload hero image using the actual bundled URL so it stays cached across navigations
+// Aggressive image caching for homepage hero image
 if (typeof document !== "undefined") {
-  const existing = document.head.querySelector<HTMLLinkElement>(
-    `link[rel="preload"][href="${heroImage}"]`
-  );
+  // Use the image URL as cache key for automatic cache busting when image changes
+  const cacheKey = `heroImageCached_${heroImage}`;
+  const isCached = sessionStorage.getItem(cacheKey);
 
-  if (!existing) {
-    const link = document.createElement("link");
-    link.rel = "preload";
-    link.as = "image";
-    link.href = heroImage;
-    link.setAttribute("fetchpriority", "high");
-    document.head.appendChild(link);
+  if (!isCached) {
+    // Preload with high priority for immediate loading
+    const preloadLink = document.createElement("link");
+    preloadLink.rel = "preload";
+    preloadLink.as = "image";
+    preloadLink.href = heroImage;
+    preloadLink.setAttribute("fetchpriority", "high");
+    document.head.appendChild(preloadLink);
+
+    // Warm the cache with multiple strategies
+    const img = new Image();
+    img.src = heroImage;
+    img.loading = "eager";
+    img.decoding = "sync";
+
+    // Also prefetch for future navigations (helps with browser preloading)
+    const prefetchLink = document.createElement("link");
+    prefetchLink.rel = "prefetch";
+    prefetchLink.href = heroImage;
+    prefetchLink.as = "image";
+    document.head.appendChild(prefetchLink);
+
+    // Mark as cached to avoid repeated preloading
+    img.onload = () => {
+      sessionStorage.setItem(cacheKey, 'true');
+    };
+
+    // Fallback: mark as cached after a timeout in case onload doesn't fire
+    setTimeout(() => {
+      if (!sessionStorage.getItem(cacheKey)) {
+        sessionStorage.setItem(cacheKey, 'true');
+      }
+    }, 2000);
+  } else {
+    // Image is cached, still preload for immediate availability
+    const preloadLink = document.createElement("link");
+    preloadLink.rel = "preload";
+    preloadLink.as = "image";
+    preloadLink.href = heroImage;
+    preloadLink.setAttribute("fetchpriority", "high");
+    document.head.appendChild(preloadLink);
   }
-
-  // Warm the cache proactively
-  const img = new Image();
-  img.src = heroImage;
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

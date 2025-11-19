@@ -33,7 +33,7 @@ export default function Judging() {
   const { judgeId } = useParams();
   const judgeIdNumber = judgeId ? parseInt(judgeId, 10) : null;
   const navigate = useNavigate();
-  const { role } = useAuthStore();
+  const { role, setShowPreloader, setPreloaderProgress } = useAuthStore();
   const { judge, fetchJudgeById } = useJudgeStore();
   const { fetchAllClustersByJudgeId } = useMapClusterJudgeStore();
   const mapClusterToTeamError = useClusterTeamStore((state) => state.mapClusterToTeamError);
@@ -44,6 +44,7 @@ export default function Judging() {
     hasAnyTeamAdvancedByContest?: { [key: number]: boolean };
   }) | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const isInitialLoadRef = useRef(true);
 
   const fetchContestsByTeams = useMapContestToTeamStore((state) => state.fetchContestsByTeams);
@@ -91,6 +92,27 @@ export default function Judging() {
       }
     }
   }, [judgeIdNumber, teams.length, hasLoaded, teamsByClusterId, fetchJudgeById]);
+
+  /**
+   * Start minimum 1.8 second timer when component mounts
+   */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinTimeElapsed(true);
+    }, 1800); // 1.8 seconds minimum for judge dashboard
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  /**
+   * Hide preloader when both data is loaded AND minimum time has elapsed
+   */
+  useEffect(() => {
+    if (hasLoaded && minTimeElapsed) {
+      setShowPreloader(false);
+      setPreloaderProgress(''); // Clear progress when hiding preloader
+    }
+  }, [hasLoaded, minTimeElapsed, setShowPreloader, setPreloaderProgress]);
 
   /**
    * Populates contest mappings for teams whenever teams are available or updated.

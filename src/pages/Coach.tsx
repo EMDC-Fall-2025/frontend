@@ -27,11 +27,12 @@ import CoachTeamScoresTable from "../components/Tables/CoachTeamScoresTable";
 import theme from "../theme";
 
 export default function Coach() {
-  const { role } = useAuthStore();
+  const { role, setShowPreloader, setPreloaderProgress } = useAuthStore();
   const { teams, fetchTeamsByCoachId, clearTeams } = useMapCoachToTeamStore();
   const { contestsForTeams, fetchContestsByTeams, clearContests } =
     useMapContestToTeamStore();
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
@@ -54,6 +55,27 @@ export default function Coach() {
       clearContests();
     };
   }, [teams]);
+
+  /**
+   * Start minimum 1.5 second timer when component mounts
+   */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinTimeElapsed(true);
+    }, 1500); // 1.5 seconds minimum
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  /**
+   * Hide preloader when both data is loaded AND minimum time has elapsed
+   */
+  useEffect(() => {
+    if (hasLoaded && minTimeElapsed) {
+      setShowPreloader(false);
+      setPreloaderProgress(''); 
+    }
+  }, [hasLoaded, minTimeElapsed, setShowPreloader, setPreloaderProgress]);
 
   useEffect(() => {
     const handlePageHide = () => {

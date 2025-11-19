@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import useContestStore from "../store/primary_stores/contestStore";
 import useOrganizerStore from "../store/primary_stores/organizerStore";
 import { useEffect } from "react";
+import { useAuthStore } from "../store/primary_stores/authStore";
 import {
   Box,
   Button,
@@ -34,11 +35,13 @@ export default function Admin() {
   const [contestModal, setContestModal] = useState(false);
   const [organizerModal, setOrganizerModal] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const isInitialLoadRef = useRef(true);
   const navigate = useNavigate();
 
   const { allContests, isLoadingContest } = useContestStore();
   const { allOrganizers, isLoadingOrganizer } = useOrganizerStore();
+  const { setShowPreloader, setPreloaderProgress } = useAuthStore();
 
   useEffect(() => {
     const needsContests = allContests.length === 0;
@@ -58,6 +61,26 @@ export default function Admin() {
     });
   }, [allContests.length, allOrganizers.length]); // Remove function dependencies to prevent re-runs
 
+  /**
+   * Start minimum 1.5 second timer when component mounts
+   */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinTimeElapsed(true);
+    }, 1500); // 1.5 seconds minimum
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  /**
+   * Hide preloader when both data is loaded AND minimum time has elapsed
+   */
+  useEffect(() => {
+    if (hasLoaded && minTimeElapsed) {
+      setShowPreloader(false);
+      setPreloaderProgress(''); // Clear progress when hiding preloader
+    }
+  }, [hasLoaded, minTimeElapsed, setShowPreloader, setPreloaderProgress]);
 
   const handleChange = (_e: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);

@@ -21,7 +21,7 @@ export default function Home() {
             alt="Emdc Homepage"
             loading="eager"
             fetchpriority="high"
-            decoding="async"
+            decoding="sync"
             style={{
               width: "calc(100% + 2px)",
               height: "100%",
