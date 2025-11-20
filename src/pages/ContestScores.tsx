@@ -19,6 +19,7 @@ import { useContestStore } from "../store/primary_stores/contestStore";
 import { useMapClusterToContestStore } from "../store/map_stores/mapClusterToContestStore";
 import useContestJudgeStore from "../store/map_stores/mapContestToJudgeStore";
 import { useAuthStore } from "../store/primary_stores/authStore";
+import { onDataChange } from "../utils/dataChangeEvents";
 
 export default function ContestScores() {
   const { contestId } = useParams<{ contestId: string }>();
@@ -35,7 +36,7 @@ export default function ContestScores() {
     isLoadingMapContestToTeam,
   } = useMapContestToTeamStore();
 
-  const { awards, AwardsByTeamTable } = useSpecialAwardStore();
+  const { awards, AwardsByTeamTable, clearAwards } = useSpecialAwardStore();
   const { coachesByTeams, fetchCoachesByTeams } = useMapCoachToTeamStore();
 
   const [activeTab, setActiveTab] = useState("prelim");
@@ -48,24 +49,52 @@ export default function ContestScores() {
     [teamsByContest]
   );
 
-  // Fetch data on mount or contest change - fetchTeamsByContest uses cache internally for instant display
+  // Fetch data on mount or contest change - always force refresh to ensure latest tabulated scores
   useEffect(() => {
     if (!contestIdNumber) return;
 
     lastContestIdRef.current = contestIdNumber;
 
-    // Fetch all data in parallel 
-    Promise.all([
-      fetchTeamsByContest(contestIdNumber), // Uses cache if available for instant render
+    // Clear any cached data first to ensure fresh fetch
+    const { clearTeamsByContest } = useMapContestToTeamStore.getState();
+    clearTeamsByContest();
+    clearAwards(); // Clear cached awards to ensure fresh data
+
+    // Fetch all data in parallel with force refresh
+    // Use Promise.allSettled for better error handling - some failures shouldn't block others
+    Promise.allSettled([
+      fetchTeamsByContest(contestIdNumber, true),
       fetchContestById(contestIdNumber),
       fetchClustersByContestId(contestIdNumber),
       getAllJudgesByContestId(contestIdNumber),
-    ]).catch((error) => {
-      console.error("Error fetching contest data:", error);
+    ]).then((results) => {
+      // Log any failures but don't block the UI
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.error(`Failed to fetch data for operation ${index}:`, result.reason);
+        }
+      });
     });
-  }, [contestIdNumber, fetchTeamsByContest, fetchContestById, fetchClustersByContestId, getAllJudgesByContestId]);
+  }, [contestIdNumber]); 
 
-  // Fetch coaches and awards only for teams missing data (optimized)
+  // Listen for data changes that should refresh awards
+  useEffect(() => {
+    const handleDataChange = () => {
+      // Clear award cache and refetch when any data changes
+      
+      clearAwards();
+      if (teamsByContest.length > 0) {
+        teamsByContest.forEach((team) => {
+          AwardsByTeamTable(team.id);
+        });
+      }
+    };
+
+    const unsubscribe = onDataChange(handleDataChange);
+    return unsubscribe;
+  }, [teamsByContest, AwardsByTeamTable, clearAwards]);
+
+
   useEffect(() => {
     if (teamsByContest.length === 0) return;
 
@@ -77,11 +106,10 @@ export default function ContestScores() {
       fetchCoachesByTeams(teamsNeedingCoaches);
     }
     
-    // Only fetch awards for teams that don't have award data
+    // Always fetch fresh award data to ensure latest awards are displayed
+   
     teamsByContest.forEach((team) => {
-      if (!awards[team.id]) {
-        AwardsByTeamTable(team.id);
-      }
+      AwardsByTeamTable(team.id);
     });
   }, [teamsByContest, coachesByTeams, awards, fetchCoachesByTeams, AwardsByTeamTable]);
 
@@ -110,27 +138,38 @@ export default function ContestScores() {
   }, [teamsByContest, awards]);
 
   // Memoize rows computation for instant rendering
+ 
+  // Use the backend-calculated ranks instead of manually re-ranking
   const rows = useMemo(() => {
     return teamsByContest.map((team) => ({
       id: team.id,
       team_name: team.team_name,
       school_name: (team as any).school_name || "",
       team_rank: team.team_rank || 0,
-      // Use preliminary_total_score for preliminary results 
- 
+      // Use preliminary_total_score for preliminary results
       total_score: (team as any).preliminary_total_score ?? team.total_score ?? 0,
       coachName: coachNames[team.id] || "N/A",
       awards: teamAwards[team.id] || "N/A",
     }));
   }, [teamsByContest, coachNames, teamAwards]);
 
-  // Memoize ranked rows to prevent recalculation
+  
+  // Only sort if team_rank is missing (fallback)
   const rankedRows = useMemo(() => {
-    const sorted = [...rows].sort((a, b) => b.total_score - a.total_score);
-    return sorted.map((team, index) => ({
-      ...team,
-      team_rank: index + 1
-    }));
+    // Check if teams have valid ranks from backend
+    const hasBackendRanks = rows.some(row => row.team_rank > 0);
+    
+    if (hasBackendRanks) {
+     
+      return rows;
+    } else {
+
+      const sorted = [...rows].sort((a, b) => b.total_score - a.total_score);
+      return sorted.map((team, index) => ({
+        ...team,
+        team_rank: index + 1
+      }));
+    }
   }, [rows]);
 
   // Trigger celebration sprinklers on first load when results are available
@@ -171,40 +210,52 @@ export default function ContestScores() {
   }, [rankedRows.length, hasCelebrated, activeTab]);
 
   // Memoize championship rows for instant rendering
+  // Use backend-calculated championship_rank instead of manually sorting
   const championshipRows = useMemo(() => {
     const championshipTeams = teamsByContest.filter((team) => team.advanced_to_championship);
-    return championshipTeams
-      .map((team) => {
-        const championshipScore = (team as any).championship_total_score || (team as any).championship_score || team.total_score || 0;
-        return {
-          id: team.id,
-          team_name: team.team_name,
-          school_name: (team as any).school_name || "",
-          team_rank: (team as any).championship_rank || 0,
-          total_score: championshipScore,
-          coachName: coachNames[team.id] || "N/A",
-          awards: teamAwards[team.id] || "N/A",
-        };
-      })
-      .sort((a, b) => b.total_score - a.total_score)
-      .slice(0, 6);
-  }, [teamsByContest, coachNames, teamAwards]);
-
-  // Memoize redesign rows for instant rendering
-  const redesignRows = useMemo(() => {
-    const redesignTeams = teamsByContest.filter((team) => !team.advanced_to_championship);
-    return redesignTeams
-      .map((team) => ({
+    const rows = championshipTeams.map((team) => {
+      const championshipScore = (team as any).championship_total_score || (team as any).championship_score || team.total_score || 0;
+      return {
         id: team.id,
         team_name: team.team_name,
         school_name: (team as any).school_name || "",
-        team_rank: (team as any).redesign_rank || 0,
-        total_score: (team as any).redesign_total_score || (team as any).redesign_score || team.total_score || 0,
+        team_rank: (team as any).championship_rank || 0,
+        total_score: championshipScore,
         coachName: coachNames[team.id] || "N/A",
         awards: teamAwards[team.id] || "N/A",
-      }))
-      .sort((a, b) => b.total_score - a.total_score)
-      .slice(0, 3);
+      };
+    });
+    
+    // Use backend ranks if available, otherwise sort by score
+    const hasBackendRanks = rows.some(row => row.team_rank > 0);
+    if (hasBackendRanks) {
+      return rows.sort((a, b) => a.team_rank - b.team_rank).slice(0, 6);
+    } else {
+      return rows.sort((a, b) => b.total_score - a.total_score).slice(0, 6);
+    }
+  }, [teamsByContest, coachNames, teamAwards]);
+
+  // Memoize redesign rows for instant rendering
+  // Use backend-calculated redesign_rank instead of manually sorting
+  const redesignRows = useMemo(() => {
+    const redesignTeams = teamsByContest.filter((team) => !team.advanced_to_championship);
+    const rows = redesignTeams.map((team) => ({
+      id: team.id,
+      team_name: team.team_name,
+      school_name: (team as any).school_name || "",
+      team_rank: (team as any).redesign_rank || 0,
+      total_score: (team as any).redesign_total_score || (team as any).redesign_score || team.total_score || 0,
+      coachName: coachNames[team.id] || "N/A",
+      awards: teamAwards[team.id] || "N/A",
+    }));
+    
+    // Use backend ranks if available, otherwise sort by score
+    const hasBackendRanks = rows.some(row => row.team_rank > 0);
+    if (hasBackendRanks) {
+      return rows.sort((a, b) => a.team_rank - b.team_rank).slice(0, 3);
+    } else {
+      return rows.sort((a, b) => b.total_score - a.total_score).slice(0, 3);
+    }
   }, [teamsByContest, coachNames, teamAwards]);
 
   if (isCoach && contest && contest.is_open === true) {

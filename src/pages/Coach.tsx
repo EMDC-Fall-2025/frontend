@@ -27,7 +27,7 @@ import CoachTeamScoresTable from "../components/Tables/CoachTeamScoresTable";
 import theme from "../theme";
 
 export default function Coach() {
-  const { role, setShowPreloader, setPreloaderProgress } = useAuthStore();
+  const { role } = useAuthStore();
   const { teams, fetchTeamsByCoachId, clearTeams } = useMapCoachToTeamStore();
   const { contestsForTeams, fetchContestsByTeams, clearContests } =
     useMapContestToTeamStore();
@@ -68,14 +68,8 @@ export default function Coach() {
   }, []);
 
   /**
-   * Hide preloader when both data is loaded AND minimum time has elapsed
+   * Preloader is now managed by App.tsx based on isLoadingAuth
    */
-  useEffect(() => {
-    if (hasLoaded && minTimeElapsed) {
-      setShowPreloader(false);
-      setPreloaderProgress(''); 
-    }
-  }, [hasLoaded, minTimeElapsed, setShowPreloader, setPreloaderProgress]);
 
   useEffect(() => {
     const handlePageHide = () => {

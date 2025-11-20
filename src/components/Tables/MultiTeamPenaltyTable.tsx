@@ -235,7 +235,7 @@ export default function MultiTeamPenaltyTable({
   };
 
   // Calculate penalty values: count × pointValue
-  // Store as NEGATIVE values (penalties deduct points)
+
   const calculatePenaltyValues = () => {
     const penaltyValues: {
       [teamId: number]: { [field: string]: number };
@@ -246,8 +246,7 @@ export default function MultiTeamPenaltyTable({
 
       penalties.forEach((penalty) => {
         const count = penaltyState[team.id]?.[penalty.id] || 0;
-        // Penalties are negative, so multiply by -1
-        penaltyValues[team.id][penalty.field] = count * penalty.pointValue * -1;
+        penaltyValues[team.id][penalty.field] = count * penalty.pointValue;
       });
     });
 

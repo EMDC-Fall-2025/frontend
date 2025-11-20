@@ -25,6 +25,7 @@ import { useMapClusterJudgeStore } from "../store/map_stores/mapClusterToJudgeSt
 import { useMapCoachToTeamStore } from "../store/map_stores/mapCoachToTeamStore";
 import useMapClusterTeamStore from "../store/map_stores/mapClusterToTeamStore";
 import { useAuthStore } from "../store/primary_stores/authStore";
+import { onDataChange } from "../utils/dataChangeEvents";
 
 const ACTIVE_TAB_COOKIE = "manageContestActiveTab";
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
@@ -63,7 +64,7 @@ export default function ManageContest() {
 
   const { role } = useAuthStore();
 
-  // Contest data management - use selector to subscribe to contest updates
+  // Contest data management -selector to subscribe to contest updates
   const contest = useContestStore((state) => state.contest);
   const fetchContestById = useContestStore((state) => state.fetchContestById);
   
@@ -199,7 +200,37 @@ export default function ManageContest() {
     fetchCoachesByTeams(allTeams).catch(console.error);
   }, [isTeamsTab, teamIdsString, allTeams, fetchCoachesByTeams]);
 
+  // Listen for data changes to refresh data in real-time (optimized)
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
 
+    const handleDataChange = (event: any) => {
+      // Only refresh on relevant data changes to prevent loops
+      const relevantTypes = ['judge', 'cluster', 'team', 'contest'];
+      if (event && relevantTypes.includes(event.type)) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          if (parsedContestId) {
+            // Selective refresh based on change type
+            if (event.type === 'contest') {
+              fetchContestById(parsedContestId);
+            } else if (event.type === 'judge') {
+              getAllJudgesByContestId(parsedContestId, true);
+            } else if (event.type === 'cluster') {
+              fetchClustersByContestId(parsedContestId);
+            }
+  
+          }
+        }, 300);
+      }
+    };
+
+    const unsubscribe = onDataChange(handleDataChange);
+    return () => {
+      clearTimeout(timeoutId);
+      unsubscribe();
+    };
+  }, [parsedContestId]); 
 
   const hasClusters = clusters.length > 0;
   const hasTeams = clusters.some(
@@ -215,7 +246,7 @@ export default function ManageContest() {
 
   return (
   <>
-    {/* Header Section - Centered on larger screens */}
+    {/* Header Section  */}
     <Container
       sx={{
         maxWidth: 1200,

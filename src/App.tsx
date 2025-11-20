@@ -1,3 +1,4 @@
+// src/App.tsx
 import { Route, Routes, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -11,7 +12,7 @@ import Navbar from "./components/Navbar";
 import { useAuthStore } from "./store/primary_stores/authStore";
 import Logout from "./pages/Logout";
 import Preloader from "./components/Preloader";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import ManageContest from "./pages/ManageContest";
 import Coach from "./pages/Coach";
 import JournalScore from "./pages/JournalScore";
@@ -38,38 +39,42 @@ import RedesignScoreBreakdown from "./pages/RedesignScoreBreakdown";
 import ContestScores from "./pages/ContestScores";
 import ContestPage from "./pages/ContestsPage";
 
-
-
 import { Toaster } from "react-hot-toast";
 import Ranking from "./components/Tables/Rankings";
+import { initializeCacheInvalidation } from "./utils/cacheInvalidation";
 
 function App() {
   const currentLink = useLocation().pathname;
-  const { isAuthenticated, role, showPreloader, setShowPreloader } = useAuthStore();
+  const { isAuthenticated, role, isLoadingAuth } = useAuthStore();
+  const [showPreloader, setShowPreloader] = useState(false);
 
-
-
-  // Hide preloader after it completes its animation
   useEffect(() => {
-    if (showPreloader) {
-      const timer = setTimeout(() => {
-        setShowPreloader(false);
-      }, 1500); // Match preloader duration
-      return () => clearTimeout(timer);
+    let timeout: number | undefined;
+
+    // cache invalidation system on app start
+    initializeCacheInvalidation();
+
+    if (isLoadingAuth) {
+      setShowPreloader(true);
+    } else if (showPreloader) {
+      // small delay so it doesn’t instantly snap off
+      timeout = window.setTimeout(() => setShowPreloader(false), 400);
     }
-  }, [showPreloader, setShowPreloader]);
 
+    return () => {
+      if (timeout) window.clearTimeout(timeout);
+    };
+  }, [isLoadingAuth, showPreloader]);
 
+  const hideNavbarOn = ["/set-password/", "/forgot-password/", "/login/", "/signup/"];
+  const shouldShowNavbar = !hideNavbarOn.includes(currentLink);
 
   return (
     <>
       <ThemeProvider theme={theme}>
-        {/* Show preloader only after login, not on reload */}
         {showPreloader && <Preloader />}
-        {currentLink !== "/set-password/" &&
-          currentLink !== "/forgot-password/" &&
-          currentLink !== "/login/" &&
-          currentLink !== "/signup/" && <Navbar />}
+
+        {shouldShowNavbar && <Navbar />}
 
         <Routes>
           {/* Public */}
@@ -82,32 +87,35 @@ function App() {
           <Route path="/set-password/" element={<SetPassword />} />
 
           {/* Auth-gated */}
-          {isAuthenticated && role?.user_type != 4 && (
+          {isAuthenticated && role?.user_type !== 4 && (
             <Route path="/judging/:judgeId/" element={<Judging />} />
           )}
-          {isAuthenticated && role?.user_type != 4 && (
+          {isAuthenticated && role?.user_type !== 4 && (
             <Route path="/journal-score/:judgeId/:teamId/" element={<JournalScore />} />
           )}
-          {isAuthenticated && role?.user_type != 4 && (
+          {isAuthenticated && role?.user_type !== 4 && (
             <Route path="/presentation-score/:judgeId/:teamId/" element={<PresentationScore />} />
           )}
-          {isAuthenticated && role?.user_type != 4 && (
+          {isAuthenticated && role?.user_type !== 4 && (
             <Route path="/machine-score/:judgeId/:teamId/" element={<MachineDesignScore />} />
           )}
-          {isAuthenticated && role?.user_type != 4 && (
+          {isAuthenticated && role?.user_type !== 4 && (
             <Route path="/general-penalties/:judgeId/:teamId/" element={<GeneralPenalties />} />
           )}
-          {isAuthenticated && role?.user_type != 4 && (
+          {isAuthenticated && role?.user_type !== 4 && (
             <Route path="/run-penalties/:judgeId/:teamId/" element={<RunPenalties />} />
           )}
-          {isAuthenticated && role?.user_type != 4 && (
+          {isAuthenticated && role?.user_type !== 4 && (
             <Route path="/redesign-score/:judgeId/:teamId/" element={<RedesignScore />} />
           )}
 
           {isAuthenticated && <Route path="/awards/" element={<AdminSpecialAwardsPage />} />}
           {isAuthenticated && <Route path="/organizerAwards/" element={<OrganizerSpecialAwards />} />}
           {isAuthenticated && (
-            <Route path="/championship-score/:judgeId/:teamId/" element={<ChampionshipScore />} />
+            <Route
+              path="/championship-score/:judgeId/:teamId/"
+              element={<ChampionshipScore />}
+            />
           )}
           {isAuthenticated && <Route path="/judgeAwards/" element={<JudgeSpecialAwards />} />}
 
@@ -130,13 +138,13 @@ function App() {
               element={<MultiTeamPresentationScore />}
             />
           )}
-          {isAuthenticated && role?.user_type != 4 && (
+          {isAuthenticated && role?.user_type !== 4 && (
             <Route
               path="/multi-team-general-penalties/:judgeId/:contestId/"
               element={<GeneralPenaltiesMultiTeam />}
             />
           )}
-          {isAuthenticated && role?.user_type != 4 && (
+          {isAuthenticated && role?.user_type !== 4 && (
             <Route
               path="/multi-team-run-penalties/:judgeId/:contestId/"
               element={<RunPenaltiesMultiTeam />}
@@ -146,25 +154,21 @@ function App() {
           {isAuthenticated && <Route path="/logout/" element={<Logout />} />}
 
           {/* Role-specific */}
-          {role?.user_type == 2 && <Route path="/organizer/" element={<Organizer />} />}
+          {role?.user_type === 2 && <Route path="/organizer/" element={<Organizer />} />}
 
           {/* Protected internal results */}
-          {(role?.user_type == 1 || role?.user_type == 2) && (
+          {(role?.user_type === 1 || role?.user_type === 2) && (
             <Route path="/results/:contestId" element={<InternalResults />} />
           )}
-          <Route path="/set-password/" element={<SetPassword />} />
-
 
           {isAuthenticated && (
             <Route path="/manage-contest/:contestId/" element={<ManageContest />} />
           )}
-          {role?.user_type == 4 && <Route path="/coach/" element={<Coach />} />}
-          {role?.user_type == 1 && <Route path="/admin/" element={<Admin />} />}
+          {role?.user_type === 4 && <Route path="/coach/" element={<Coach />} />}
+          {role?.user_type === 1 && <Route path="/admin/" element={<Admin />} />}
+
           {isAuthenticated && (
-            <Route
-              path="/score-breakdown/:teamId"
-              element={<ScoreBreakdown />}
-            />
+            <Route path="/score-breakdown/:teamId" element={<ScoreBreakdown />} />
           )}
           {isAuthenticated && (
             <Route
@@ -178,93 +182,98 @@ function App() {
               element={<RedesignScoreBreakdown />}
             />
           )}
-
-          {isAuthenticated && <Route path="/score-breakdown/:teamId" element={<ScoreBreakdown />} />}
         </Routes>
-
 
         <Toaster
           position="top-center"
           toastOptions={{
             duration: 4000,
             style: {
-              background: '#ffffff',
-              color: '#1a1a1a',
-              borderRadius: '24px',
-              padding: '18px 28px',
-              boxShadow: '0 8px 24px rgba(76, 175, 80, 0.2), 0 0 0 1px rgba(76, 175, 80, 0.1)',
-              fontFamily: 'Open Sans, sans-serif',
-              fontSize: '15px',
+              background: "#ffffff",
+              color: "#1a1a1a",
+              borderRadius: "24px",
+              padding: "18px 28px",
+              boxShadow:
+                "0 8px 24px rgba(76, 175, 80, 0.2), 0 0 0 1px rgba(76, 175, 80, 0.1)",
+              fontFamily: "Open Sans, sans-serif",
+              fontSize: "15px",
               fontWeight: 600,
-              minWidth: '320px',
-              border: 'none',
-              position: 'relative',
-              overflow: 'hidden',
-              backgroundImage: 'radial-gradient(circle at 0% 50%, rgba(76, 175, 80, 0.08) 0%, transparent 50%)',
+              minWidth: "320px",
+              border: "none",
+              position: "relative",
+              overflow: "hidden",
+              backgroundImage:
+                "radial-gradient(circle at 0% 50%, rgba(76, 175, 80, 0.08) 0%, transparent 50%)",
             },
             success: {
               duration: 4000,
               iconTheme: {
-                primary: '#4caf50',
-                secondary: '#ffffff',
+                primary: "#4caf50",
+                secondary: "#ffffff",
               },
               style: {
-                background: '#ffffff',
-                color: '#166534',
-                borderRadius: '24px',
-                padding: '18px 28px',
-                boxShadow: '0 8px 24px rgba(76, 175, 80, 0.25), 0 0 0 1px rgba(76, 175, 80, 0.1)',
-                fontFamily: 'Open Sans, sans-serif',
-                fontSize: '15px',
+                background: "#ffffff",
+                color: "#166534",
+                borderRadius: "24px",
+                padding: "18px 28px",
+                boxShadow:
+                  "0 8px 24px rgba(76, 175, 80, 0.25), 0 0 0 1px rgba(76, 175, 80, 0.1)",
+                fontFamily: "Open Sans, sans-serif",
+                fontSize: "15px",
                 fontWeight: 600,
-                minWidth: '320px',
-                border: 'none',
-                position: 'relative',
-                overflow: 'hidden',
-                backgroundImage: 'radial-gradient(ellipse 120% 100% at 0% 50%, rgba(76, 175, 80, 0.12) 0%, rgba(76, 175, 80, 0.06) 40%, transparent 70%)',
+                minWidth: "320px",
+                border: "none",
+                position: "relative",
+                overflow: "hidden",
+                backgroundImage:
+                  "radial-gradient(ellipse 120% 100% at 0% 50%, rgba(76, 175, 80, 0.12) 0%, rgba(76, 175, 80, 0.06) 40%, transparent 70%)",
               },
             },
             error: {
               duration: 5000,
               iconTheme: {
-                primary: '#dc2626',
-                secondary: '#ffffff',
+                primary: "#dc2626",
+                secondary: "#ffffff",
               },
               style: {
-                background: '#ffffff',
-                color: '#991b1b',
-                borderRadius: '24px',
-                padding: '18px 28px',
-                boxShadow: '0 8px 24px rgba(220, 38, 38, 0.2), 0 0 0 1px rgba(220, 38, 38, 0.1)',
-                fontFamily: 'Open Sans, sans-serif',
-                fontSize: '15px',
+                background: "#ffffff",
+                color: "#991b1b",
+                borderRadius: "24px",
+                padding: "18px 28px",
+                boxShadow:
+                  "0 8px 24px rgba(220, 38, 38, 0.2), 0 0 0 1px rgba(220, 38, 38, 0.1)",
+                fontFamily: "Open Sans, sans-serif",
+                fontSize: "15px",
                 fontWeight: 600,
-                minWidth: '320px',
-                border: 'none',
-                position: 'relative',
-                overflow: 'hidden',
-                backgroundImage: 'radial-gradient(ellipse 120% 100% at 0% 50%, rgba(220, 38, 38, 0.12) 0%, rgba(220, 38, 38, 0.06) 40%, transparent 70%)',
+                minWidth: "320px",
+                border: "none",
+                position: "relative",
+                overflow: "hidden",
+                backgroundImage:
+                  "radial-gradient(ellipse 120% 100% at 0% 50%, rgba(220, 38, 38, 0.12) 0%, rgba(220, 38, 38, 0.06) 40%, transparent 70%)",
               },
             },
             loading: {
               iconTheme: {
-                primary: '#4caf50',
-                secondary: '#ffffff',
+                primary: "#4caf50",
+                secondary: "#ffffff",
               },
               style: {
-                background: '#ffffff',
-                color: '#4caf50',
-                borderRadius: '24px',
-                padding: '18px 28px',
-                boxShadow: '0 8px 24px rgba(76, 175, 80, 0.2), 0 0 0 1px rgba(76, 175, 80, 0.1)',
-                fontFamily: 'Open Sans, sans-serif',
-                fontSize: '15px',
+                background: "#ffffff",
+                color: "#4caf50",
+                borderRadius: "24px",
+                padding: "18px 28px",
+                boxShadow:
+                  "0 8px 24px rgba(76, 175, 80, 0.2), 0 0 0 1px rgba(76, 175, 80, 0.1)",
+                fontFamily: "Open Sans, sans-serif",
+                fontSize: "15px",
                 fontWeight: 600,
-                minWidth: '320px',
-                border: 'none',
-                position: 'relative',
-                overflow: 'hidden',
-                backgroundImage: 'radial-gradient(ellipse 120% 100% at 0% 50%, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.05) 40%, transparent 70%)',
+                minWidth: "320px",
+                border: "none",
+                position: "relative",
+                overflow: "hidden",
+                backgroundImage:
+                  "radial-gradient(ellipse 120% 100% at 0% 50%, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.05) 40%, transparent 70%)",
               },
             },
           }}

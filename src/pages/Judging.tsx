@@ -33,7 +33,7 @@ export default function Judging() {
   const { judgeId } = useParams();
   const judgeIdNumber = judgeId ? parseInt(judgeId, 10) : null;
   const navigate = useNavigate();
-  const { role, setShowPreloader, setPreloaderProgress } = useAuthStore();
+  const { role} = useAuthStore();
   const { judge, fetchJudgeById } = useJudgeStore();
   const { fetchAllClustersByJudgeId } = useMapClusterJudgeStore();
   const mapClusterToTeamError = useClusterTeamStore((state) => state.mapClusterToTeamError);
@@ -43,18 +43,17 @@ export default function Judging() {
     hasAnyTeamAdvancedByContest?: { [key: number]: boolean };
   }) | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const isInitialLoadRef = useRef(true);
 
   const fetchContestsByTeams = useMapContestToTeamStore((state) => state.fetchContestsByTeams);
   const clearContests = useMapContestToTeamStore((state) => state.clearContests);
 
   const lastLoadedJudgeIdRef = useRef<number | null>(null);
-  const teamsByClusterId = useClusterTeamStore((state) => state.teamsByClusterId);
 
   /**
-   * Loads judge data and teams. If navigating back to the same judge,
-   * uses cached teams from store to display immediately without refetching.
+   * Loads judge data and teams.
+   * - Initial load: Uses cache for teams (fast performance)
+   * - Data changes: Uses forceRefresh to bypass cache (ensures accuracy)
    */
   useEffect(() => {
     if (judgeIdNumber) {
@@ -67,51 +66,22 @@ export default function Judging() {
         lastLoadedJudgeIdRef.current = judgeIdNumber;
 
       fetchJudgeById(judgeIdNumber);
-      fetchAllClustersForJudge(judgeIdNumber);
+      fetchAllClustersForJudge(judgeIdNumber); 
       } else {
-        const hasCachedTeams = Object.values(teamsByClusterId).some(clusterTeams => clusterTeams && clusterTeams.length > 0);
         
-        if (hasCachedTeams && teams.length === 0) {
-          const allCachedTeams = Object.values(teamsByClusterId).flat();
-          const uniqueTeams = allCachedTeams.filter((team, index, self) =>
-            index === self.findIndex(t => t.id === team.id)
-          );
-          setTeams(uniqueTeams as Team[]);
-          setHasLoaded(true);
-          isInitialLoadRef.current = false;
-        } else if (teams.length > 0) {
-          if (!hasLoaded) {
-            setHasLoaded(true);
-            isInitialLoadRef.current = false;
-          }
-        } else if (!hasLoaded) {
+        if (!hasLoaded) {
           fetchJudgeById(judgeIdNumber);
-          fetchAllClustersForJudge(judgeIdNumber);
+          fetchAllClustersForJudge(judgeIdNumber); 
+        } else if (teams.length > 0) {
+          
         }
       }
     }
-  }, [judgeIdNumber, teams.length, hasLoaded, teamsByClusterId, fetchJudgeById]);
+  }, [judgeIdNumber, teams.length, hasLoaded, fetchJudgeById]);
 
-  /**
-   * Start minimum 1.8 second timer when component mounts
-   */
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setMinTimeElapsed(true);
-    }, 1800); // 1.8 seconds minimum for judge dashboard
 
-    return () => clearTimeout(timer);
-  }, []);
 
-  /**
-   * Hide preloader when both data is loaded AND minimum time has elapsed
-   */
-  useEffect(() => {
-    if (hasLoaded && minTimeElapsed) {
-      setShowPreloader(false);
-      setPreloaderProgress(''); // Clear progress when hiding preloader
-    }
-  }, [hasLoaded, minTimeElapsed, setShowPreloader, setPreloaderProgress]);
+ 
 
   /**
    * Populates contest mappings for teams whenever teams are available or updated.
@@ -141,7 +111,8 @@ export default function Judging() {
           setTeams([]);
           setHasLoaded(false);
           isInitialLoadRef.current = true;
-          await fetchAllClustersForJudge(judgeIdNumber);
+          // Use forceRefresh to bypass cache and get fresh team data
+          await fetchAllClustersForJudge(judgeIdNumber, true);
         } else if (event.type === 'judge' && event.action === 'delete' && event.judgeId === judgeIdNumber && event.clusterId) {
           setTeams([]);
           setHasLoaded(false);
@@ -151,7 +122,8 @@ export default function Judging() {
           setTeams([]);
           setHasLoaded(false);
           isInitialLoadRef.current = true;
-          await fetchAllClustersForJudge(judgeIdNumber);
+          // Use forceRefresh to bypass cache and get fresh cluster/team data
+          await fetchAllClustersForJudge(judgeIdNumber, true);
         }
       }
     };
@@ -185,7 +157,7 @@ export default function Judging() {
       const contestStore = useContestStore.getState();
       if (contestStore.allContests.length === 0) {
         contestStore.fetchAllContests().catch(() => {
-          // Silently fail - will show all clusters if contests aren't available
+          //  will show all clusters if contests aren't available
         });
       }
 
@@ -204,6 +176,19 @@ export default function Judging() {
           return !cluster.contest_id || activeContestIds.has(cluster.contest_id);
         });
 
+        // If judge has no active clusters (e.g., only inactive redesign/championship),
+        // clear any cached teams and contest data to prevent showing stale data
+        if (clustersToShow.length === 0) {
+          const { clearTeamsByClusterId } = useClusterTeamStore.getState();
+          clearTeamsByClusterId();
+          clearContests(); // Clear contest data to prevent stale contest mappings
+          setTeams([]);
+          setCurrentCluster(null);
+          isInitialLoadRef.current = false;
+          setHasLoaded(true);
+          return; // Exit early - judge has no active clusters, should see nothing
+        }
+
         /**
          * Determines if judge has championship assignment in each contest.
          * Used to disable preliminary scoresheets when judge has championship assignment.
@@ -220,8 +205,10 @@ export default function Judging() {
           }
         });
 
+        // Use forceRefresh only when explicitly requested (e.g., after data changes)
+        // For initial loads, uses cache for faster performance
         const teamPromises = clustersToShow.map(cluster =>
-          fetchTeamsByClusterId(cluster.id).catch(() => [])
+          fetchTeamsByClusterId(cluster.id, forceRefresh).catch(() => [])
         );
         const teamsArrays = await Promise.all(teamPromises);
         const allTeamsForJudge = teamsArrays.flat();
@@ -244,40 +231,47 @@ export default function Judging() {
         /**
          * Fetches all teams for each contest to check if any team has advanced.
          * This is needed to disable preliminary scoresheets when any team in a contest advances.
-         */
-        const contestIds = new Set<number>();
-        clustersToShow.forEach((cluster: ClusterWithContest) => {
-          if (cluster.contest_id) {
-            contestIds.add(cluster.contest_id);
-          }
-        });
-
-        const allTeamsByContest: { [contestId: number]: Team[] } = {};
-        
-        await Promise.all(
-          Array.from(contestIds).map(async (contestId: number) => {
-            try {
-              const response = await api.get<Team[]>(`/api/mapping/teamToContest/getTeamsByContest/${contestId}/`);
-              allTeamsByContest[contestId] = response.data || [];
-            } catch (error) {
-              console.error(`[Judging] Error fetching teams for contest ${contestId}:`, error);
-              allTeamsByContest[contestId] = [];
-            }
-          })
-        );
-
-        /**
-         * Checks if any team has advanced to championship in each contest.
-         * If any team has advanced, all preliminary scoresheets for all teams
-         * in that contest should be disabled.
+         * Only fetch teams for contests that the judge actually has active clusters in.
+         * If a judge has no active clusters (e.g., only in inactive redesign/championship clusters),
+         * do not fetch any teams - they should see nothing.
          */
         const hasAnyTeamAdvancedByContest = new Map<number, boolean>();
-        Object.keys(allTeamsByContest).forEach((contestIdStr) => {
-          const contestId = parseInt(contestIdStr, 10);
-          const contestTeams = allTeamsByContest[contestId] || [];
-          const hasAdvanced = contestTeams.some((team: Team) => team.advanced_to_championship === true);
-          hasAnyTeamAdvancedByContest.set(contestId, hasAdvanced);
-        });
+        
+        // Only fetch teams if judge has active clusters
+        if (clustersToShow.length > 0) {
+          const contestIds = new Set<number>();
+          clustersToShow.forEach((cluster: ClusterWithContest) => {
+            if (cluster.contest_id) {
+              contestIds.add(cluster.contest_id);
+            }
+          });
+
+          const allTeamsByContest: { [contestId: number]: Team[] } = {};
+          
+          await Promise.all(
+            Array.from(contestIds).map(async (contestId: number) => {
+              try {
+                const response = await api.get<Team[]>(`/api/mapping/teamToContest/getTeamsByContest/${contestId}/`);
+                allTeamsByContest[contestId] = response.data || [];
+              } catch (error) {
+                console.error(`[Judging] Error fetching teams for contest ${contestId}:`, error);
+                allTeamsByContest[contestId] = [];
+              }
+            })
+          );
+
+          /**
+           * Checks if any team has advanced to championship in each contest.
+           * If any team has advanced, all preliminary scoresheets for all teams
+           * in that contest should be disabled.
+           */
+          Object.keys(allTeamsByContest).forEach((contestIdStr) => {
+            const contestId = parseInt(contestIdStr, 10);
+            const contestTeams = allTeamsByContest[contestId] || [];
+            const hasAdvanced = contestTeams.some((team: Team) => team.advanced_to_championship === true);
+            hasAnyTeamAdvancedByContest.set(contestId, hasAdvanced);
+          });
+        }
 
         setHasLoaded(true);
 

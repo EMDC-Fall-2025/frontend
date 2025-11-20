@@ -1,5 +1,5 @@
 import { Box, Container, Typography, Paper } from "@mui/material";
-import image from "../assets/group.png";
+import image from "../assets/group.webp";
 
 export default function Home() {
   return (
@@ -22,6 +22,7 @@ export default function Home() {
             width={1200}
             height={800}
             loading="eager"
+            decoding="async"
             style={{
               display: "block",
               width: "calc(100% + 2px)",

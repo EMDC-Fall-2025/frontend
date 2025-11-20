@@ -40,7 +40,7 @@ export default function Organizer() {
   const isInitialLoadRef = useRef(true);
   const { fetchContestsByOrganizerId, contests } = useMapContestOrganizerStore();
   const { allSheetsSubmittedForContests } = useMapScoreSheetStore();
-  const { role, isAuthenticated, setShowPreloader, setPreloaderProgress } = useAuthStore();
+  const { role, isAuthenticated } = useAuthStore();
   // Use selector to subscribe to allOrganizers changes
   const allOrganizers = useOrganizerStore((state) => state.allOrganizers);
   const fetchAllOrganizers = useOrganizerStore((state) => state.fetchAllOrganizers);
@@ -89,26 +89,10 @@ export default function Organizer() {
      
   }, [organizerId, isAuthenticated, role?.user_type]); // Removed contests, fetchContestsByOrganizerId, fetchAllOrganizers from deps to prevent infinite loop
 
+  
   /**
-   * Start minimum 1.5 second timer when component mounts
+   * Preloader is now managed by App.tsx based on isLoadingAuth
    */
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setMinTimeElapsed(true);
-    }, 1500); // 1.5 seconds minimum
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  /**
-   * Hide preloader when both data is loaded AND minimum time has elapsed
-   */
-  useEffect(() => {
-    if (hasLoaded && minTimeElapsed) {
-      setShowPreloader(false);
-      setPreloaderProgress(''); // Clear progress when hiding preloader
-    }
-  }, [hasLoaded, minTimeElapsed, setShowPreloader, setPreloaderProgress]);
 
   const safeContests = contests ?? [];
   
@@ -129,7 +113,7 @@ export default function Organizer() {
       });
     }
      
-  }, [contestIds, safeContests.length]); // Only depend on contest IDs string and length
+  }, [contestIds, safeContests.length]); 
 
   const handleChange = (_event: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);

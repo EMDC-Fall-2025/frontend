@@ -478,6 +478,9 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   }) {
     const { team, type, url, buttonText } = props;
 
+    // Championship scoresheets (type 7) only appear when:
+    // - Team has advanced to championship, OR
+    // - Judge is in a championship cluster
     if (type === 7) {
       const inChampionshipCluster =
         currentCluster &&
@@ -485,6 +488,30 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
           currentCluster.cluster_name?.toLowerCase().includes('championship'));
       if (team.advanced_to_championship !== true && !inChampionshipCluster) {
       return null;
+      }
+    }
+
+    // Redesign scoresheets (type 6) only appear when:
+    // - Judge is in a redesign cluster, OR
+    // - Any team in the contest has advanced (meaning this team didn't advance, so it's in redesign)
+    if (type === 6) {
+      const inRedesignCluster =
+        currentCluster &&
+        (currentCluster.cluster_type === 'redesign' ||
+          currentCluster.cluster_name?.toLowerCase().includes('redesign'));
+      
+      // Check if any team in this team's contest has advanced
+      const teamContest = contestsForTeams[team.id];
+      const anyTeamInContestAdvanced = teamContest ? hasAnyTeamAdvancedByContest.get(teamContest.id) || false : false;
+      
+      // Only show redesign if in redesign cluster OR if advancement has happened (and team didn't advance to championship)
+      if (!inRedesignCluster && !anyTeamInContestAdvanced) {
+        return null;
+      }
+      
+      // If advancement happened but this team advanced to championship, don't show redesign
+      if (anyTeamInContestAdvanced && team.advanced_to_championship === true) {
+        return null;
       }
     }
 

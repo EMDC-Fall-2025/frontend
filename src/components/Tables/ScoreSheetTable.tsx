@@ -167,24 +167,30 @@ export default function ScoreSheetTable({
    * Save current formData (draft) without submitting
    * Memoized to prevent recreation on every render
    */
-  const handleSaveScoreSheet = useCallback(() => {
-    if (scoreSheet) {
-      // Prepare data with proper handling of undefined/null values
-      const scoreData = {
-        id: scoreSheet.id,
-        field1: formData[1] !== undefined ? formData[1] : undefined,
-        field2: formData[2] !== undefined ? formData[2] : undefined,
-        field3: formData[3] !== undefined ? formData[3] : undefined,
-        field4: formData[4] !== undefined ? formData[4] : undefined,
-        field5: formData[5] !== undefined ? formData[5] : undefined,
-        field6: formData[6] !== undefined ? formData[6] : undefined,
-        field7: formData[7] !== undefined ? formData[7] : undefined,
-        field8: formData[8] !== undefined ? formData[8] : undefined,
-        field9: formData[9] !== undefined ? formData[9]?.toString() : undefined, // comments stored as string
-      };
-      
-      // Save score sheet data
-      updateScores(scoreData);
+  const handleSaveScoreSheet = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent any default form submission
+    try {
+      if (scoreSheet) {
+        // Prepare data with proper handling of undefined/null values
+        const scoreData = {
+          id: scoreSheet.id,
+          field1: formData[1] !== undefined ? formData[1] : undefined,
+          field2: formData[2] !== undefined ? formData[2] : undefined,
+          field3: formData[3] !== undefined ? formData[3] : undefined,
+          field4: formData[4] !== undefined ? formData[4] : undefined,
+          field5: formData[5] !== undefined ? formData[5] : undefined,
+          field6: formData[6] !== undefined ? formData[6] : undefined,
+          field7: formData[7] !== undefined ? formData[7] : undefined,
+          field8: formData[8] !== undefined ? formData[8] : undefined,
+          field9: formData[9] !== undefined ? formData[9]?.toString() : undefined, // comments stored as string
+        };
+
+        // Save score sheet data
+        await updateScores(scoreData);
+      }
+    } catch (error) {
+      console.error('Error saving scoresheet:', error);
+      // Error already handled in the store with toast notifications
     }
   }, [scoreSheet, formData, updateScores]);
 
@@ -364,6 +370,7 @@ export default function ScoreSheetTable({
           }}
         >
           <Button
+            type="button"
             variant="contained"
             onClick={handleSaveScoreSheet}
             sx={{
@@ -755,6 +762,7 @@ export default function ScoreSheetTable({
 
         {/* Final submit (opens confirmation modal). Disabled until all required fields are filled. */}
         <Button
+          type="button"
           variant="contained"
           onClick={() => setOpenAreYouSure(true)}
           disabled={!allFieldsFilled()}
