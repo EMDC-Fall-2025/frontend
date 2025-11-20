@@ -23,6 +23,7 @@ import { useAuthStore } from "../store/primary_stores/authStore";
 import useMapContestOrganizerStore from "../store/map_stores/mapContestToOrganizerStore";
 import useMapScoreSheetStore from "../store/map_stores/mapScoreSheetStore";
 import useOrganizerStore from "../store/primary_stores/organizerStore";
+import { onDataChange } from "../utils/dataChangeEvents";
 
 // icons
 import CampaignIcon from "@mui/icons-material/Campaign";
@@ -129,7 +130,27 @@ export default function Organizer() {
       });
     }
      
-  }, [contestIds, safeContests.length]); // Only depend on contest IDs string and length
+  }, [contestIds, safeContests.length]);
+
+  // Listen for data changes to refresh organizer data when contests change (e.g., championship advancement)
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const handleDataChange = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        if (organizerId) {
+          fetchContestsByOrganizerId(organizerId).catch(console.error);
+          fetchAllOrganizers().catch(console.error);
+        }
+      }, 300);
+    };
+
+    const unsubscribe = onDataChange(handleDataChange);
+    return () => {
+      clearTimeout(timeoutId);
+      unsubscribe();
+    };
+  }, [organizerId, fetchContestsByOrganizerId, fetchAllOrganizers]);
 
   const handleChange = (_event: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);

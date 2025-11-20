@@ -296,23 +296,30 @@ export default function JudgeModal(props: IJudgeModalProps) {
         });
 
         // Add all existing championship/redesign assignments (preserve them)
+        // Also preserve any cluster that has championship or redesign flags set
         for (const existingCluster of existingClusters as any) {
           const clusterType = getClusterType(existingCluster);
-          if (clusterType === 'championship' || clusterType === 'redesign') {
-            // Keep championship/redesign assignments
-            clusterAssignments.push({
-              clusterid: existingCluster.id,
-              contestid: existingCluster.contest_id,
-              presentation: existingCluster.sheet_flags?.presentation || false,
-              journal: existingCluster.sheet_flags?.journal || false,
-              mdo: existingCluster.sheet_flags?.mdo || false,
-              runpenalties: existingCluster.sheet_flags?.runpenalties || false,
-              otherpenalties: existingCluster.sheet_flags?.otherpenalties || false,
-              redesign: existingCluster.sheet_flags?.redesign || false,
-              championship: existingCluster.sheet_flags?.championship || false,
-            });
+          const hasChampionshipFlags = existingCluster.sheet_flags?.championship ||
+                                       existingCluster.sheet_flags?.redesign;
+
+          // Keep championship/redesign clusters OR clusters with championship/redesign flags
+          if (clusterType === 'championship' || clusterType === 'redesign' || hasChampionshipFlags) {
+            // Don't include the cluster we're currently editing
+            if (existingCluster.id !== selectedClusterId) {
+              clusterAssignments.push({
+                clusterid: existingCluster.id,
+                contestid: existingCluster.contest_id || contestid, // Fallback to current contest
+                presentation: existingCluster.sheet_flags?.presentation || false,
+                journal: existingCluster.sheet_flags?.journal || false,
+                mdo: existingCluster.sheet_flags?.mdo || false,
+                runpenalties: existingCluster.sheet_flags?.runpenalties || false,
+                otherpenalties: existingCluster.sheet_flags?.otherpenalties || false,
+                redesign: existingCluster.sheet_flags?.redesign || false,
+                championship: existingCluster.sheet_flags?.championship || false,
+              });
+            }
           }
-          // Skip preliminary clusters - we'll replace with the new one
+          // Skip other clusters - we'll replace with the new one if it's preliminary
         }
 
         const updatedData = {

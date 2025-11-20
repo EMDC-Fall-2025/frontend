@@ -170,6 +170,28 @@ export const useRankingsStore = create<RankingsState>()(
                 contestId: contestId
               });
             });
+
+            // Dispatch cluster update event to trigger judge and team refreshes
+            dispatchDataChange({
+              type: 'cluster',
+              action: 'update',
+              contestId: contestId
+            });
+
+            // Dispatch scoresheet update event to invalidate scoresheet cache
+            dispatchDataChange({
+              type: 'scoresheet',
+              action: 'create',
+              contestId: contestId
+            });
+
+            // Dispatch judge update event to refresh judge data
+            // (judge championship/redesign flags may have been updated)
+            dispatchDataChange({
+              type: 'judge',
+              action: 'update',
+              contestId: contestId
+            });
           } else {
             throw new Error(response.data.message || "Failed to advance to championship");
           }
@@ -201,6 +223,34 @@ export const useRankingsStore = create<RankingsState>()(
             // Refresh the clusters to show the reverted state
             const { fetchClustersWithTeamsForContest } = useRankingsStore.getState();
             await fetchClustersWithTeamsForContest(contestId);
+
+            // Dispatch data change events to notify all components to refresh
+            dispatchDataChange({
+              type: 'team',
+              action: 'update',
+              contestId: contestId
+            });
+
+            dispatchDataChange({
+              type: 'cluster',
+              action: 'update',
+              contestId: contestId
+            });
+
+            dispatchDataChange({
+              type: 'scoresheet',
+              action: 'delete',
+              contestId: contestId
+            });
+
+            dispatchDataChange({
+              type: 'judge',
+              action: 'update',
+              contestId: contestId
+            });
+
+            // Dispatch the championshipUndone event that Judging.tsx listens for
+            window.dispatchEvent(new CustomEvent('championshipUndone'));
           } else {
             throw new Error(response.data.message || "Failed to undo championship advancement");
           }

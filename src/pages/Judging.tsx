@@ -66,6 +66,10 @@ export default function Judging() {
       isInitialLoadRef.current = true;
         lastLoadedJudgeIdRef.current = judgeIdNumber;
 
+        // Clear cached judge data to ensure fresh fetch
+        const { clearJudge } = useJudgeStore.getState();
+        clearJudge();
+
       fetchJudgeById(judgeIdNumber);
       fetchAllClustersForJudge(judgeIdNumber);
       } else {
@@ -147,11 +151,23 @@ export default function Judging() {
           setHasLoaded(false);
           isInitialLoadRef.current = true;
           await fetchAllClustersForJudge(judgeIdNumber, true);
+        } else if (event.type === 'judge' && event.action === 'update' && event.judgeId === judgeIdNumber) {
+          // Judge data updated (e.g., championship flags changed) - refresh judge data
+          await fetchJudgeById(judgeIdNumber);
+        } else if (event.type === 'scoresheet' && (event.action === 'create' || event.action === 'update' || event.action === 'delete')) {
+          // Scoresheets created/changed (e.g., championship advancement) - refresh clusters and teams
+          setTeams([]);
+          setHasLoaded(false);
+          isInitialLoadRef.current = true;
+          await fetchAllClustersForJudge(judgeIdNumber, true);
         } else if (event.type === 'cluster' && (event.action === 'create' || event.action === 'update' || event.action === 'delete')) {
           setTeams([]);
           setHasLoaded(false);
           isInitialLoadRef.current = true;
-          await fetchAllClustersForJudge(judgeIdNumber);
+
+          await fetchAllClustersForJudge(judgeIdNumber, true);
+          // Also refresh judge data since cluster changes can affect judge flags (championship advancement)
+          await fetchJudgeById(judgeIdNumber);
         }
       }
     };

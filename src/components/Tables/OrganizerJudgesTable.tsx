@@ -25,6 +25,7 @@ import ClusterModal from "../Modals/ClusterModal";
 import { Cluster, Judge, JudgeData } from "../../types";
 import AreYouSureModal from "../Modals/AreYouSureModal";
 import Modal from "../Modals/Modal";
+import { onDataChange } from "../../utils/dataChangeEvents";
 
 interface IJudgesTableProps {
   judges: any[];
@@ -242,11 +243,24 @@ function JudgesTable(props: IJudgesTableProps) {
         // If not found in local state, fetch fresh data for other clusters to be sure
         if (!isInOtherClusters && otherClusters.length > 0) {
           // Fetch judges for all other clusters to ensure we have accurate data
-          await Promise.all(
-            otherClusters.map(cluster => fetchJudgesByClusterId(cluster.id, true))
-          );
-          
-          // Check again after fetching
+          // Use Promise.allSettled to prevent fetch failures from breaking the delete operation
+          try {
+            const results = await Promise.allSettled(
+              otherClusters.map(cluster => fetchJudgesByClusterId(cluster.id, true))
+            );
+
+            // Log any failures but don't let them break the operation
+            results.forEach((result, index) => {
+              if (result.status === 'rejected') {
+                console.warn(`Failed to fetch judges for cluster ${otherClusters[index].id}:`, result.reason);
+              }
+            });
+          } catch (error) {
+            // This shouldn't happen with allSettled, but just in case
+            console.warn('Unexpected error during cluster fetch:', error);
+          }
+
+          // Check again after fetching (using whatever data we successfully retrieved)
           isInOtherClusters = otherClusters.some(cluster => {
             const judgesInCluster = judgesByClusterId[cluster.id] || [];
             return judgesInCluster.some(j => j.id === judgeId);
@@ -600,6 +614,20 @@ function OrganizerJudgesTable(
   const [clusterData, setClusterData] = useState<Cluster | undefined>(
     undefined
   );
+
+  // Listen for data changes to refresh judges when they're removed from clusters
+  React.useEffect(() => {
+    const handleDataChange = (event: any) => {
+      if (event.type === 'judge' && event.action === 'delete' && event.clusterId) {
+        // A judge was removed from a cluster, refresh the judges for that cluster
+        const { fetchJudgesByClusterId } = useMapClusterJudgeStore.getState();
+        fetchJudgesByClusterId(event.clusterId, true).catch(console.error);
+      }
+    };
+
+    const unsubscribe = onDataChange(handleDataChange);
+    return unsubscribe;
+  }, []);
 
   const handleToggleRow = (clusterId: number) => {
     setOpenClusterIds((prevIds) =>
