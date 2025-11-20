@@ -160,7 +160,7 @@ function JudgesTable(props: IJudgesTableProps) {
   const [onConfirm, setOnConfirm] = useState<(() => void) | null>(null);
   const [judgeData, setJudgeData] = useState<JudgeData | undefined>(undefined);
   const { submissionStatus, checkAllScoreSheetsSubmitted, deleteJudge } = useJudgeStore();
-  
+
   const [judgeId, setJudgeId] = useState(0);
   const { fetchJudgesByClusterId, removeJudgeFromCluster, fetchClustersForJudges, judgesByClusterId } = useMapClusterJudgeStore();
   const { removeJudgeFromContestStoreIfNoOtherClusters, getAllJudgesByContestId } = useContestJudgeStore();
@@ -182,10 +182,10 @@ function JudgesTable(props: IJudgesTableProps) {
   // Check submission status for this specific cluster - only when cluster or judges actually change
   React.useEffect(() => {
     if (!currentCluster || !judges || judges.length === 0) return;
-    
+
     const clusterChanged = lastCheckedClusterIdRef.current !== currentCluster.id;
     const judgesChanged = lastCheckedJudgeIdsRef.current !== judgeIdsString;
-    
+
     if (clusterChanged || judgesChanged) {
       lastCheckedClusterIdRef.current = currentCluster.id;
       lastCheckedJudgeIdsRef.current = judgeIdsString;
@@ -196,7 +196,7 @@ function JudgesTable(props: IJudgesTableProps) {
   // Fetch clusters for judges - only when judge IDs actually change
   React.useEffect(() => {
     if (!judges || judges.length === 0) return;
-    
+
     if (lastFetchedJudgeIdsRef.current !== judgeIdsString) {
       lastFetchedJudgeIdsRef.current = judgeIdsString;
       fetchClustersForJudges(judges as any).catch(console.error);
@@ -226,26 +226,26 @@ function JudgesTable(props: IJudgesTableProps) {
         toast.error("Cluster information not available. Please refresh the page and try again.");
         return;
       }
-      
+
       // Before removal, check if judge is in any other clusters in this contest
       // This ensures we check BEFORE removing, so we have accurate data
       let isInOtherClusters = false;
       if (contestid) {
         const otherClusters = clusters.filter(c => c.id !== currentCluster.id);
-        
+
         // First check local state
         isInOtherClusters = otherClusters.some(cluster => {
           const judgesInCluster = judgesByClusterId[cluster.id] || [];
           return judgesInCluster.some(j => j.id === judgeId);
         });
-        
+
         // If not found in local state, fetch fresh data for other clusters to be sure
         if (!isInOtherClusters && otherClusters.length > 0) {
           // Fetch judges for all other clusters to ensure we have accurate data
           await Promise.all(
             otherClusters.map(cluster => fetchJudgesByClusterId(cluster.id, true))
           );
-          
+
           // Check again after fetching
           isInOtherClusters = otherClusters.some(cluster => {
             const judgesInCluster = judgesByClusterId[cluster.id] || [];
@@ -253,15 +253,15 @@ function JudgesTable(props: IJudgesTableProps) {
           });
         }
       }
-      
+
       // Remove judge from cluster
       await removeJudgeFromCluster(judgeId, currentCluster.id);
-      
+
       // Only remove from contest if judge is not in any other clusters
       if (contestid && !isInOtherClusters) {
         removeJudgeFromContestStoreIfNoOtherClusters(judgeId, contestid);
       }
-      
+
       toast.success(`Judge removed from ${currentCluster.cluster_name} cluster successfully!`);
     } catch (error: any) {
       let errorMessage = "Failed to remove judge from cluster. Please try again.";
@@ -275,6 +275,31 @@ function JudgesTable(props: IJudgesTableProps) {
       toast.error(errorMessage);
     }
   };
+  // delete judge from all cluter
+  const handleDeleteFromAllClusters = async (judgeId: number) => {
+    try {
+      for (const cluster of clusters) {
+        const judgesInCluster = judgesByClusterId[cluster.id] || [];
+
+        if (judgesInCluster.some(j => j.id === judgeId)) {
+          await removeJudgeFromCluster(judgeId, cluster.id);
+        }
+      }
+
+      if (currentCluster?.id) {
+        await fetchJudgesByClusterId(currentCluster.id, true);
+      }
+      await getAllJudgesByContestId(contestid, true);
+
+      toast.success("Judge removed from all clusters.");
+    } catch (error) {
+      toast.error("Error removing judge from all clusters.");
+    } finally {
+      setOpenAreYouSure(false);
+    }
+  };
+
+
 
   // Permanently delete judge (system-wide)
   const handleDeleteCompletely = async (judgeId: number) => {
@@ -340,17 +365,17 @@ function JudgesTable(props: IJudgesTableProps) {
 
   // Check if current cluster is championship or redesign
   const isChampionshipOrRedesignCluster = currentCluster && (
-    currentCluster.cluster_type === 'championship' || 
+    currentCluster.cluster_type === 'championship' ||
     currentCluster.cluster_name?.toLowerCase().includes('championship') ||
-    currentCluster.cluster_type === 'redesign' || 
+    currentCluster.cluster_type === 'redesign' ||
     currentCluster.cluster_name?.toLowerCase().includes('redesign')
   );
 
   // Memoize rows to prevent recreating buttons on every render
   const rows = useMemo(() => judges.map((judge) => {
     // Get submission status for this specific cluster
-    const clusterSubmissionStatus = currentCluster?.id && submissionStatus 
-      ? submissionStatus[currentCluster.id] 
+    const clusterSubmissionStatus = currentCluster?.id && submissionStatus
+      ? submissionStatus[currentCluster.id]
       : null;
     const isSubmitted = clusterSubmissionStatus ? clusterSubmissionStatus[judge.id] : false;
     return createDataJudge(
@@ -477,15 +502,15 @@ function JudgesTable(props: IJudgesTableProps) {
 
   return (
     <TableContainer component={Box}>
-        <Table
-          sx={{
-            "& .MuiTableCell-root": { 
-              fontSize: { xs: "0.7rem", sm: "0.85rem", md: "0.95rem" }, 
-              py: { xs: 0.5, sm: 0.75, md: 1.25 },
-              px: { xs: 0.5, sm: 0.75, md: 1 }
-            },
-          }}
-        >
+      <Table
+        sx={{
+          "& .MuiTableCell-root": {
+            fontSize: { xs: "0.7rem", sm: "0.85rem", md: "0.95rem" },
+            py: { xs: 0.5, sm: 0.75, md: 1.25 },
+            px: { xs: 0.5, sm: 0.75, md: 1 }
+          },
+        }}
+      >
         <TableBody>
           {rows.map((row, index) => (
             <JudgeRow key={index} row={row} />
@@ -502,7 +527,7 @@ function JudgesTable(props: IJudgesTableProps) {
         contestid={contestid}
         onSuccess={async () => {
           clearMappings();
-          
+
           if (currentCluster?.id) {
             await fetchJudgesByClusterId(currentCluster.id, true);
           }
@@ -534,6 +559,28 @@ function JudgesTable(props: IJudgesTableProps) {
           <Button
             variant="outlined"
             onClick={() => {
+              setConfirmTitle("Remove judge from ALL clusters?");
+              setOnConfirm(() => () => handleDeleteFromAllClusters(judgeId));
+              setOpenDeleteOptions(false);
+              setOpenAreYouSure(true);
+            }}
+            sx={{
+              textTransform: "none",
+              borderRadius: 1.5,
+              py: 1.25,
+              px: 2.5,
+              borderColor: "#ff9800",
+              color: "#ef6c00",
+              minWidth: 0,
+              flex: 1,
+              "&:hover": { backgroundColor: "rgba(255,152,0,0.1)" },
+            }}
+          >
+            Delete from all clusters
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => {
               setConfirmTitle("Remove judge from this cluster?");
               setOnConfirm(() => () => handleDelete(judgeId));
               setOpenDeleteOptions(false);
@@ -553,6 +600,7 @@ function JudgesTable(props: IJudgesTableProps) {
           >
             Delete from cluster
           </Button>
+
           <Button
             variant="contained"
             onClick={() => {
@@ -623,7 +671,7 @@ function OrganizerJudgesTable(
   };
 
   return judgesByClusterId ? (
-    <TableContainer 
+    <TableContainer
       component={Box}
       sx={{
         overflowAnchor: "none",
@@ -707,8 +755,8 @@ function OrganizerJudgesTable(
                       contain: "layout style",
                     }}
                   >
-                    <Box 
-                      sx={{ 
+                    <Box
+                      sx={{
                         py: 1,
                         isolation: "isolate",
                       }}
