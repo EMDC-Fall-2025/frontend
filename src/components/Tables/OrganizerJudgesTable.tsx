@@ -299,8 +299,6 @@ function JudgesTable(props: IJudgesTableProps) {
     }
   };
 
-
-
   // Permanently delete judge (system-wide)
   const handleDeleteCompletely = async (judgeId: number) => {
     try {
@@ -557,7 +555,7 @@ function JudgesTable(props: IJudgesTableProps) {
           }}
         >
           <Button
-            variant="outlined"
+            variant="contained"
             onClick={() => {
               setConfirmTitle("Remove judge from ALL clusters?");
               setOnConfirm(() => () => handleDeleteFromAllClusters(judgeId));
@@ -569,11 +567,11 @@ function JudgesTable(props: IJudgesTableProps) {
               borderRadius: 1.5,
               py: 1.25,
               px: 2.5,
-              borderColor: "#ff9800",
-              color: "#ef6c00",
+              bgcolor: "#d32f2f",
+              color: "#fff",
               minWidth: 0,
               flex: 1,
-              "&:hover": { backgroundColor: "rgba(255,152,0,0.1)" },
+              "&:hover": { bgcolor: "#b71c1c" },
             }}
           >
             Delete from all clusters
