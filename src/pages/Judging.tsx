@@ -39,6 +39,7 @@ export default function Judging() {
   const mapClusterToTeamError = useClusterTeamStore((state) => state.mapClusterToTeamError);
   const fetchTeamsByClusterId = useClusterTeamStore((state) => state.fetchTeamsByClusterId);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [visibleTeamsCount, setVisibleTeamsCount] = useState<number>(0);
   const [currentCluster, setCurrentCluster] = useState<(ClusterWithContest & {
     hasAnyTeamAdvancedByContest?: { [key: number]: boolean };
   }) | null>(null);
@@ -468,7 +469,7 @@ export default function Judging() {
 
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={12} sm={6} md={3}>
-                <StatCard value={teams.length} label="Teams Assigned" />
+                <StatCard value={visibleTeamsCount} label="Teams Assigned" />
               </Grid>
             </Grid>
 
@@ -487,7 +488,11 @@ export default function Judging() {
               <Divider />
               <Box sx={{ px: 3, pb: 2 }}>
                 {teams.length > 0 ? (
-                  <JudgeDashboardTable teams={teams} currentCluster={currentCluster} />
+                  <JudgeDashboardTable 
+                    teams={teams} 
+                    currentCluster={currentCluster}
+                    onVisibleTeamsChange={setVisibleTeamsCount}
+                  />
                 ) : !hasLoaded ? (
                   <Box sx={{ py: 2 }}>
                     {/* Skeleton placeholders to avoid flicker while loading teams */}

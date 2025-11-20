@@ -122,7 +122,11 @@ export default function JudgeModal(props: IJudgeModalProps) {
 
   useEffect(() => {
     if (judgeData) {
-      getUserByRole(judgeData.id, 3);
+      // Fetch user data for email field, but don't fail if it doesn't work
+      getUserByRole(judgeData.id, 3).catch((error) => {
+        console.warn('Could not fetch user data for judge:', judgeData.id, error);
+        // Email will remain empty, but modal can still be used
+      });
     }
   }, [judgeData, getUserByRole]);
 
@@ -130,14 +134,17 @@ export default function JudgeModal(props: IJudgeModalProps) {
     if (judgeData) {
       setFirstName(judgeData.firstName || '');
       setLastName(judgeData.lastName || '');
-      setEmail(judgeData.firstName ? user?.username || '' : '');
+      // Set email from user data if available, otherwise leave empty
+      setEmail(user?.username || '');
+      // Set cluster ID if cluster data is available, otherwise -1
       setClusterId(judgeData.cluster?.id || -1);
       setPhoneNumber(judgeData.phoneNumber || '');
+
+      // Initialize selected sheets from judge data
       const initialSheets = scoringSheetOptions
         .filter((option) => judgeData[option.value as keyof typeof judgeData])
         .map((option) => option.value);
-      
-      
+
       setSelectedSheets(initialSheets);
       setSelectedTitle(Number(judgeData.role) || 0);
     }

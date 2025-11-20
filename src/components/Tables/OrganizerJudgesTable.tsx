@@ -163,7 +163,7 @@ function JudgesTable(props: IJudgesTableProps) {
   const { submissionStatus, checkAllScoreSheetsSubmitted, deleteJudge } = useJudgeStore();
   
   const [judgeId, setJudgeId] = useState(0);
-  const { fetchJudgesByClusterId, removeJudgeFromCluster, fetchClustersForJudges, judgesByClusterId } = useMapClusterJudgeStore();
+  const { fetchJudgesByClusterId, removeJudgeFromCluster, fetchClustersForJudges, judgesByClusterId, fetchAllClustersByJudgeId } = useMapClusterJudgeStore();
   const { removeJudgeFromContestStoreIfNoOtherClusters, getAllJudgesByContestId } = useContestJudgeStore();
   const { clearMappings } = useMapScoreSheetStore();
 
@@ -373,15 +373,30 @@ function JudgesTable(props: IJudgesTableProps) {
       isChampionshipOrRedesignCluster ? null : (
         <Button
           variant="outlined"
-          onClick={(e) => {
+          onClick={async (e) => {
             e.stopPropagation();
+
+            // Ensure cluster data is loaded before opening modal
+            let judgeCluster = judgeClusters[judge.id];
+            if (!judgeCluster) {
+              // If cluster not in cache, try to fetch it
+              try {
+                const clusters = await fetchAllClustersByJudgeId(judge.id);
+                if (clusters && clusters.length > 0) {
+                  judgeCluster = clusters[0]; // Use first cluster as primary
+                }
+              } catch (error) {
+                console.warn('Could not fetch cluster data for judge:', judge.id, error);
+              }
+            }
+
             // Use cluster-specific sheet flags for editing
             const clusterFlags = judge.cluster_sheet_flags || {};
             handleOpenJudgeModal({
               id: judge.id,
               firstName: judge.first_name,
               lastName: judge.last_name,
-              cluster: judgeClusters[judge.id],
+              cluster: judgeCluster,
               role: judge.role,
               journalSS: clusterFlags.journal || false,
               presSS: clusterFlags.presentation || false,
