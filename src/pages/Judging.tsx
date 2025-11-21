@@ -27,6 +27,7 @@ import { api } from "../lib/api";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
 import { useContestStore } from "../store/primary_stores/contestStore";
+import { useMapScoreSheetStore } from "../store/map_stores/mapScoreSheetStore";
 import { onDataChange, DataChangeEvent } from "../utils/dataChangeEvents";
 
 export default function Judging() {
@@ -142,32 +143,56 @@ export default function Judging() {
           setHasLoaded(false);
           isInitialLoadRef.current = true;
           await fetchAllClustersForJudge(judgeIdNumber, true);
-        } else if (event.type === 'team' && (event.action === 'create' || event.action === 'update' || event.action === 'delete')) {
-          setTeams([]);
-          setHasLoaded(false);
-          isInitialLoadRef.current = true;
-          await fetchAllClustersForJudge(judgeIdNumber);
+        } else if (
+          event.type === 'team' &&
+          (event.action === 'create' || event.action === 'update' || event.action === 'delete')
+        ) {
+          // Teams changed (advancement changes team flags, contest mapping, etc.)
+          // Only reload if it's actual team creation/deletion, not just advancement status updates
+          if (event.action === 'create' || event.action === 'delete') {
+            setTeams([]);
+            setHasLoaded(false);
+            isInitialLoadRef.current = true;
+            await fetchAllClustersForJudge(judgeIdNumber);
+          }
+    
+          else if (event.action === 'update') {
+            await fetchJudgeById(judgeIdNumber);
+         
+            setTimeout(() => {
+              const { clearMappings, fetchScoreSheetsByJudge } = useMapScoreSheetStore.getState();
+              clearMappings();
+              fetchScoreSheetsByJudge(judgeIdNumber);
+            }, 100);
+          }
+
         } else if (event.type === 'judge' && event.action === 'delete' && event.judgeId === judgeIdNumber && event.clusterId) {
           setTeams([]);
           setHasLoaded(false);
           isInitialLoadRef.current = true;
           await fetchAllClustersForJudge(judgeIdNumber, true);
         } else if (event.type === 'judge' && event.action === 'update' && event.judgeId === judgeIdNumber) {
-          // Judge data updated (e.g., championship flags changed) - refresh judge data
+
           await fetchJudgeById(judgeIdNumber);
-        } else if (event.type === 'scoresheet' && (event.action === 'create' || event.action === 'update' || event.action === 'delete')) {
-          // Scoresheets created/changed (e.g., championship advancement) - refresh clusters and teams
-          setTeams([]);
-          setHasLoaded(false);
-          isInitialLoadRef.current = true;
-          await fetchAllClustersForJudge(judgeIdNumber, true);
+        } else if (
+          event.type === 'scoresheet' &&
+          (event.action === 'create' || event.action === 'update' || event.action === 'delete')
+        ) {
+          // Scoresheets created/changed - refresh judge data and scoresheet mappings
+          await fetchJudgeById(judgeIdNumber);
+    
+          setTimeout(() => {
+            const { clearMappings, fetchScoreSheetsByJudge } = useMapScoreSheetStore.getState();
+            clearMappings();
+            fetchScoreSheetsByJudge(judgeIdNumber);
+          }, 100);
         } else if (event.type === 'cluster' && (event.action === 'create' || event.action === 'update' || event.action === 'delete')) {
           setTeams([]);
           setHasLoaded(false);
           isInitialLoadRef.current = true;
 
           await fetchAllClustersForJudge(judgeIdNumber, true);
-          // Also refresh judge data since cluster changes can affect judge flags (championship advancement)
+          
           await fetchJudgeById(judgeIdNumber);
         }
       }
@@ -298,10 +323,42 @@ export default function Judging() {
 
         setHasLoaded(true);
 
-        const currentClusterToSet: (ClusterWithContest & {
+        /**
+         * Select the appropriate current cluster for the judge.
+         * Prefer championship/redesign clusters when teams have advanced in those contests.
+         */
+        let currentClusterToSet: (ClusterWithContest & {
           judgeHasChampionshipByContest?: { [key: number]: boolean };
           hasAnyTeamAdvancedByContest?: { [key: number]: boolean };
-        }) | null = clustersToShow[0] ? { ...clustersToShow[0] } : null;
+        }) | null = null;
+
+        // First, look for championship/redesign clusters where advancement has occurred
+        const championshipOrRedesignClusters = clustersToShow.filter((cluster: ClusterWithContest) => {
+          const isChampionshipOrRedesign = cluster.cluster_type === 'championship' ||
+            cluster.cluster_type === 'redesign' ||
+            cluster.cluster_name?.toLowerCase().includes('championship') ||
+            cluster.cluster_name?.toLowerCase().includes('redesign');
+
+          if (isChampionshipOrRedesign && cluster.contest_id) {
+            // Check if any teams have advanced in this contest
+            return hasAnyTeamAdvancedByContest.get(cluster.contest_id) === true;
+          }
+          return false;
+        });
+
+        // If we found championship/redesign clusters with advancement, use the first one
+        if (championshipOrRedesignClusters.length > 0) {
+          currentClusterToSet = { ...championshipOrRedesignClusters[0] };
+          console.log('[Judging] Selected championship/redesign cluster:', currentClusterToSet.cluster_name || currentClusterToSet.cluster_type, 'for contest', currentClusterToSet.contest_id);
+        } else {
+          // Otherwise, fall back to the first cluster (original behavior)
+          currentClusterToSet = clustersToShow[0] ? { ...clustersToShow[0] } : null;
+          console.log('[Judging] Selected fallback cluster:', currentClusterToSet?.cluster_name || currentClusterToSet?.cluster_type, 'for contest', currentClusterToSet?.contest_id);
+        }
+
+        console.log('[Judging] All clusters for judge:', clustersToShow.map(c => ({ name: c.cluster_name, type: c.cluster_type, contestId: (c as any).contest_id })));
+        console.log('[Judging] Championship/redesign clusters found:', championshipOrRedesignClusters.length);
+        console.log('[Judging] Advancement status by contest:', Object.fromEntries(hasAnyTeamAdvancedByContest));
         
         /**
          * Store championship and advancement data in cluster object for access in JudgeDashboardTable.

@@ -149,7 +149,8 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
 
   /**
    * Filters teams to only show those from active contests.
-   * Hides teams whose contest has ended (is_open === false) for all roles.
+   * Exception: Shows teams from contests that haven't started (is_open === false && is_tabulated === false)
+   * Hides teams whose contest has ended (is_open === false && is_tabulated === true) for all roles.
    */
   const visibleTeams: Team[] = useMemo(() => {
     if (!teams || teams.length === 0) return [];
@@ -170,19 +171,36 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
         return false;
       }
 
-      // 2. Hide teams from contests that have ended (is_open === false)
+      // 2. Contest visibility logic
       const contestForTeam = contestsForTeams[team.id] as Contest | undefined;
 
       if (!contestForTeam) return true;
 
-      // Hide if contest is closed (ended)
-      if (contestForTeam.is_open === false) {
+      // Exception: Show teams from contests that haven't started (is_open === false && is_tabulated === false)
+      // ONLY if judge is in a preliminary cluster
+      // They will display with "Contest has not started yet" message
+      if (contestForTeam.is_open === false && contestForTeam.is_tabulated === false) {
+        // Check if current cluster is preliminary (not championship or redesign)
+        const isPreliminaryCluster = currentCluster && (
+          currentCluster.cluster_type !== 'championship' &&
+          currentCluster.cluster_type !== 'redesign' &&
+          !currentCluster.cluster_name?.toLowerCase().includes('championship') &&
+          !currentCluster.cluster_name?.toLowerCase().includes('redesign')
+        );
+        
+        // Only show teams from contests that haven't started if judge is in preliminary cluster
+        return isPreliminaryCluster === true;
+      }
+
+      // Hide teams from contests that have ended (is_open === false && is_tabulated === true)
+      if (contestForTeam.is_open === false && contestForTeam.is_tabulated === true) {
         return false;
       }
 
+      // Show teams from active contests (is_open === true)
       return true;
     });
-  }, [teams, contestsForTeams, judge?.id, hasScoresheet]);
+  }, [teams, contestsForTeams, judge?.id, hasScoresheet, currentCluster]);
 
   // Notify parent component of visible teams count change
   React.useEffect(() => {
@@ -283,6 +301,49 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   const [allContests, setAllContests] = useState<Contest[]>([]);
   const [selectedContest, setSelectedContest] = useState<Contest | null>(null);
 
+  // Fresh team advancement data to override stale cluster store data
+  const [freshTeamAdvancementData, setFreshTeamAdvancementData] = useState<{ [teamId: number]: boolean }>({});
+
+  /**
+   * Fetches fresh team advancement data from contest endpoints to override stale cluster data.
+   * This ensures championship scoresheets appear correctly after advancement.
+   */
+  const fetchFreshTeamAdvancementData = useCallback(async () => {
+    if (!teams.length) return;
+
+    try {
+      // Get unique contest IDs for all teams
+      const contestIds = new Set<number>();
+      teams.forEach(team => {
+        const contest = contestsForTeams[team.id];
+        if (contest) contestIds.add(contest.id);
+      });
+
+      const freshData: { [teamId: number]: boolean } = {};
+
+      // Fetch fresh data for each contest
+      await Promise.all(
+        Array.from(contestIds).map(async (contestId: number) => {
+          try {
+            const response = await api.get<Team[]>(`/api/mapping/teamToContest/getTeamsByContest/${contestId}/`);
+            const contestTeams = response.data || [];
+
+            // Store advancement status for each team in this contest
+            contestTeams.forEach(team => {
+              freshData[team.id] = team.advanced_to_championship || false;
+            });
+          } catch (error) {
+            console.error(`Error fetching fresh team data for contest ${contestId}:`, error);
+          }
+        })
+      );
+
+      setFreshTeamAdvancementData(freshData);
+    } catch (error) {
+      console.error('Error fetching fresh team advancement data:', error);
+    }
+  }, [teams, contestsForTeams]);
+
   const handleToggle = (teamId: number) => {
     setOpenRows((prevState) => ({
       ...prevState,
@@ -339,23 +400,25 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
             });
         }
       } else if (event.type === 'team' && (event.action === 'update')) {
-        // Team advancement status changed - refresh scoresheet mappings
-        // This will pick up championship scoresheets for advanced teams
+        // Team advancement status changed - refresh scoresheet mappings and fresh team data
+
         if (judge?.id) {
           try {
             clearMappings();
             fetchScoreSheetsByJudge(judge.id);
+            fetchFreshTeamAdvancementData(); 
           } catch (error) {
             console.error('Error refreshing scoresheet mappings after team update:', error);
           }
         }
       } else if (event.type === 'scoresheet' && (event.action === 'create' || event.action === 'update')) {
-    
+
         // This handles championship advancement creating new scoresheets
         if (judge?.id) {
           try {
             clearMappings();
             fetchScoreSheetsByJudge(judge.id);
+            fetchFreshTeamAdvancementData(); // Refresh advancement status after scoresheet changes
           } catch (error) {
             console.error('Error refreshing scoresheet mappings after scoresheet change:', error);
           }
@@ -386,6 +449,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
           clearMappings();
         }
         fetchScoreSheetsByJudge(judge.id);
+        fetchFreshTeamAdvancementData(); // Fetch fresh advancement data
         lastFetchedJudgeIdRef.current = judge.id;
         lastClusterTypeRef.current = currentClusterType;
       } catch (error) {
@@ -975,46 +1039,53 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
                                  );
                                }
 
+                               // Override team advancement status with fresh data from contest endpoint
+                               const freshAdvancedStatus = freshTeamAdvancementData[team.id];
+                               const teamWithFreshAdvancement = {
+                                 ...team,
+                                 advanced_to_championship: freshAdvancedStatus !== undefined ? freshAdvancedStatus : team.advanced_to_championship
+                               };
+
                                return (
                                 <>
                                   <ScoreSheetButton
-                                    team={team}
+                                    team={teamWithFreshAdvancement}
                                     type={2}
                                     url="journal-score"
                                     buttonText="Journal"
                                   />
                                   <ScoreSheetButton
-                                    team={team}
+                                    team={teamWithFreshAdvancement}
                                     type={1}
                                     url="presentation-score"
                                     buttonText="Presentation"
                                   />
                                   <ScoreSheetButton
-                                    team={team}
+                                    team={teamWithFreshAdvancement}
                                     type={3}
                                     url="machine-score"
                                     buttonText="Machine Design and Operation"
                                   />
                                   <ScoreSheetButton
-                                    team={team}
+                                    team={teamWithFreshAdvancement}
                                     type={6}
                                     url="redesign-score"
                                     buttonText="Redesign"
                                   />
                                   <ScoreSheetButton
-                                    team={team}
+                                    team={teamWithFreshAdvancement}
                                     type={7}
                                     url="championship-score"
                                     buttonText="Championship"
                                   />
                                   <ScoreSheetButton
-                                    team={team}
+                                    team={teamWithFreshAdvancement}
                                     type={4}
                                     url="run-penalties"
                                     buttonText="Run Penalties"
                                   />
                                   <ScoreSheetButton
-                                    team={team}
+                                    team={teamWithFreshAdvancement}
                                     type={5}
                                     url="general-penalties"
                                     buttonText="General Penalties"
