@@ -10,7 +10,7 @@ import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
-import { Button, Container, CircularProgress } from "@mui/material";
+import { Button, Container, CircularProgress, Chip, Box as MuiBox } from "@mui/material";
 import { useState, useMemo, useCallback } from "react";
 import JudgeModal from "../Modals/JudgeModal";
 import { useNavigate } from "react-router-dom";
@@ -716,7 +716,37 @@ function OrganizerJudgesTable(
                   scope="row"
                   sx={{ fontWeight: 700 }}
                 >
-                  {cluster.cluster_name}
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+    <span>{cluster.cluster_name}</span>
+    {cluster.cluster_name !== "All Teams" && (
+      <Chip 
+        label={
+          cluster.cluster_type === 'championship' || cluster.cluster_name?.toLowerCase().includes('championship') 
+            ? 'Championship'
+            : cluster.cluster_type === 'redesign' || cluster.cluster_name?.toLowerCase().includes('redesign')
+            ? 'Redesign'
+            : 'Preliminary'
+        }
+        size="small"
+        sx={{
+          height: 20,
+          fontSize: "0.7rem",
+          backgroundColor: 
+            (cluster.cluster_type === 'championship' || cluster.cluster_name?.toLowerCase().includes('championship'))
+              ? '#fff3cd'
+              : (cluster.cluster_type === 'redesign' || cluster.cluster_name?.toLowerCase().includes('redesign'))
+              ? '#cfe2ff'
+              : '#d1e7dd',
+          color: 
+            (cluster.cluster_type === 'championship' || cluster.cluster_name?.toLowerCase().includes('championship'))
+              ? '#856404'
+              : (cluster.cluster_type === 'redesign' || cluster.cluster_name?.toLowerCase().includes('redesign'))
+              ? '#084298'
+              : '#0f5132',
+        }}
+      />
+    )}
+  </Box>
                 </TableCell>
                 <TableCell align="right">
                   {cluster.cluster_name != "All Teams" && (
