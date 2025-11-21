@@ -291,9 +291,9 @@ function JudgesTable(props: IJudgesTableProps) {
       }
       await getAllJudgesByContestId(contestid, true);
 
-      toast.success("Judge removed from all clusters.");
+      toast.success("Judge removed from contest.");
     } catch (error) {
-      toast.error("Error removing judge from all clusters.");
+      toast.error("Error removing judge from contest.");
     } finally {
       setOpenAreYouSure(false);
     }
@@ -557,24 +557,27 @@ function JudgesTable(props: IJudgesTableProps) {
           <Button
             variant="contained"
             onClick={() => {
-              setConfirmTitle("Remove judge from ALL clusters?");
+              setConfirmTitle("Remove judge from contest?");
               setOnConfirm(() => () => handleDeleteFromAllClusters(judgeId));
               setOpenDeleteOptions(false);
               setOpenAreYouSure(true);
             }}
             sx={{
               textTransform: "none",
-              borderRadius: 1.5,
-              py: 1.25,
-              px: 2.5,
+              borderRadius: 2,
+              px: { xs: 1.5, sm: 2, md: 2.5 },
+              py: { xs: 0.6, sm: 0.8, md: 1 },
+              height: { xs: "32px", sm: "36px", md: "40px" },
               bgcolor: "#d32f2f",
               color: "#fff",
               minWidth: 0,
               flex: 1,
+              fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
+              fontWeight: 600,
               "&:hover": { bgcolor: "#b71c1c" },
             }}
           >
-            Delete from all clusters
+            Delete from contest
           </Button>
           <Button
             variant="outlined"
@@ -586,13 +589,16 @@ function JudgesTable(props: IJudgesTableProps) {
             }}
             sx={{
               textTransform: "none",
-              borderRadius: 1.5,
-              py: 1.25,
-              px: 2.5,
+              borderRadius: 2,
+              px: { xs: 1.5, sm: 2, md: 2.5 },
+              py: { xs: 0.6, sm: 0.8, md: 1 },
+              height: { xs: "32px", sm: "36px", md: "40px" },
               borderColor: "#9e9e9e",
               color: "#424242",
               minWidth: 0,
               flex: 1,
+              fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
+              fontWeight: 600,
               "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
             }}
           >
@@ -609,13 +615,16 @@ function JudgesTable(props: IJudgesTableProps) {
             }}
             sx={{
               textTransform: "none",
-              borderRadius: 1.5,
-              py: 1.25,
-              px: 2.5,
+              borderRadius: 2,
+              px: { xs: 1.5, sm: 2, md: 2.5 },
+              py: { xs: 0.6, sm: 0.8, md: 1 },
+              height: { xs: "32px", sm: "36px", md: "40px" },
               bgcolor: "#d32f2f",
               color: "#fff",
               minWidth: 0,
               flex: 1,
+              fontSize: { xs: "0.65rem", sm: "0.7rem", md: "0.8rem" },
+              fontWeight: 600,
               "&:hover": { bgcolor: "#b71c1c" },
             }}
           >
