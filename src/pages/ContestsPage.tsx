@@ -75,7 +75,7 @@ export default function Contests() {
     .map((contest: { id: number; name: string; date: string; is_open: boolean; is_tabulated: boolean }) =>
       createData(contest.id, contest.name, contest.date, contest.is_open, contest.is_tabulated)
     )
-
+    .filter((row: { status: string }) => row.status !== "Not Started")
     .sort((a: { status: string }, b: { status: string }) => {
       const order = { Finalized: 1, "In Progress": 2, "Not Started": 3 };
       return order[a.status as keyof typeof order] - order[b.status as keyof typeof order];
@@ -117,10 +117,10 @@ export default function Contests() {
           </Button>
         </Box>
 
-        <Stack 
-          direction="row" 
-          spacing={2} 
-          alignItems="center" 
+        <Stack
+          direction="row"
+          spacing={2}
+          alignItems="center"
           sx={{ mb: 1 }}
         >
           <Typography
