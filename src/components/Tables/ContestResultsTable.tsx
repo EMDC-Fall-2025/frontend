@@ -77,6 +77,9 @@ const ContestResultsTable: React.FC<ContestResultsTableProps> = ({
       accentGold: "#D97706",
       accentSilver: "#9CA3AF",
       accentBronze: "#B45309",
+      accent4th: "#6B7280",
+      accent5th: "#6B7280",
+      accent6th: "#6B7280",
       border: "#E5E7EB",
       textPrimary: "#0B1120",
       textMuted: "#6B7280",
@@ -97,6 +100,9 @@ const ContestResultsTable: React.FC<ContestResultsTableProps> = ({
       accentGold: "#D4A574",
       accentSilver: "#C9A961",
       accentBronze: "#8B6914",
+      accent4th: "#8B7355",
+      accent5th: "#8B7355",
+      accent6th: "#8B7355",
       border: "#D4C4B0",
       textPrimary: "#3E2723",
       textMuted: "#6D4C41",
@@ -117,6 +123,9 @@ const ContestResultsTable: React.FC<ContestResultsTableProps> = ({
       accentGold: "#FFD700",
       accentSilver: "#C0C0C0",
       accentBronze: "#CD7F32",
+      accent4th: "#808080",
+      accent5th: "#808080",
+      accent6th: "#808080",
       border: "#404040",
       textPrimary: "#FFFFFF",
       textMuted: "#B0B0B0",
@@ -374,7 +383,10 @@ const ContestResultsTable: React.FC<ContestResultsTableProps> = ({
                   const isRank1 = rank === 1;
                   const isRank2 = rank === 2;
                   const isRank3 = rank === 3;
-                  const isTop3 = isRank1 || isRank2 || isRank3;
+                  const isRank4 = rank === 4;
+                  const isRank5 = rank === 5;
+                  const isRank6 = rank === 6;
+                  const isTop6 = isRank1 || isRank2 || isRank3 || isRank4 || isRank5 || isRank6;
                   const awardsArray = getAwardsArray(row.awards);
                   const isEven = index % 2 === 0;
 
@@ -398,6 +410,21 @@ const ContestResultsTable: React.FC<ContestResultsTableProps> = ({
                     rowBg = colors.rank3Bg;
                     leftBarColor = colors.accentBronze;
                     rankBadgeBg = colors.accentBronze;
+                    rankBadgeText = "#FFFFFF";
+                  } else if (isRank4) {
+                    rowBg = colors.rank2Bg;
+                    leftBarColor = colors.accent4th;
+                    rankBadgeBg = colors.accent4th;
+                    rankBadgeText = "#FFFFFF";
+                  } else if (isRank5) {
+                    rowBg = colors.rank2Bg;
+                    leftBarColor = colors.accent5th;
+                    rankBadgeBg = colors.accent5th;
+                    rankBadgeText = "#FFFFFF";
+                  } else if (isRank6) {
+                    rowBg = colors.rank2Bg;
+                    leftBarColor = colors.accent6th;
+                    rankBadgeBg = colors.accent6th;
                     rankBadgeText = "#FFFFFF";
                   }
 
@@ -423,8 +450,8 @@ const ContestResultsTable: React.FC<ContestResultsTableProps> = ({
                         },
                       }}
                     >
-                      {/* Left Accent Bar for Top 3 */}
-                      {isTop3 && (
+                      {/* Left Accent Bar for Top 6 */}
+                      {isTop6 && (
                         <Box
                           sx={{
                             position: "absolute",
@@ -444,10 +471,10 @@ const ContestResultsTable: React.FC<ContestResultsTableProps> = ({
                         sx={{
                           position: "relative",
                           width: 100,
-                          pl: isTop3 ? 2 : 1, 
+                          pl: isTop6 ? 2 : 1, 
                         }}
                       >
-                        {isTop3 ? (
+                        {isTop6 ? (
                           <Box
                             sx={{
                               display: "inline-flex",

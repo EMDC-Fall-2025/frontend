@@ -941,28 +941,28 @@ useEffect(() => {
             <TableBody>
   
 
-              {visibleTeams.map((team: Team) => {
-                const isPreliminaryTeam = hasOnlyPreliminaryScoresheets(team.id);
+            {visibleTeams.map((team: Team) => {
+                // const isPreliminaryTeam = hasOnlyPreliminaryScoresheets(team.id);
                 return (
-                <React.Fragment key={team.id}>
-                  <TableRow
-                    onClick={() => handleToggle(team.id)}
-                    sx={{
-                      cursor: "pointer",
-                      transition: "background-color 0.15s ease, opacity 0.15s ease",
-                      "&:hover": {
-                        backgroundColor: isPreliminaryTeam
-                          ? "rgba(0,0,0,0.01)"
-                          : "rgba(46,125,50,0.06)",
-                      },
-                      borderBottom: `1px solid ${theme.palette.grey[200]}`,
-                      backgroundColor: isPreliminaryTeam ? theme.palette.grey[100] : "inherit",
-                      opacity: isPreliminaryTeam ? 0.7 : 1,
-                      "& .MuiTableCell-root": {
-                        color: isPreliminaryTeam ? theme.palette.grey[600] : "inherit",
-                      },
-                    }}
-                  >
+                  <React.Fragment key={team.id}>
+                    <TableRow
+                      onClick={() => handleToggle(team.id)}
+                      sx={{
+                        cursor: "pointer",
+                        transition: "background-color 0.15s ease, opacity 0.15s ease",
+                        "&:hover": {
+                          backgroundColor: "rgba(46,125,50,0.06)",
+                        },
+                        borderBottom: `1px solid ${theme.palette.grey[200]}`,
+                        backgroundColor: "inherit",
+                        opacity: 1,
+                        "& .MuiTableCell-root": {
+                          color: "inherit",
+                        },
+                      }}
+                    >
+     
+
                     <TableCell sx={{ width: 56 }}>
                       <IconButton
                         aria-label="expand row"

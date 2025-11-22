@@ -311,14 +311,20 @@ export default function MultiTeamPenaltyTable({
     });
 
     if (updatedSheets.length > 0) {
+      // Navigate immediately to avoid showing loading state
+      setOpenAreYouSure(false);
+      navigate(-1);
+
+      // Submit in background
       await submitMultipleScoreSheets(updatedSheets);
 
       if (judgeId) {
         fetchScoreSheetsByJudge(judgeId).catch(() => {});
       }
+    } else {
+      setOpenAreYouSure(false);
+      navigate(-1);
     }
-    setOpenAreYouSure(false);
-    navigate(-1);
   };
 
   const penaltiesByCategory = React.useMemo(() => {

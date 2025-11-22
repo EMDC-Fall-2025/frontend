@@ -1,7 +1,6 @@
 // ==============================
 // Component: PublicScoreBreakdown
 // Displays detailed score breakdown for a team's performance across all scoring categories.
-// Shows loading skeleton while data is being fetched and renders organized sections for each score type.
 // ==============================
 
 // ==============================
@@ -268,4 +267,5 @@ export default function PublicScoreBreakdown() {
       <ScoreBreakdownTableRunPenalties />
     </>
   );
+}
 }

@@ -816,17 +816,21 @@ export default function ChampionshipScoreSheetTable({
                                     type="number"
                                     value={formData[index + 1] || ""}
                                     disabled={scoreSheet?.isSubmitted}
+                                    onWheel={(e) => {
+                                      const inputElement = e.target as HTMLInputElement;
+                                      inputElement.blur();
+                                    }}
                                     onChange={(e) => {
-                                      // enforce allowed range: [lowPoints, highPoints] or empty
+          
                                       let value: any = e.target.value;
 
                                       if (value !== undefined) {
                                         if (value === "") {
-                                          value = undefined; // Clear the field
+                                          value = undefined; 
                                         } else if (Number(value) < question.lowPoints) {
-                                          value = undefined; // Clear if below range
+                                          value = undefined; 
                                         } else if (Number(value) > question.highPoints) {
-                                          value = undefined; // Clear if above range
+                                          value = undefined; 
                                         } else {
                                           value = Number(value); // Convert to number if valid
                                         }
@@ -1075,6 +1079,10 @@ export default function ChampionshipScoreSheetTable({
                                     type="number"
                                     value={formData[index + 10] || ""}
                                     disabled={scoreSheet?.isSubmitted}
+                                    onWheel={(e) => {
+                                      const inputElement = e.target as HTMLInputElement;
+                                      inputElement.blur();
+                                    }}
                                     onChange={(e) => {
                           
                                       let value: any = e.target.value;

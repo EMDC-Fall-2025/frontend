@@ -1,216 +1,106 @@
-// ==============================
-// Component: InternalResults
-// Master results page with tabbed interface for preliminary, championship, and redesign results.
-// Features live updates, PDF export, and conditional preloader based on navigation source.
-// ==============================
-
-// ==============================
-// React Core
-// ==============================
 import { useEffect, useState, useRef, useCallback } from "react";
-
-// ==============================
-// Router
-// ==============================
-import { useParams, useNavigate } from "react-router-dom";
-
-// ==============================
-// UI Libraries & Theme
-// ==============================
-import { Box, Chip, Container, Paper, Typography, Link, Tab, Tabs, Button, Tooltip } from "@mui/material";
+import { Box, Chip, Container, Paper, Typography, Link, Tab, Tabs, Button } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../theme";
-
-// ==============================
-// PDF Generation
-// ==============================
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-
-// ==============================
-// Store Hooks
-// ==============================
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/primary_stores/authStore";
 import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
-import useContestStore from "../store/primary_stores/contestStore";
-
-// ==============================
-// Utilities
-// ==============================
-import { onDataChange, DataChangeEvent } from "../utils/dataChangeEvents";
-
-// ==============================
-// Local Components
-// ==============================
 import InternalResultsTable from "../components/Tables/InternalResultsTable";
 import ResultsPreloader from "../components/ResultsPreloader";
-
-// ==============================
-// Theme Types
-// ==============================
-type ThemeType = "green" | "brown" | "black";
-
+import useContestStore from "../store/primary_stores/contestStore";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { onDataChange, DataChangeEvent } from "../utils/dataChangeEvents";
+  
 const InternalResults: React.FC = () => {
-  // ==============================
-  // Theme Selection State
-  // ==============================
-  const [selectedTheme, setSelectedTheme] = useState<ThemeType>("green");
-
-  // ==============================
-  // Theme Definitions
-  // ==============================
-  const themes = {
-    green: {
-      pageBg: "#F3F4F6",
-      cardBg: "#FFFFFF",
-      primary: "#166534",
-      primaryDark: "#064E3B",
-      soft: "#E6F4EA",
-      border: "#E5E7EB",
-      textPrimary: "#0B1120",
-      textMuted: "#6B7280",
-      shadow: "rgba(15, 23, 42, 0.08)",
-    },
-    brown: {
-      pageBg: "#F5F3F0",
-      cardBg: "#FFFFFF",
-      primary: "#8B4513",
-      primaryDark: "#654321",
-      soft: "#F5E6D3",
-      border: "#D4C4B0",
-      textPrimary: "#3E2723",
-      textMuted: "#6D4C41",
-      shadow: "rgba(62, 39, 35, 0.08)",
-    },
-    black: {
-      pageBg: "#1A1A1A",
-      cardBg: "#2D2D2D",
-      primary: "#000000",
-      primaryDark: "#000000",
-      soft: "#3A3A3A",
-      border: "#404040",
-      textPrimary: "#FFFFFF",
-      textMuted: "#B0B0B0",
-      shadow: "rgba(0, 0, 0, 0.3)",
-    },
-  };
-
-  // Get current theme colors
-  const colors = themes[selectedTheme];
-
-  // Typography font families
-  const dmSerifFont = '"DM Serif Display", "Georgia", serif';
-  const poppinsFont = '"Poppins", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-  // ------------------------------
-  // Route Parameters & Authentication
-  // ------------------------------
   const { contestId } = useParams<{ contestId: string }>();
   const navigate = useNavigate();
   const { role } = useAuthStore();
 
-  // ------------------------------
-  // Parsed Data
-  // ------------------------------
-  const parsedContestId = contestId ? parseInt(contestId, 10) : undefined;
-
-  // ------------------------------
-  // Store State & Actions
-  // ------------------------------
-  const { contest, fetchContestById, isLoadingContest } = useContestStore();
-
-  // ------------------------------
-  // Local UI State
-  // ------------------------------
-  const [activeTab, setActiveTab] = useState(0);
   const [showPreloader, setShowPreloader] = useState(false);
   const [preloaderMinDone, setPreloaderMinDone] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const isInitialLoadRef = useRef(true);
-  const [isCachedDataLoad, setIsCachedDataLoad] = useState(false);
 
-  // ==============================
-  // Side Effects & Initialization
-  // ==============================
-
-  // Scroll to top on contest change
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [contestId]);
+  
+  const parsedContestId = contestId ? parseInt(contestId, 10) : undefined;
+  const { contest, fetchContestById, isLoadingContest } = useContestStore();
+  const [activeTab, setActiveTab] = useState(0);
 
-  // Fetch contest details on mount or contest change
   useEffect(() => {
     if (parsedContestId) {
       fetchContestById(parsedContestId);
     }
   }, [parsedContestId, fetchContestById]);
 
-  // Additional store hooks for team data management
   const fetchTeamsByContest = useMapContestToTeamStore((state) => state.fetchTeamsByContest);
   const isLoading = useMapContestToTeamStore((state) => state.isLoadingMapContestToTeam);
   const teamsByContest = useMapContestToTeamStore((state) => state.teamsByContest);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const isInitialLoadRef = useRef(true);
+  const [isCachedDataLoad, setIsCachedDataLoad] = useState(false);
 
-  // ==============================
-  // Data Loading & Effects
-  // ==============================
-
-  // Reset loading state when contest changes
   useEffect(() => {
     setHasLoaded(false);
     setIsCachedDataLoad(false);
   }, [parsedContestId]);
 
-  // Preloader timing refs for controlled loading experience
-  const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const minTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Control preloader display based on navigation source
-  // Only show preloader when navigating from "View Results" button, not on page reloads
-  useEffect(() => {
-    // Check if we came from the "View Results" button
-    const cameFromRankings = sessionStorage.getItem("fromRankings") === "true";
-    sessionStorage.removeItem("fromRankings");
 
-    // If we've already loaded or didn't come from rankings, don't show preloader
-    if (hasLoaded || !cameFromRankings) return;
+const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+const minTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Start "maybe show preloader" timer
-    showTimerRef.current = setTimeout(() => {
-      if (!hasLoaded) {
-        setShowPreloader(true);
-        setPreloaderMinDone(false);
+/**
+ * Decide *when to show* the preloader
+ * - if still not loaded after 40ms → show preloader + start 1.1s minimum timer
+ */
+useEffect(() => {
+  // Check if we came from the "View Results" button
+  const cameFromRankings = sessionStorage.getItem("fromRankings") === "true";
+  sessionStorage.removeItem("fromRankings");
 
-        // Once we actually show it, enforce 1.1s minimum display time
-        minTimerRef.current = setTimeout(() => {
-          setPreloaderMinDone(true);
-        }, 1100);
-      }
-    }, 40);
+  // If we've already loaded or didn't come from rankings, don't show preloader
+  if (hasLoaded || !cameFromRankings) return;
 
-    return () => {
-      if (showTimerRef.current) clearTimeout(showTimerRef.current);
-    };
-  }, [hasLoaded]);
+  // Start "maybe show preloader" timer
+  showTimerRef.current = setTimeout(() => {
+    if (!hasLoaded) {
+      setShowPreloader(true);
+      setPreloaderMinDone(false);
 
-  // Hide preloader only when BOTH conditions are met: data loaded AND minimum time passed
-  useEffect(() => {
-    if (hasLoaded && preloaderMinDone) {
-      setShowPreloader(false);
+      //  once we actually show it, enforce 1.1s minimum
+      minTimerRef.current = setTimeout(() => {
+        setPreloaderMinDone(true);
+      }, 1100);
     }
-  }, [hasLoaded, preloaderMinDone]);
+  }, 40);
 
-  // Cleanup timers on unmount
-  useEffect(() => {
-    return () => {
-      if (showTimerRef.current) clearTimeout(showTimerRef.current);
-      if (minTimerRef.current) clearTimeout(minTimerRef.current);
-    };
-  }, []);
+  return () => {
+    if (showTimerRef.current) clearTimeout(showTimerRef.current);
 
-  // ==============================
-  // Data Loading Functions
-  // ==============================
+  };
+}, [hasLoaded]);
 
-  // Main data loading function with caching support
+/**
+ * Hide preloader only when BOTH conditions are met:
+ *  - data has loaded
+ *  - minimum time has passed
+ */
+useEffect(() => {
+  if (hasLoaded && preloaderMinDone) {
+    setShowPreloader(false);
+  }
+}, [hasLoaded, preloaderMinDone]);
+
+useEffect(() => {
+  return () => {
+    if (showTimerRef.current) clearTimeout(showTimerRef.current);
+    if (minTimerRef.current) clearTimeout(minTimerRef.current);
+  };
+}, []);
+
+
   const load = useCallback(
     async (options?: { force?: boolean }) => {
       if (!parsedContestId) return;
@@ -229,8 +119,6 @@ const InternalResults: React.FC = () => {
     },
     [parsedContestId, fetchTeamsByContest]
   );
-
-  // Main data loading effect with live updates and focus handling
 
   useEffect(() => {
     if (!parsedContestId) return;
@@ -277,30 +165,17 @@ const InternalResults: React.FC = () => {
     };
   }, [parsedContestId, load]);
 
-  // ==============================
-  // Computed Values
-  // ==============================
+  // Only run tabulation on demand - removed automatic tabulation on tab switches
 
-  // Check if championship advancement has occurred
   const hasChampionshipAdvanced = teamsByContest?.some((team: any) => team.advanced_to_championship === true) ?? false;
   const hasRedesignAdvanced = hasChampionshipAdvanced;
 
-  // ==============================
-  // Tab Management
-  // ==============================
-
-  // Reset to first tab if championship hasn't advanced yet
   useEffect(() => {
     if (!hasChampionshipAdvanced && activeTab !== 0) {
       setActiveTab(0);
     }
   }, [hasChampionshipAdvanced, activeTab]);
 
-  // ==============================
-  // PDF Export Functionality
-  // ==============================
-
-  // Generate and download PDF report of contest results
   const handleDownloadPDF = () => {
     const doc = new jsPDF();
     doc.setFontSize(18);
@@ -327,10 +202,6 @@ const InternalResults: React.FC = () => {
     });
     doc.save(`MasterScoreSheet_${contest?.name || 'Contest'}.pdf`);
   };
-
-  // ==============================
-  // Main Component Render
-  // ==============================
 
   return (
     <Box sx={{ bgcolor: "#fff", minHeight: "100vh" }}>
