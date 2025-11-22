@@ -1,5 +1,31 @@
 
 
+// ==============================
+// Component: Rankings
+// Advanced rankings table with championship advancement controls.
+// Features expandable team details, bulk selection, and live scoring status.
+// ==============================
+
+// ==============================
+// React Core
+// ==============================
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+  memo,
+} from "react";
+
+// ==============================
+// Router
+// ==============================
+import { useNavigate } from "react-router-dom";
+
+// ==============================
+// UI Libraries & Theme
+// ==============================
 import {
   Button,
   Box,
@@ -17,23 +43,30 @@ import {
   alpha,
   Chip,
 } from "@mui/material";
-import {
-  useEffect,
-  useState,
-  useCallback,
-  useRef,
-  useMemo,
-  memo,
-} from "react";
 import theme from "../../theme";
 import { TriangleIcon, Trophy } from "lucide-react";
+import toast from "react-hot-toast";
+
+// ==============================
+// Store Hooks
+// ==============================
 import { useAuthStore } from "../../store/primary_stores/authStore";
 import { useRankingsStore } from "../../store/primary_stores/rankingsStore";
-import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+
+// ==============================
+// API & Utilities
+// ==============================
 import { api } from "../../lib/api";
 import { onDataChange, DataChangeEvent } from "../../utils/dataChangeEvents";
+
+// ==============================
+// Local Components
+// ==============================
 import GreenDotsPreloader from "../GreenDotsPreloader";
+
+// ==============================
+// Types & Interfaces
+// ==============================
 
 type ContestType = "preliminary" | "championship" | "redesign" | string;
 type TeamStatus = "completed" | "in_progress" | "not_started";

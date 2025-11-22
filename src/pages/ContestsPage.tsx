@@ -1,23 +1,57 @@
+// ==============================
+// Component: ContestsPage
+// Main contests listing page with interactive navigation.
+// Displays available contests with status indicators and navigation to results.
+// ==============================
+
+// ==============================
+// React Core
+// ==============================
 import { useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom"; // 
+
+// ==============================
+// Router
+// ==============================
+import { useNavigate, Link } from "react-router-dom";
+
+// ==============================
+// UI Libraries & Theme
+// ==============================
 import Typography from "@mui/material/Typography";
 import { Container, Stack, Button, Box } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../theme";
-import { useContestStore } from "../store/primary_stores/contestStore";
-import ContestTable from "../components/Tables/ContestTable";
-import InteractiveGrid from "../components/Cube";
 import toast from "react-hot-toast";
 
-// FILE OVERVIEW: page for displaying contests
+// ==============================
+// Store Hooks
+// ==============================
+import { useContestStore } from "../store/primary_stores/contestStore";
+
+// ==============================
+// Local Components
+// ==============================
+import ContestTable from "../components/Tables/ContestTable";
+import InteractiveGrid from "../components/Cube";
 export default function Contests() {
+  // ------------------------------
+  // Store State & Actions
+  // ------------------------------
   const { allContests, fetchAllContests, isLoadingContest } = useContestStore();
+
+  // ------------------------------
+  // Navigation
+  // ------------------------------
   const navigate = useNavigate();
 
-  // Get all contests
+  // ==============================
+  // Data Loading & Effects
+  // ==============================
+
+  // Fetch all contests on component mount
   useEffect(() => {
     fetchAllContests();
-  }, []);
+  }, [fetchAllContests]);
 
   // function to create data row
   function createData(

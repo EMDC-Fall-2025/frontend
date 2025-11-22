@@ -49,12 +49,11 @@ function App() {
 
 
 
-  // Hide preloader after it completes its animation
   useEffect(() => {
     if (showPreloader) {
       const timer = setTimeout(() => {
         setShowPreloader(false);
-      }, 1500); // Match preloader duration
+      }, 1200); 
       return () => clearTimeout(timer);
     }
   }, [showPreloader, setShowPreloader]);
@@ -65,10 +64,10 @@ function App() {
     <>
       <ThemeProvider theme={theme}>
         {/* Show preloader only after login, not on reload */}
-        {showPreloader && <Preloader />}
+        <Preloader show={showPreloader} />
         {currentLink !== "/set-password/" &&
           currentLink !== "/forgot-password/" &&
-          currentLink !== "/login/" &&
+          currentLink !== "/login/" &&   
           currentLink !== "/signup/" && <Navbar />}
 
         <Routes>

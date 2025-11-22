@@ -1,21 +1,53 @@
+// ==============================
+// Store: Team Store
+// Manages team data, CRUD operations, and synchronization with related entities.
+// Handles team creation, editing, deletion with automatic data consistency.
+// ==============================
+
+// ==============================
+// Core Dependencies
+// ==============================
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+
+// ==============================
+// API & Utilities
+// ==============================
 import { api } from "../../lib/api";
-import { Team, NewTeam, EditedTeam } from "../../types";
 import { dispatchDataChange } from "../../utils/dataChangeEvents";
+
+// ==============================
+// Related Store Imports
+// ==============================
 import { useMapCoachToTeamStore } from "../map_stores/mapCoachToTeamStore";
 import useMapClusterTeamStore from "../map_stores/mapClusterToTeamStore";
 
+// ==============================
+// Types
+// ==============================
+import { Team, NewTeam, EditedTeam } from "../../types";
+
+// ==============================
+// Types & Interfaces
+// ==============================
+
 interface TeamState {
+  // Team data
   team: Team | null;
-  teams: Team[]; 
+  teams: Team[];
+
+  // Loading and error states
   isLoadingTeam: boolean;
   teamError: string | null;
+
+  // CRUD operations
   fetchTeamById: (teamId: number) => Promise<void>;
-  fetchAllTeams: () => Promise<void>; 
+  fetchAllTeams: () => Promise<void>;
   createTeam: (newTeam: NewTeam) => Promise<Team>;
   editTeam: (editedTeam: EditedTeam) => Promise<Team>;
   deleteTeam: (teamId: number) => Promise<void>;
+
+  // Utility functions
   clearTeam: () => void;
 }
 

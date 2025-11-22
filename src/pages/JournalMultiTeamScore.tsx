@@ -1,43 +1,76 @@
+// ==============================
+// Component: MultiTeamJournalScore
+// Multi-team scoring interface for journal scoresheets.
+// Allows judges to score multiple teams across their assigned clusters in one interface.
+// ==============================
+
+// ==============================
+// React Core
+// ==============================
 import { useEffect, useState } from "react";
+
+// ==============================
+// Router
+// ==============================
 import { useParams, useNavigate } from "react-router-dom";
+
+// ==============================
+// Store Hooks
+// ==============================
 import { useAuthStore } from "../store/primary_stores/authStore";
-import { journalQuestions } from "../data/journalQuestions";
-import MultiTeamScoreSheet from "../components/Tables/MultiTeamScoreTable";
 import { useMapClusterJudgeStore } from "../store/map_stores/mapClusterToJudgeStore";
 import useClusterTeamStore from "../store/map_stores/mapClusterToTeamStore";
 import { useScoreSheetStore } from "../store/primary_stores/scoreSheetStore";
+
+// ==============================
+// API & Data
+// ==============================
 import { api } from "../lib/api";
+import { journalQuestions } from "../data/journalQuestions";
+
+// ==============================
+// Types
+// ==============================
 import { ClusterWithContest, ScoreSheetMappingWithSheet, Team, ScoreSheet, Question } from "../types";
 
-/**
- * Page component for multi-team journal scoring.
- * Allows judges to score multiple teams simultaneously for journal scoresheets.
- */
+// ==============================
+// Local Components
+// ==============================
+import MultiTeamScoreSheet from "../components/Tables/MultiTeamScoreTable";
+
 export default function MultiTeamJournalScore() {
+  // ------------------------------
+  // Route Parameters & Authentication
+  // ------------------------------
   const { role } = useAuthStore();
   const { judgeId, contestId } = useParams();
   const navigate = useNavigate();
   const parsedJudgeId = judgeId ? parseInt(judgeId, 10) : null;
-  
+
+  // ------------------------------
+  // Store State & Actions
+  // ------------------------------
   const { fetchAllClustersByJudgeId } = useMapClusterJudgeStore();
   const fetchTeamsByClusterId = useClusterTeamStore((state) => state.fetchTeamsByClusterId);
+
+  // ------------------------------
+  // Local UI State
+  // ------------------------------
   const [teams, setTeams] = useState<Array<{ id: number; name: string }>>([]);
   const [isDataReady, setIsDataReady] = useState(false);
 
-  /**
-   * Ensures judges can only access their own scoring pages.
-   * Redirects to correct URL if judge ID doesn't match authenticated user.
-   */
+  // ==============================
+  // Data Loading & Effects
+  // ==============================
+
+  // Redirect judges to their own scoring interface if accessing another judge's URL
   useEffect(() => {
     if (role?.user_type === 3 && parsedJudgeId !== role.user.id) {
       navigate(`/multi-team-journal-score/${role.user.id}/${contestId}/`);
     }
   }, [judgeId, role, contestId, navigate, parsedJudgeId]);
 
-  /**
-   * Fetches clusters, scoresheets, and teams for the judge.
-   * Filters by contest if contestId is provided.
-   */
+  // Fetch clusters, teams, and scoresheets data for multi-team scoring interface
   useEffect(() => {
     const fetchData = async () => {
       if (!parsedJudgeId) return;
@@ -120,7 +153,16 @@ export default function MultiTeamJournalScore() {
     fetchData();
   }, [parsedJudgeId, contestId, fetchAllClustersByJudgeId, fetchTeamsByClusterId]);
 
+  // ==============================
+  // Early Returns & Conditional Rendering
+  // ==============================
+
+  // Invalid judge ID - cannot proceed
   if (parsedJudgeId === null) return null;
+
+  // ==============================
+  // Main Component Render
+  // ==============================
 
   return (
     <MultiTeamScoreSheet

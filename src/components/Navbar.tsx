@@ -5,6 +5,8 @@ import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/primary_stores/authStore";
+import useMediaQuery from "@mui/material/useMediaQuery";
+
 import {
   Button,
   Container,
@@ -29,6 +31,7 @@ function Nav() {
   const [logoUrl, setLogoUrl] = useState("/");
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const handleLogout = async () => {
     try {
@@ -164,17 +167,84 @@ function Nav() {
                   )}
 
                   {/* User Chip */}
-                  {isAuthenticated && (
-                    <Chip
-                      label={`${roleLabel(role?.user_type)} • ${
-                        role?.user?.first_name ?? ""
-                      }${
-                        role?.user?.last_name ? " " + role?.user?.last_name : ""
-                      }`}
-                      variant="outlined"
-                      sx={{ mr: { xs: 0, sm: 1 } }}
-                    />
+                  {isAuthenticated && role && (
+                    isMobile ? (
+                      // Mobile
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: { xs: 1.2, sm: 2 },
+                          px: 1.25,
+                          py: 0.6,
+                          borderRadius: 999,
+                          border: `1px solid ${theme.palette.grey[200]}`,
+                          bgcolor: "#f9fafb",
+                          maxWidth: 230,
+                          order: { xs: 0, sm: 0 },
+                        }}
+                      >
+                        {/* Tiny role avatar circle */}
+                        <Box
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: "50%",
+                            bgcolor: theme.palette.success.light,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "0.8rem",
+                            fontWeight: 700,
+                            color: theme.palette.success.dark,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {roleLabel(role.user_type).charAt(0)}
+                        </Box>
+
+                        {/* Name + role */}
+                        <Box sx={{ overflow: "hidden" }}>
+                          <Box
+                            sx={{
+                              fontSize: "0.8rem",
+                              fontWeight: 600,
+                              color: "text.primary",
+                              whiteSpace: "nowrap",
+                              textOverflow: "ellipsis",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {role.user.first_name}
+                            {role.user.last_name ? ` ${role.user.last_name}` : ""}
+                          </Box>
+                          <Box
+                            sx={{
+                              fontSize: "0.7rem",
+                              color: "text.secondary",
+                              textTransform: "uppercase",
+                              letterSpacing: 0.08,
+                            }}
+                          >
+                            {roleLabel(role.user_type)}
+                          </Box>
+                        </Box>
+                      </Box>
+                    ) : (
+                      // Desktop / tablet: keep your existing Chip style
+                      <Chip
+                        label={`${roleLabel(role.user_type)} • ${
+                          role.user.first_name ?? ""
+                        }${role.user.last_name ? " " + role.user.last_name : ""}`}
+                        variant="outlined"
+                        sx={{
+                          mr: { xs: 0, sm: 1 },
+                          fontSize: "0.85rem",
+                        }}
+                      />
+                    )
                   )}
+
 
                   {/* Admin-only: Set Role Password */}
                   {isAuthenticated && isAdmin && (

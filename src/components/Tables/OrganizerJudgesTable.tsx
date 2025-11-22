@@ -1,4 +1,23 @@
+// ==============================
+// Component: OrganizerJudgesTable
+// Comprehensive table for managing judges, clusters, and their assignments.
+// Features expandable rows, judge assignment management, and scoring oversight.
+// ==============================
+
+// ==============================
+// React Core
+// ==============================
 import * as React from "react";
+import { useState, useMemo, useCallback } from "react";
+
+// ==============================
+// Router
+// ==============================
+import { useNavigate } from "react-router-dom";
+
+// ==============================
+// UI Libraries & Theme
+// ==============================
 import Box from "@mui/material/Box";
 import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
@@ -11,20 +30,34 @@ import Typography from "@mui/material/Typography";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { Button, Container, CircularProgress, Chip, Box as MuiBox } from "@mui/material";
-import { useState, useMemo, useCallback } from "react";
-import JudgeModal from "../Modals/JudgeModal";
-import { useNavigate } from "react-router-dom";
+import CloseIcon from "@mui/icons-material/Close";
+import CheckIcon from "@mui/icons-material/Check";
+import toast from "react-hot-toast";
+
+// ==============================
+// Store Hooks
+// ==============================
 import { useMapClusterJudgeStore } from "../../store/map_stores/mapClusterToJudgeStore";
 import { useJudgeStore } from "../../store/primary_stores/judgeStore";
 import useContestJudgeStore from "../../store/map_stores/mapContestToJudgeStore";
 import { useMapScoreSheetStore } from "../../store/map_stores/mapScoreSheetStore";
-import CloseIcon from "@mui/icons-material/Close";
-import CheckIcon from "@mui/icons-material/Check";
-import toast from "react-hot-toast";
-import ClusterModal from "../Modals/ClusterModal";
+
+// ==============================
+// Types
+// ==============================
 import { Cluster, Judge, JudgeData } from "../../types";
+
+// ==============================
+// Local Components
+// ==============================
+import JudgeModal from "../Modals/JudgeModal";
+import ClusterModal from "../Modals/ClusterModal";
 import AreYouSureModal from "../Modals/AreYouSureModal";
 import Modal from "../Modals/Modal";
+
+// ==============================
+// Types & Interfaces
+// ==============================
 
 interface IJudgesTableProps {
   judges: any[];
@@ -40,6 +73,10 @@ interface IOrganizerClustersTeamsTableProps {
   };
   contestid: number;
 }
+
+// ==============================
+// Data Creation Helpers
+// ==============================
 
 function createDataJudge(
   name: string,
@@ -228,7 +265,7 @@ function JudgesTable(props: IJudgesTableProps) {
       }
 
       // Before removal, check if judge is in any other clusters in this contest
-      // This ensures we check BEFORE removing, so we have accurate data
+  
       let isInOtherClusters = false;
       if (contestid) {
         const otherClusters = clusters.filter(c => c.id !== currentCluster.id);

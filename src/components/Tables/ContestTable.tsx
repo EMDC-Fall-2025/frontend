@@ -1,3 +1,12 @@
+// ==============================
+// Component: ContestTable
+// Simple contest listing table with clickable rows.
+// Displays contest information with status indicators and navigation.
+// ==============================
+
+// ==============================
+// UI Libraries & Theme
+// ==============================
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -7,6 +16,10 @@ import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import theme from "../../theme";
+
+// ==============================
+// Types & Interfaces
+// ==============================
 
 interface ContestRow {
   id: number;

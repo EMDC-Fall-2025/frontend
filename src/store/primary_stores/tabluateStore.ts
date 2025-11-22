@@ -1,12 +1,34 @@
+// ==============================
+// Store: Tabulate Store
+// Manages score tabulation operations for contests.
+// Handles bulk score calculations and tabulation processes.
+// ==============================
+
+// ==============================
+// Core Dependencies
+// ==============================
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+
+// ==============================
+// API
+// ==============================
 import { api } from "../../lib/api";
 
+// ==============================
+// Types & Interfaces
+// ==============================
+
 interface TabulateState {
+  // Tabulation operations
   tabulateContest: (contest_id: number) => Promise<void>;
-  clearTabulateError: () => void;
+
+  // Loading and error states
   isLoadingTabulate: boolean;
   tabulateError: string | null;
+
+  // Utility functions
+  clearTabulateError: () => void;
 }
 
 export const useTabulateStore = create<TabulateState>()(

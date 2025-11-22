@@ -1,20 +1,49 @@
+// ==============================
+// Store: Rankings Store
+// Manages contest rankings, championship advancement, and cluster data.
+// Handles organizer-specific contest listings and advancement operations.
+// ==============================
+
+// ==============================
+// Core Dependencies
+// ==============================
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+
+// ==============================
+// API & Utilities
+// ==============================
 import { api } from "../../lib/api";
-import { Contest, Cluster } from "../../types";
 import { dispatchDataChange } from "../../utils/dataChangeEvents";
 
+// ==============================
+// Types
+// ==============================
+import { Contest, Cluster } from "../../types";
+
+// ==============================
+// Types & Interfaces
+// ==============================
+
 interface RankingsState {
+  // Rankings data
   contests: Contest[];
   clusters: Cluster[];
   selectedContest: Contest | null;
+
+  // Loading and error states
   isLoadingRankings: boolean;
   rankingsError: string | null;
-  
+
+  // Data fetching operations
   fetchContestsForOrganizer: (organizerId: number) => Promise<void>;
   fetchClustersWithTeamsForContest: (contestId: number) => Promise<void>;
+
+  // UI state management
   setSelectedContest: (contest: Contest | null) => void;
   clearRankings: () => void;
+
+  // Championship operations
   advanceToChampionship: (contestId: number, championshipTeamIds: number[]) => Promise<void>;
   undoChampionshipAdvancement: (contestId: number) => Promise<void>;
   listAdvancers: (contestId: number) => Promise<any>;

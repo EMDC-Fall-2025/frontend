@@ -1,8 +1,29 @@
+// ==============================
+// Store: Organizer Store
+// Manages organizer data, CRUD operations, and team disqualification.
+// Handles organizer-related state with data change synchronization.
+// ==============================
+
+// ==============================
+// Core Dependencies
+// ==============================
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+
+// ==============================
+// API & Utilities
+// ==============================
 import { api } from "../../lib/api";
-import useMapContestOrganizerStore from "../map_stores/mapContestToOrganizerStore";
 import { dispatchDataChange } from "../../utils/dataChangeEvents";
+
+// ==============================
+// Related Store Imports
+// ==============================
+import useMapContestOrganizerStore from "../map_stores/mapContestToOrganizerStore";
+
+// ==============================
+// Types & Interfaces
+// ==============================
 
 interface Organizer {
   id: number;
@@ -13,29 +34,46 @@ interface Organizer {
 }
 
 interface OrganizerState {
+  // Organizer data
   allOrganizers: Organizer[];
   organizer: Organizer | null;
+
+  // Loading and error states
   isLoadingOrganizer: boolean;
   organizerError: string | null;
+
+  // CRUD operations
   fetchAllOrganizers: (forceRefresh?: boolean) => Promise<void>;
   fetchOrganizerById: (organizerId: number) => Promise<void>;
   createOrganizer: (newOrganizer: Omit<Organizer, "id">) => Promise<void>;
   editOrganizer: (editedOrganizer: Organizer) => Promise<void>;
   deleteOrganizer: (organizerId: number) => Promise<void>;
-  organizerDisqualifyTeam: (
-    teamId: number,
-    organizer_disqualified: boolean
-  ) => Promise<void>;
+
+  // Business logic actions
+  organizerDisqualifyTeam: (teamId: number, organizer_disqualified: boolean) => Promise<void>;
+
+  // Utility functions
   clearOrganizer: () => void;
 }
+
+// ==============================
+// Store Implementation
+// ==============================
 
 export const useOrganizerStore = create<OrganizerState>()(
   persist(
     (set, get) => ({
+      // ==============================
+      // Initial State
+      // ==============================
       allOrganizers: [],
       organizer: null,
       isLoadingOrganizer: false,
       organizerError: null,
+
+      // ==============================
+      // Utility Functions
+      // ==============================
 
       clearOrganizer: () => {
         set({ organizer: null, organizerError: null });

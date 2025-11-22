@@ -15,6 +15,7 @@ interface MapContestToTeamState {
   removeContestFromTeams: (contestId: number) => void;
   clearContests: () => void;
   clearTeamsByContest: () => void;
+  setContestsForTeams: (map: { [key: number]: Contest | null }) => void;
 }
 
 export const useMapContestToTeamStore = create<MapContestToTeamState>()(
@@ -128,6 +129,15 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
           set({ isLoadingMapContestToTeam: false });
         }
       },
+
+      setContestsForTeams: (map: { [key: number]: Contest | null }) => {
+        set((state) => ({
+          contestsForTeams: {
+            ...state.contestsForTeams,
+            ...map,
+          },
+        }));
+      },
     }),
     {
       name: "map-contest-to-team-storage",
@@ -135,5 +145,4 @@ export const useMapContestToTeamStore = create<MapContestToTeamState>()(
     }
   )
 );
-
-
+    

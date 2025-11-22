@@ -1,4 +1,22 @@
+// ==============================
+// Component: AdminContestTable
+// Administrative table for managing contests with CRUD operations.
+// Provides contest overview, status management, and organizer assignments.
+// ==============================
+
+// ==============================
+// React Core
+// ==============================
 import { useEffect, useState, useMemo } from "react";
+
+// ==============================
+// Router
+// ==============================
+import { useNavigate } from "react-router-dom";
+
+// ==============================
+// UI Libraries & Theme
+// ==============================
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -14,14 +32,29 @@ import {
   Typography,
   alpha,
 } from "@mui/material";
-import useContestStore from "../../store/primary_stores/contestStore";
-import { useNavigate } from "react-router-dom";
-import AreYouSureModal from "../Modals/AreYouSureModal";
-import ContestModal from "../Modals/ContestModal";
-import { onDataChange, DataChangeEvent } from "../../utils/dataChangeEvents";
-import dayjs from "dayjs";
 import CampaignIcon from "@mui/icons-material/Campaign";
 import GroupIcon from "@mui/icons-material/Group";
+
+// ==============================
+// Store Hooks
+// ==============================
+import useContestStore from "../../store/primary_stores/contestStore";
+
+// ==============================
+// Utilities
+// ==============================
+import { onDataChange, DataChangeEvent } from "../../utils/dataChangeEvents";
+import dayjs from "dayjs";
+
+// ==============================
+// Local Components
+// ==============================
+import AreYouSureModal from "../Modals/AreYouSureModal";
+import ContestModal from "../Modals/ContestModal";
+
+// ==============================
+// Data Creation Helpers
+// ==============================
 
 function createData(
   id: number,
@@ -33,6 +66,10 @@ function createData(
 ) {
   return { id, name, date, is_open, is_tabulated, organizers };
 }
+
+// ==============================
+// Global Event Listeners
+// ==============================
 
 // Global event listener setup - survives component unmounts
 let globalListenerUnsubscribe: (() => void) | null = null;
