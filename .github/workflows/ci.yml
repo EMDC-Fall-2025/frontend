@@ -25,6 +25,7 @@ jobs:
 
       - name: Run ESLint
         run: npm run lint
+        continue-on-error: false
 
   build:
     name: Build Application
@@ -51,6 +52,7 @@ jobs:
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: dist
           path: dist/
@@ -74,7 +76,7 @@ jobs:
         run: npm ci
 
       - name: Run TypeScript compiler
-        run: npx tsc --noEmit
+        run: npx tsc --noEmit --pretty
 
   security-scan:
     name: Security Scan
