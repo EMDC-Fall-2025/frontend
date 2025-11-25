@@ -76,7 +76,8 @@ function App() {
           <Route path="/forgot-password/" element={<ForgotPassword />} />
           <Route path="/contestresults/:contestId" element={<ContestScores />} />
           <Route path="/rank" element={<Ranking />} />
-          <Route path="/login/" element={<Login />} />
+          <Route path="/login/" element={showPreloader ? null : <Login />}
+/>
           <Route path="/contestPage/" element={<ContestPage />} />
           <Route path="/set-password/" element={<SetPassword />} />
 

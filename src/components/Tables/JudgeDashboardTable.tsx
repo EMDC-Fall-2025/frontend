@@ -99,7 +99,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
   const { judge } = useJudgeStore();
   const { mappings, fetchScoreSheetsByJudge, clearMappings, isLoadingMapScoreSheet } = useMapScoreSheetStore();
   const { contestsForTeams } = useMapContestToTeamStore();
-  const { editScoreSheetField, multipleScoreSheets } = useScoreSheetStore();
+  const { editScoreSheetField} = useScoreSheetStore();
 
   const isOrganizerOrAdmin = role?.user_type === 1 || role?.user_type === 2;
   const isJudge = role?.user_type === 3;
@@ -271,82 +271,7 @@ const JudgeDashboardTable = React.memo(function JudgeDashboardTable(props: IJudg
 
  
 
-  /**
-   * Checks if all preliminary scoresheets (types 1-5) are completed for a team.
-   * Returns true only if all existing preliminary scoresheets have been submitted.
-   */
-  const checkAllPreliminaryScoresheetsCompleted = (teamId: number) => {
-    if (!judge) return false;
-    
-    const preliminaryTypes = [1, 2, 3, 4, 5];
-    let allCompleted = true;
-    
-    for (const sheetType of preliminaryTypes) {
-      if (hasScoresheet(judge.id, teamId, sheetType)) {
-        const scoresheet = multipleScoreSheets?.find(sheet => 
-          sheet.teamId === teamId && 
-          sheet.judgeId === judge.id && 
-          sheet.sheetType === sheetType
-        );
-        
-        if (scoresheet && !scoresheet.isSubmitted) {
-          allCompleted = false;
-          break;
-        }
-      }
-    }
-    
-    return allCompleted;
-  };
 
-  /**
-   * Determines if a team should have grey styling applied.
-   * Only applies in championship/redesign clusters when:
-   * - Team has advanced to championship AND
-   * - All preliminary scoresheets are completed (if no championship sheets exist) OR
-   * - All championship scoresheets are completed (if they exist)
-   */
-  const hasOnlyPreliminaryScoresheets = useCallback((teamId: number) => {
-    const isInChampionshipOrRedesignCluster = currentCluster && (
-      currentCluster.cluster_type === 'championship' ||
-      currentCluster.cluster_type === 'redesign' ||
-      currentCluster.cluster_name?.toLowerCase().includes('championship') ||
-      currentCluster.cluster_name?.toLowerCase().includes('redesign')
-    );
-    
-    if (!isInChampionshipOrRedesignCluster) {
-      return false;
-    }
-
-    const teamInChampionshipCluster = teams.some((team) => {
-      if (team.id !== teamId) return false;
-      const freshAdvanced = freshTeamAdvancementData[team.id];
-      const advanced = freshAdvanced !== undefined ? freshAdvanced : team.advanced_to_championship;
-      return advanced === true;
-    });
-
-
-    if (teamInChampionshipCluster) {
-      const hasChampionshipScoresheets = judge && (
-        hasScoresheet(judge.id, teamId, 6) ||
-        hasScoresheet(judge.id, teamId, 7)
-      );
-
-      if (hasChampionshipScoresheets) {
-        const hasIncompleteChampionshipScoresheets = judge && (
-          (hasScoresheet(judge.id, teamId, 6) && !getIsSubmitted(judge.id, teamId, 6)) ||
-          (hasScoresheet(judge.id, teamId, 7) && !getIsSubmitted(judge.id, teamId, 7))
-        );
-
-        return !hasIncompleteChampionshipScoresheets;
-      } else {
-        const allPreliminaryCompleted = checkAllPreliminaryScoresheetsCompleted(teamId);
-        return allPreliminaryCompleted;
-      }
-    }
-    
-    return false;
-  }, [currentCluster, teams, judge, hasScoresheet, getIsSubmitted]);
 
   const [openRows, setOpenRows] = React.useState<{ [key: number]: boolean }>(
     {}
@@ -942,7 +867,6 @@ useEffect(() => {
   
 
             {visibleTeams.map((team: Team) => {
-                // const isPreliminaryTeam = hasOnlyPreliminaryScoresheets(team.id);
                 return (
                   <React.Fragment key={team.id}>
                     <TableRow

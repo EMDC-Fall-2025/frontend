@@ -184,8 +184,15 @@ export const useRankingsStore = create<RankingsState>()(
             `/api/advance/advanceToChampionship/`,
             requestData
           );
-          
+
           if (response.data.ok) {
+            // Tell all listeners that scoresheets changed for this contest
+            dispatchDataChange({
+              type: "scoresheet",
+              action: "create",
+              contestId: contestId,
+            });
+
             // Refresh the clusters to show the new championship/redesign clusters
             const { fetchClustersWithTeamsForContest } = useRankingsStore.getState();
             await fetchClustersWithTeamsForContest(contestId);

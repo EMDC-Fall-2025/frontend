@@ -43,7 +43,6 @@ import ContestModal from "../components/Modals/ContestModal";
 import AdminContestTable from "../components/Tables/AdminContestTable";
 import AdminOrganizerTable from "../components/Tables/AdminOrganizerTable";
 import ContestOverviewTable from "../components/Tables/ContestOverview";
-import ResendPasswordEmailDialog from "../components/Modals/ResendPasswordEmailDialog";
 
 // ==============================
 // Component: Admin
@@ -56,7 +55,6 @@ export default function Admin() {
   const [value, setValue] = useState("1"); // active tab
   const [contestModal, setContestModal] = useState(false);
   const [organizerModal, setOrganizerModal] = useState(false);
-  const [resendEmailModal, setResendEmailModal] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const isInitialLoadRef = useRef(true);
 
@@ -301,28 +299,6 @@ export default function Admin() {
             Create Award
           </Button>
 
-          <Button
-            onClick={() => setResendEmailModal(true)}
-            variant="outlined"
-            startIcon={<EmailIcon />}
-            size="small"
-            sx={{
-              textTransform: "none",
-              borderRadius: 2,
-              px: { xs: 2, sm: 2 },
-              py: { xs: 1, sm: 1 },
-              borderColor: theme.palette.success.main,
-              color: theme.palette.success.main,
-              "&:hover": {
-                borderColor: theme.palette.success.dark,
-                backgroundColor: "rgba(46,125,50,0.06)",
-              },
-              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
-              width: { xs: "100%", sm: "auto" }
-            }}
-          >
-            Resend Password Email
-          </Button>
         </Stack>
 
         {/* Tabs */}
@@ -459,10 +435,6 @@ export default function Admin() {
         mode={"new"}
       />
       <ContestModal open={contestModal} handleClose={() => setContestModal(false)} mode={"new"} />
-      <ResendPasswordEmailDialog
-        open={resendEmailModal}
-        onClose={() => setResendEmailModal(false)}
-      />
     </Box>
   );
 }
