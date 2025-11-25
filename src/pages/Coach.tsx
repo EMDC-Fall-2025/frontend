@@ -43,7 +43,11 @@ import theme from "../theme";
 // Handles data fetching, preload timing, and page cleanup.
 // ==============================
 export default function Coach() {
-  const { role } = useAuthStore();
+  // ------------------------------
+  // Global state (Auth + Stores)
+  // ------------------------------
+  const { role} = useAuthStore();
+
   const { teams, fetchTeamsByCoachId, clearTeams } = useMapCoachToTeamStore();
 
   const {
@@ -56,7 +60,6 @@ export default function Coach() {
   // Local UI State
   // ------------------------------
   const [hasLoaded, setHasLoaded] = useState(false);
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const isInitialLoadRef = useRef(true);
 
   // ==============================
@@ -93,21 +96,6 @@ export default function Coach() {
     };
   }, [teams]);
 
-  /**
-   * Start a minimum 1.5s timer for the preloader when the component mounts.
-   * This ensures the preloader doesn’t just "flash" briefly.
-   */
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setMinTimeElapsed(true);
-    }, 1500); // 1.5 seconds minimum
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  /**
-   * Preloader is now managed by App.tsx based on isLoadingAuth
-   */
 
   /**
    * When the page is being hidden (e.g., navigation/back), clean up

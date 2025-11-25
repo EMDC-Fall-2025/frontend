@@ -59,7 +59,6 @@ export default function Organizer() {
   // ------------------------------
   const [value, setValue] = useState("1"); // Tabs: "1" = current, "2" = past, etc.
   const [hasLoaded, setHasLoaded] = useState(false);
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const isInitialLoadRef = useRef(true);
 
   // ------------------------------
@@ -68,9 +67,11 @@ export default function Organizer() {
   const { fetchContestsByOrganizerId, contests } =
     useMapContestOrganizerStore();
   const { allSheetsSubmittedForContests } = useMapScoreSheetStore();
-  const { role, isAuthenticated } = useAuthStore();
-  // Use selector to subscribe to allOrganizers changes
 
+  const {
+    role,
+    isAuthenticated
+  } = useAuthStore();
 
   // Organizer directory (for up-to-date name)
   const allOrganizers = useOrganizerStore((state) => state.allOrganizers);
@@ -130,7 +131,9 @@ export default function Organizer() {
         isInitialLoadRef.current = false;
       });
   }, [organizerId, isAuthenticated, role?.user_type]);
-
+  // Note: fetchContestsByOrganizerId & fetchAllOrganizers intentionally
+  // omitted to avoid infinite loops
+  
 
   // ==============================
   // Contest Utilities / Memoization

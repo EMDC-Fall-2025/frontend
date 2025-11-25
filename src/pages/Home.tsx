@@ -3,6 +3,7 @@ import image from "../assets/group.webp";
 import { useEffect, useRef } from "react";
 
 export default function Home() {
+
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
@@ -27,11 +28,13 @@ export default function Home() {
         >
           <img
             ref={imgRef}
+            ref={imgRef}
             src={image}
             alt="Engineering Machine Design Contest Hero Image"
             width={1200}
             height={800}
             loading="eager"
+            decoding="async"
             decoding="async"
             style={{
               display: "block",
