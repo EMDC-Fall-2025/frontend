@@ -119,11 +119,13 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
     if (clusterToDelete) {
       try {
         await deleteCluster(clusterToDelete);
+        toast.dismiss();
         toast.success('Cluster deleted successfully!');
         removeClusterFromContest(contestId, clusterToDelete);
         setOpenDeleteConfirmModal(false);
         setClusterToDelete(null);
       } catch (error) {
+        toast.dismiss();
         toast.error('Failed to delete cluster');
         console.error('Delete cluster error:', error);
       }

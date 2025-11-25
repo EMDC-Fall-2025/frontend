@@ -32,6 +32,7 @@ import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import CampaignIcon from "@mui/icons-material/Campaign";
 import GroupIcon from "@mui/icons-material/Group";
+import EmailIcon from "@mui/icons-material/Email";
 import theme from "../theme";
 
 // ==============================
@@ -42,6 +43,7 @@ import ContestModal from "../components/Modals/ContestModal";
 import AdminContestTable from "../components/Tables/AdminContestTable";
 import AdminOrganizerTable from "../components/Tables/AdminOrganizerTable";
 import ContestOverviewTable from "../components/Tables/ContestOverview";
+import ResendPasswordEmailDialog from "../components/Modals/ResendPasswordEmailDialog";
 
 // ==============================
 // Component: Admin
@@ -54,8 +56,7 @@ export default function Admin() {
   const [value, setValue] = useState("1"); // active tab
   const [contestModal, setContestModal] = useState(false);
   const [organizerModal, setOrganizerModal] = useState(false);
-
-  // Controls initial fade-in behavior once data is loaded
+  const [resendEmailModal, setResendEmailModal] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const isInitialLoadRef = useRef(true);
 
@@ -254,122 +255,122 @@ export default function Admin() {
               Create Contest
             </Button>
 
-            {/* Create Organizer */}
-            <Button
-              onClick={() => setOrganizerModal(true)}
-              variant="outlined"
-              startIcon={<PersonAddAlt1Icon />}
-              size="small"
+          <Button
+            onClick={() => setOrganizerModal(true)}
+            variant="outlined"
+            startIcon={<PersonAddAlt1Icon />}
+            size="small"
+            sx={{
+              textTransform: "none",
+              borderRadius: 2,
+              px: { xs: 2, sm: 2 },
+              py: { xs: 1, sm: 1 },
+              borderColor: theme.palette.success.main,
+              color: theme.palette.success.main,
+              "&:hover": {
+                borderColor: theme.palette.success.dark,
+                backgroundColor: "rgba(46,125,50,0.06)",
+              },
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              width: { xs: "100%", sm: "auto" }
+            }}
+          >
+            Create Organizer
+          </Button>
+
+          <Button
+            onClick={() => navigate("/awards")}
+            variant="outlined"
+            startIcon={<EmojiEventsIcon />}
+            size="small"
+            sx={{
+              textTransform: "none",
+              borderRadius: 2,
+              px: { xs: 2, sm: 2 },
+              py: { xs: 1, sm: 1 },
+              borderColor: theme.palette.success.main,
+              color: theme.palette.success.main,
+              "&:hover": {
+                borderColor: theme.palette.success.dark,
+                backgroundColor: "rgba(46,125,50,0.06)",
+              },
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              width: { xs: "100%", sm: "auto" }
+            }}
+          >
+            Create Award
+          </Button>
+
+          <Button
+            onClick={() => setResendEmailModal(true)}
+            variant="outlined"
+            startIcon={<EmailIcon />}
+            size="small"
+            sx={{
+              textTransform: "none",
+              borderRadius: 2,
+              px: { xs: 2, sm: 2 },
+              py: { xs: 1, sm: 1 },
+              borderColor: theme.palette.success.main,
+              color: theme.palette.success.main,
+              "&:hover": {
+                borderColor: theme.palette.success.dark,
+                backgroundColor: "rgba(46,125,50,0.06)",
+              },
+              fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+              width: { xs: "100%", sm: "auto" }
+            }}
+          >
+            Resend Password Email
+          </Button>
+        </Stack>
+
+        {/* Tabs */}
+        <TabContext value={value}>
+          <Box
+            sx={{
+              border: `1px solid ${theme.palette.grey[300]}`,
+              borderBottom: 0,
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              backgroundColor: "#fff",
+              px: 2,
+            }}
+          >
+            <TabList
+              onChange={handleChange}
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
               sx={{
-                textTransform: "none",
-                borderRadius: 2,
-                px: { xs: 2, sm: 2 },
-                py: { xs: 1, sm: 1 },
-                borderColor: theme.palette.success.main,
-                color: theme.palette.success.main,
-                "&:hover": {
-                  borderColor: theme.palette.success.dark,
-                  backgroundColor: "rgba(46,125,50,0.06)",
+                "& .MuiTab-root": { 
+                  textTransform: "none", 
+                  fontWeight: 600, 
+                  minHeight: 56,
+                  minWidth: { xs: "auto", sm: 160 },
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                  px: { xs: 1, sm: 2 },
                 },
-                fontSize: { xs: "0.875rem", sm: "0.9375rem" },
-                width: { xs: "100%", sm: "auto" },
-              }}
-            >
-              Create Organizer
-            </Button>
-
-            {/* Navigate to Awards */}
-            <Button
-              onClick={() => navigate("/awards")}
-              variant="outlined"
-              startIcon={<EmojiEventsIcon />}
-              size="small"
-              sx={{
-                textTransform: "none",
-                borderRadius: 2,
-                px: { xs: 2, sm: 2 },
-                py: { xs: 1, sm: 1 },
-                borderColor: theme.palette.success.main,
-                color: theme.palette.success.main,
-                "&:hover": {
-                  borderColor: theme.palette.success.dark,
-                  backgroundColor: "rgba(46,125,50,0.06)",
+                "& .MuiTabs-indicator": { height: 3, backgroundColor: theme.palette.success.main },
+                "& .MuiTabs-scrollButtons": {
+                  color: theme.palette.success.main,
                 },
-                fontSize: { xs: "0.875rem", sm: "0.9375rem" },
-                width: { xs: "100%", sm: "auto" },
               }}
             >
-              Create Award
-            </Button>
-          </Stack>
-
-          {/* ==============================
-              Tabs: Contests / Organizers / Overview
-          ============================== */}
-          <TabContext value={value}>
-            {/* Tabs Header */}
-            <Box
-              sx={{
-                border: `1px solid ${theme.palette.grey[300]}`,
-                borderBottom: 0,
-                borderTopLeftRadius: 12,
-                borderTopRightRadius: 12,
-                backgroundColor: "#fff",
-                px: 2,
-              }}
-            >
-              <TabList
-                onChange={handleChange}
-                variant="scrollable"
-                scrollButtons="auto"
-                allowScrollButtonsMobile
-                sx={{
-                  "& .MuiTab-root": {
-                    textTransform: "none",
-                    fontWeight: 600,
-                    minHeight: 56,
-                    minWidth: { xs: "auto", sm: 160 },
-                    fontSize: { xs: "0.75rem", sm: "0.875rem" },
-                    px: { xs: 1, sm: 2 },
-                  },
-                  "& .MuiTabs-indicator": {
-                    height: 3,
-                    backgroundColor: theme.palette.success.main,
-                  },
-                  "& .MuiTabs-scrollButtons": {
-                    color: theme.palette.success.main,
-                  },
-                }}
-              >
-                {/* Contests Tab */}
-                <Tab
-                  iconPosition="start"
-                  icon={<CampaignIcon />}
-                  label={
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <span>Contests</span>
-                    </Stack>
-                  }
-                  value="1"
-                />
-
-                {/* Organizers Tab */}
-                <Tab
-                  iconPosition="start"
-                  icon={<GroupIcon />}
-                  label="Manage Organizers"
-                  value="2"
-                />
-
-                {/* Contest Overview Tab */}
-                <Tab
-                  iconPosition="start"
-                  icon={<EmojiEventsIcon />}
-                  label="Contest Overview"
-                  value="3"
-                />
-              </TabList>
-            </Box>
+              <Tab
+                iconPosition="start"
+                icon={<CampaignIcon />}
+                label={
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <span>Contests</span>
+                  </Stack>
+                }
+                value="1"
+              />
+              <Tab iconPosition="start" icon={<GroupIcon />} label="Manage Organizers" value="2" />
+              <Tab iconPosition="start" icon={<EmojiEventsIcon />} label="Contest Overview" value="3" />
+            </TabList>
+          </Box>
 
             {/* --------------------------------
                 Tab Panel: Contests
@@ -457,10 +458,10 @@ export default function Admin() {
         handleClose={() => setOrganizerModal(false)}
         mode={"new"}
       />
-      <ContestModal
-        open={contestModal}
-        handleClose={() => setContestModal(false)}
-        mode={"new"}
+      <ContestModal open={contestModal} handleClose={() => setContestModal(false)} mode={"new"} />
+      <ResendPasswordEmailDialog
+        open={resendEmailModal}
+        onClose={() => setResendEmailModal(false)}
       />
     </Box>
   );

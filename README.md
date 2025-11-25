@@ -1,11 +1,19 @@
-# Running the application:
+# EMDC Frontend
 
-## 1. Without Docker
+Engineering Machine Design Competition (EMDC) Frontend Application - A modern React-based web application for managing competitions, scoring, and tabulation.
 
-1. npm install
-2. npm run dev
+## Running the application:
 
-## 2. With Docker
+### 1. Without Docker
+
+```bash
+npm install
+npm run dev
+```
+
+The application will be available at `http://localhost:5173`
+
+### 2. With Docker
 
 1. Start docker engine
 2. Cd into development-environment folder
@@ -13,6 +21,27 @@
 4. Run docker-compose up -d / docker compose --env-file .env.docker up -d --build web django-api db
 5. Navigate to localhost:7001 to see your changes
 6. To close docker run: docker compose --env-file .env.docker down. 
+
+## 🚀 CI/CD Pipeline
+
+This project uses **GitHub Actions** for continuous integration and deployment:
+
+- ✅ **Automated Testing**: Lint checks and TypeScript validation on every PR
+- ✅ **Build Validation**: Ensures production builds succeed
+- ✅ **Security Scanning**: npm audit for vulnerability detection
+- ✅ **Docker Images**: Automated builds pushed to GitHub Container Registry
+- ✅ **Deployment**: Templates for Vercel, Netlify, DigitalOcean, and VPS
+
+**📖 For detailed CI/CD documentation, see [CI-CD.md](./CI-CD.md)**
+
+### Available Scripts
+
+```bash
+npm run dev      # Start development server
+npm run build    # Build for production
+npm run lint     # Run ESLint
+npm run preview  # Preview production build locally
+```
 
 # Project Overview:
 

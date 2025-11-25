@@ -260,6 +260,7 @@ function JudgesTable(props: IJudgesTableProps) {
   const handleDelete = async (judgeId: number) => {
     try {
       if (!currentCluster) {
+        toast.dismiss();
         toast.error("Cluster information not available. Please refresh the page and try again.");
         return;
       }
@@ -299,6 +300,7 @@ function JudgesTable(props: IJudgesTableProps) {
         removeJudgeFromContestStoreIfNoOtherClusters(judgeId, contestid);
       }
 
+      toast.dismiss();
       toast.success(`Judge removed from ${currentCluster.cluster_name} cluster successfully!`);
     } catch (error: any) {
       let errorMessage = "Failed to remove judge from cluster. Please try again.";
@@ -309,6 +311,7 @@ function JudgesTable(props: IJudgesTableProps) {
       } else if (error?.message) {
         errorMessage = `Failed to remove judge: ${error.message}`;
       }
+      toast.dismiss();
       toast.error(errorMessage);
     }
   };
@@ -328,8 +331,10 @@ function JudgesTable(props: IJudgesTableProps) {
       }
       await getAllJudgesByContestId(contestid, true);
 
+      toast.dismiss();
       toast.success("Judge removed from contest.");
     } catch (error) {
+      toast.dismiss();
       toast.error("Error removing judge from contest.");
     } finally {
       setOpenAreYouSure(false);
@@ -350,9 +355,11 @@ function JudgesTable(props: IJudgesTableProps) {
         await getAllJudgesByContestId(contestid, true);
       }
 
+      toast.dismiss();
       toast.success("Judge deleted from system successfully.");
     } catch (error: any) {
       const msg = error?.response?.data?.detail || error?.message || "Failed to delete judge.";
+      toast.dismiss();
       toast.error(msg);
     } finally {
       setOpenAreYouSure(false);
