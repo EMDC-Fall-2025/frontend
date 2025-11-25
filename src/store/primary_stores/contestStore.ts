@@ -1,33 +1,72 @@
+// ==============================
+// Store: Contest Store
+// Manages contest data, CRUD operations, and synchronization with related entities.
+// Handles contest creation, editing, deletion with automatic data consistency across stores.
+// ==============================
+
+// ==============================
+// Core Dependencies
+// ==============================
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+
+// ==============================
+// API & Types
+// ==============================
 import { api } from "../../lib/api";
 import { Contest, NewContest } from "../../types";
+
+// ==============================
+// Related Store Imports
+// ==============================
 import useMapContestOrganizerStore from "../map_stores/mapContestToOrganizerStore";
 import { useMapContestToTeamStore } from "../map_stores/mapContestToTeamStore";
 import useMapContestJudgeStore from "../map_stores/mapContestToJudgeStore";
 import { useMapClusterToContestStore } from "../map_stores/mapClusterToContestStore";
 import { dispatchDataChange } from "../../utils/dataChangeEvents";
 
+// ==============================
+// Types & Interfaces
+// ==============================
+
 interface ContestState {
+  // Contest data
   allContests: Contest[];
   contest: Contest | null;
+
+  // Loading and error states
   isLoadingContest: boolean;
   contestError: string | null;
+
+  // CRUD operations
   fetchAllContests: (forceRefresh?: boolean) => Promise<void>;
   fetchContestById: (contestId: number) => Promise<void>;
   createContest: (newContest: NewContest) => Promise<void>;
   editContest: (editedContest: Contest) => Promise<void>;
   deleteContest: (contestId: number) => Promise<void>;
+
+  // Utility functions
   clearContest: () => void;
 }
+
+// ==============================
+// Store Implementation
+// ==============================
 
 export const useContestStore = create<ContestState>()(
   persist(
     (set, get) => ({
+      // ==============================
+      // Initial State
+      // ==============================
       allContests: [],
       contest: null,
       isLoadingContest: false,
       contestError: null,
+
+      // ==============================
+      // Utility Functions
+      // ==============================
 
       clearContest: () => {
         set({ contest: null, contestError: null });
@@ -36,6 +75,10 @@ export const useContestStore = create<ContestState>()(
       clearAllContests: () => {
         set({ contest: null, contestError: null });
       },
+
+      // ==============================
+      // Data Fetching Actions
+      // ==============================
 
       fetchAllContests: async (forceRefresh: boolean = false) => {
         const cachedContests = get().allContests;
@@ -67,7 +110,7 @@ export const useContestStore = create<ContestState>()(
           set({ contest: cachedInAll });
           return;
         }
-        
+
         set({ isLoadingContest: true });
         try {
           const { data } = await api.get(`/api/contest/get/${contestId}/`);
@@ -82,6 +125,10 @@ export const useContestStore = create<ContestState>()(
           set({ isLoadingContest: false });
         }
       },
+
+      // ==============================
+      // CRUD Operations
+      // ==============================
 
       createContest: async (newContest: NewContest) => {
         set({ isLoadingContest: true });
@@ -105,7 +152,7 @@ export const useContestStore = create<ContestState>()(
         try {
           const { data } = await api.post(`/api/contest/edit/`, editedContest);
           const updatedContest: Contest = data.Contest;
-          
+
           set((state) => ({
             allContests: state.allContests.map((c) =>
               c.id === updatedContest.id ? updatedContest : c
@@ -114,6 +161,7 @@ export const useContestStore = create<ContestState>()(
             contestError: null,
           }));
 
+          // Synchronize changes across related stores
           const { updateContestInMappings } = useMapContestOrganizerStore.getState();
           updateContestInMappings(updatedContest.id, updatedContest);
 
@@ -140,6 +188,7 @@ export const useContestStore = create<ContestState>()(
             contestError: null,
           }));
 
+          // Clean up related data across all stores
           const { removeContestFromAllOrganizers } = useMapContestOrganizerStore.getState();
           removeContestFromAllOrganizers(contestId);
 
@@ -162,6 +211,9 @@ export const useContestStore = create<ContestState>()(
       },
     }),
     {
+      // ==============================
+      // Persistence Configuration
+      // ==============================
       name: "contest-storage",
       storage: createJSONStorage(() => sessionStorage),
     }

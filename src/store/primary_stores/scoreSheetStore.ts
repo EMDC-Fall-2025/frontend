@@ -1,32 +1,55 @@
+// ==============================
+// Store: ScoreSheet Store
+// Comprehensive scoresheet management with caching, multi-team operations, and breakdown handling.
+// Manages individual and bulk scoresheet operations with performance optimizations.
+// ==============================
+
+// ==============================
+// Core Dependencies
+// ==============================
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+
+// ==============================
+// API & Notifications
+// ==============================
 import { api } from "../../lib/api";
 import toast from "react-hot-toast";
+
+// ==============================
+// Types
+// ==============================
 import { ScoreSheet, ScoreSheetDetails } from "../../types";
 
+// ==============================
+// Types & Interfaces
+// ==============================
+
 interface ScoreSheetState {
+  // Scoresheet data
   scoreSheet: ScoreSheet | null;
   createdScoreSheets: ScoreSheet[]; // Array to store created score sheets
+  multipleScoreSheets: ScoreSheet[] | null;
+
+  // Loading and error states
   isLoadingScoreSheet: boolean;
   scoreSheetError: string | null;
+
+  // Breakdown data and caching
   scoreSheetBreakdown: ScoreSheetDetails;
-  multipleScoreSheets: ScoreSheet[] | null;
-  // Lightweight cache for breakdowns to speed up page loads
   scoreSheetBreakdownByTeam?: { [teamId: number]: ScoreSheetDetails };
   scoreBreakdownCacheTsByTeam?: { [teamId: number]: number };
-  
-  // Existing methods
+
+  // Individual scoresheet operations
   fetchScoreSheetById: (scoresId: number) => Promise<void>;
   createScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>;
   editScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>;
   updateScores: (data: Partial<ScoreSheet>) => Promise<void>;
-  submitScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>; 
-  editScoreSheetField: (
-    id: number,
-    field: string | number,
-    newValue: any
-  ) => Promise<void>;
+  submitScoreSheet: (data: Partial<ScoreSheet>) => Promise<void>;
+  editScoreSheetField: (id: number, field: string | number, newValue: any) => Promise<void>;
   deleteScoreSheet: (scoresId: number) => Promise<void>;
+
+  // Bulk operations
   createSheetsForTeamsInCluster: (
     judgeId: number,
     clusterId: number,
@@ -35,16 +58,18 @@ interface ScoreSheetState {
     journal: boolean,
     mdo: boolean
   ) => Promise<void>;
-  clearScoreSheet: () => void;
-  getScoreSheetBreakdown: (teamId: number) => Promise<void>;
-  clearScoreBreakdown: () => void;
-  setScoreSheet: (scoreSheet: ScoreSheet) => void;
-  
-  // New methods
   fetchMultipleScoreSheets: (teamIds: number[], judgeId: number, sheetType: number) => Promise<void>;
   updateMultipleScores: (scoreSheets: Partial<ScoreSheet>[]) => Promise<void>;
   submitMultipleScoreSheets: (scoreSheets: Partial<ScoreSheet>[]) => Promise<void>;
   fetchMultiTeamPenalties: (judgeId: number, contestId: number, sheetType: number) => Promise<void>;
+
+  // Breakdown and caching operations
+  getScoreSheetBreakdown: (teamId: number) => Promise<void>;
+  clearScoreBreakdown: () => void;
+
+  // Utility functions
+  clearScoreSheet: () => void;
+  setScoreSheet: (scoreSheet: ScoreSheet) => void;
 }
 
 export const useScoreSheetStore = create<ScoreSheetState>()(

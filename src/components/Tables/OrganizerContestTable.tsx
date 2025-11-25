@@ -249,9 +249,6 @@ if (type === "current" && contests) {
           <Link
             component="button"
             onClick={() => {
-              // Mark that we're navigating into Internal Results so the preloader shows.
-              // InternalResults reads this flag from sessionStorage and only uses it
-              // for the first load, then clears it.
               sessionStorage.setItem("fromRankings", "true");
               navigate(`/results/${contest.id}/`);
             }}

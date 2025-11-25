@@ -13,11 +13,11 @@ import {
   Typography,
   TextField,
   Button,
-  Link,
   Divider,
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../../theme";
 import { useNavigate } from "react-router-dom";
 import { useMapScoreSheetStore } from "../../store/map_stores/mapScoreSheetStore";
@@ -452,120 +452,133 @@ export default function ChampionshipScoreSheetTable({
     </Box>
   ) : (
     <>
-      {/* Back link to the judging dashboard */}
-      <Link
-        onClick={() => navigate(-1)}
+      {/* Navigation back to judging dashboard - aligned with navbar */}
+      <Container
+        maxWidth="lg"
         sx={{
-          textDecoration: "none",
-          cursor: "pointer",
-          display: "inline-flex",
-          alignItems: "center",
-          mx: { xs: 1, sm: 2 },
+          px: { xs: 1, sm: 2 },
           mt: { xs: 1, sm: 2 },
-          color: theme.palette.success.main,
-          "&:hover": { color: theme.palette.success.dark },
+          mb: 1,
         }}
       >
-        <Typography variant="body2" sx={{ 
-          fontWeight: 600,
-          fontSize: { xs: "0.8rem", sm: "0.875rem" }
-        }}>
-          {"<"} Back to Judging Dashboard{" "}
-        </Typography>
-      </Link>
-
-      {/* Page title + team name (subtitle) */}
-      <Box sx={{ 
-        mx: { xs: 1, sm: 2 }, 
-        mt: { xs: 2, sm: 3 }, 
-        mb: 0.5, 
-        display: 'flex', 
-        flexDirection: { xs: 'column', sm: 'row' },
-        alignItems: { xs: 'flex-start', sm: 'center' }, 
-        gap: { xs: 1, sm: 2 }
-      }}>
-        <Typography
-          variant="h4"
+        <Button
+          onClick={() => navigate(-1)}
+          startIcon={<ArrowBackIcon />}
           sx={{
-            fontWeight: 800,
-            color: theme.palette.success.main,
-            fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" }
+            textTransform: "none",
+            color: theme.palette.success.dark,
+            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+            fontWeight: 500,
+            px: { xs: 1.5, sm: 2 },
+            py: { xs: 0.75, sm: 1 },
+            borderRadius: "8px",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              backgroundColor: "rgba(76, 175, 80, 0.08)",
+              transform: "translateX(-2px)",
+            },
           }}
         >
-          {title}
-        </Typography>
-        {/* Completion indicator */}
+          Back to Judging Dashboard
+        </Button>
+      </Container>
+
+      {/* Page title + team name (subtitle) */}
+      <Box sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        width: "100%",
+        mt: { xs: 2, sm: 3 },
+        mb: 0.5,
+      }}>
         <Box sx={{ 
           display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' },
           alignItems: 'center', 
-          gap: 1,
-          px: { xs: 1.5, sm: 2 },
-          py: 0.5,
-          borderRadius: 2,
-          bgcolor: allFieldsFilled() ? theme.palette.success.light : theme.palette.grey[100],
-          border: `1px solid ${allFieldsFilled() ? theme.palette.success.main : theme.palette.grey[300]}`,
-          alignSelf: { xs: 'flex-start', sm: 'center' }
+          gap: { xs: 1, sm: 2 }
         }}>
-          {allFieldsFilled() ? (
-            <CheckIcon sx={{ color: theme.palette.success.main, fontSize: { xs: '16px', sm: '20px' } }} />
-          ) : (
-            <CloseIcon sx={{ color: theme.palette.error.main, fontSize: { xs: '16px', sm: '20px' } }} />
-          )}
-          <Typography variant="body2" sx={{ 
-            fontWeight: 600,
-            color: allFieldsFilled() ? theme.palette.success.main : theme.palette.text.secondary,
-            fontSize: { xs: '10px', sm: '12px' }
-          }}>
-            {allFieldsFilled() ? 'Complete' : 'Incomplete'}
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 800,
+              color: theme.palette.success.main,
+              fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" },
+              textAlign: "center",
+            }}
+          >
+            {title}
           </Typography>
+          {/* Completion indicator */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1,
+            px: { xs: 1.5, sm: 2 },
+            py: 0.5,
+            borderRadius: 2,
+            bgcolor: allFieldsFilled() ? theme.palette.success.light : theme.palette.grey[100],
+            border: `1px solid ${allFieldsFilled() ? theme.palette.success.main : theme.palette.grey[300]}`,
+          }}>
+            {allFieldsFilled() ? (
+              <CheckIcon sx={{ color: theme.palette.success.main, fontSize: { xs: '16px', sm: '20px' } }} />
+            ) : (
+              <CloseIcon sx={{ color: theme.palette.error.main, fontSize: { xs: '16px', sm: '20px' } }} />
+            )}
+            <Typography variant="body2" sx={{ 
+              fontWeight: 600,
+              color: allFieldsFilled() ? theme.palette.success.main : theme.palette.text.secondary,
+              fontSize: { xs: '10px', sm: '12px' }
+            }}>
+              {allFieldsFilled() ? 'Complete' : 'Incomplete'}
+            </Typography>
+          </Box>
         </Box>
+        <Typography 
+          variant="subtitle2" 
+          color="text.secondary" 
+          sx={{ 
+            mb: 2,
+            fontSize: { xs: "0.875rem", sm: "0.9rem" },
+            textAlign: "center",
+          }}
+        >
+          {teamName}
+        </Typography>
       </Box>
-      <Typography 
-        variant="subtitle2" 
-        color="text.secondary" 
-        sx={{ 
-          mx: { xs: 1, sm: 2 }, 
-          mb: 2,
-          fontSize: { xs: "0.875rem", sm: "0.9rem" }
-        }}
-      >
-        {teamName}
-      </Typography>
 
       {/* Submitted banner */}
       {scoreSheet?.isSubmitted && (
-        <Box sx={{
-          mx: { xs: 0.5, sm: 1, md: 2 },
-          mb: 2,
-          p: 2,
-          bgcolor: theme.palette.success.light,
-          borderRadius: 2,
-          border: `2px solid ${theme.palette.success.main}`,
-          textAlign: 'center'
-        }}>
-          <Typography variant="h6" sx={{ 
-            color: theme.palette.success.main,
-            fontWeight: 600,
-            fontSize: { xs: "0.9rem", sm: "1rem" }
+        <Container maxWidth="lg" sx={{ mb: 2 }}>
+          <Box sx={{
+            p: 2,
+            bgcolor: theme.palette.success.light,
+            borderRadius: 2,
+            border: `2px solid ${theme.palette.success.main}`,
+            textAlign: 'center'
           }}>
-            ✓ Scores Successfully Submitted - Form Locked
-          </Typography>
-        </Box>
+            <Typography variant="h6" sx={{ 
+              color: theme.palette.success.main,
+              fontWeight: 600,
+              fontSize: { xs: "0.9rem", sm: "1rem" }
+            }}>
+              ✓ Scores Successfully Submitted - Form Locked
+            </Typography>
+          </Box>
+        </Container>
       )}
 
       {/* Main card container for actions + sections */}
       <Container
         component="form"
+        maxWidth="lg"
         sx={{
-          width: "100%",
-          maxWidth: "100vw",
           p: { xs: 1, sm: 2, md: 3 },
           bgcolor: "#fff", 
           borderRadius: 3,
           opacity: scoreSheet?.isSubmitted ? 0.7 : 1,
           pointerEvents: scoreSheet?.isSubmitted ? 'none' : 'auto',
           border: `1px solid ${theme.palette.grey[300]}`,
-          mx: { xs: 0.5, sm: 1, md: 2 },
           mb: 3,
         }}
       >
@@ -803,17 +816,21 @@ export default function ChampionshipScoreSheetTable({
                                     type="number"
                                     value={formData[index + 1] || ""}
                                     disabled={scoreSheet?.isSubmitted}
+                                    onWheel={(e) => {
+                                      const inputElement = e.target as HTMLInputElement;
+                                      inputElement.blur();
+                                    }}
                                     onChange={(e) => {
-                                      // enforce allowed range: [lowPoints, highPoints] or empty
+          
                                       let value: any = e.target.value;
 
                                       if (value !== undefined) {
                                         if (value === "") {
-                                          value = undefined; // Clear the field
+                                          value = undefined; 
                                         } else if (Number(value) < question.lowPoints) {
-                                          value = undefined; // Clear if below range
+                                          value = undefined; 
                                         } else if (Number(value) > question.highPoints) {
-                                          value = undefined; // Clear if above range
+                                          value = undefined; 
                                         } else {
                                           value = Number(value); // Convert to number if valid
                                         }
@@ -1062,6 +1079,10 @@ export default function ChampionshipScoreSheetTable({
                                     type="number"
                                     value={formData[index + 10] || ""}
                                     disabled={scoreSheet?.isSubmitted}
+                                    onWheel={(e) => {
+                                      const inputElement = e.target as HTMLInputElement;
+                                      inputElement.blur();
+                                    }}
                                     onChange={(e) => {
                           
                                       let value: any = e.target.value;

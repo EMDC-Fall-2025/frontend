@@ -123,8 +123,10 @@ export default function JudgeModal(props: IJudgeModalProps) {
 
   useEffect(() => {
     if (judgeData) {
-      getUserByRole(judgeData.id, 3).catch(() => {
-        // Silently fail - not critical for editing
+      // Fetch user data for email field, but don't fail if it doesn't work
+      getUserByRole(judgeData.id, 3).catch((error) => {
+        console.warn('Could not fetch user data for judge:', judgeData.id, error);
+        // Email will remain empty, but modal can still be used
       });
     }
   }, [judgeData, getUserByRole]);
@@ -133,14 +135,17 @@ export default function JudgeModal(props: IJudgeModalProps) {
     if (judgeData) {
       setFirstName(judgeData.firstName || '');
       setLastName(judgeData.lastName || '');
-      setEmail(judgeData.firstName ? user?.username || '' : '');
+      // Set email from user data if available, otherwise leave empty
+      setEmail(user?.username || '');
+      // Set cluster ID if cluster data is available, otherwise -1
       setClusterId(judgeData.cluster?.id || -1);
       setPhoneNumber(judgeData.phoneNumber || '');
+
+      // Initialize selected sheets from judge data
       const initialSheets = scoringSheetOptions
         .filter((option) => judgeData[option.value as keyof typeof judgeData])
         .map((option) => option.value);
-      
-      
+
       setSelectedSheets(initialSheets);
       setSelectedTitle(Number(judgeData.role) || 0);
     }
@@ -308,23 +313,30 @@ export default function JudgeModal(props: IJudgeModalProps) {
         });
 
         // Add all existing championship/redesign assignments (preserve them)
+        // Also preserve any cluster that has championship or redesign flags set
         for (const existingCluster of existingClusters as any) {
           const clusterType = getClusterType(existingCluster);
-          if (clusterType === 'championship' || clusterType === 'redesign') {
-            // Keep championship/redesign assignments
-            clusterAssignments.push({
-              clusterid: existingCluster.id,
-              contestid: existingCluster.contest_id,
-              presentation: existingCluster.sheet_flags?.presentation || false,
-              journal: existingCluster.sheet_flags?.journal || false,
-              mdo: existingCluster.sheet_flags?.mdo || false,
-              runpenalties: existingCluster.sheet_flags?.runpenalties || false,
-              otherpenalties: existingCluster.sheet_flags?.otherpenalties || false,
-              redesign: existingCluster.sheet_flags?.redesign || false,
-              championship: existingCluster.sheet_flags?.championship || false,
-            });
+          const hasChampionshipFlags = existingCluster.sheet_flags?.championship ||
+                                       existingCluster.sheet_flags?.redesign;
+
+          // Keep championship/redesign clusters OR clusters with championship/redesign flags
+          if (clusterType === 'championship' || clusterType === 'redesign' || hasChampionshipFlags) {
+            // Don't include the cluster we're currently editing
+            if (existingCluster.id !== selectedClusterId) {
+              clusterAssignments.push({
+                clusterid: existingCluster.id,
+                contestid: existingCluster.contest_id || contestid, // Fallback to current contest
+                presentation: existingCluster.sheet_flags?.presentation || false,
+                journal: existingCluster.sheet_flags?.journal || false,
+                mdo: existingCluster.sheet_flags?.mdo || false,
+                runpenalties: existingCluster.sheet_flags?.runpenalties || false,
+                otherpenalties: existingCluster.sheet_flags?.otherpenalties || false,
+                redesign: existingCluster.sheet_flags?.redesign || false,
+                championship: existingCluster.sheet_flags?.championship || false,
+              });
+            }
           }
-          // Skip preliminary clusters - we'll replace with the new one
+          // Skip other clusters - we'll replace with the new one if it's preliminary
         }
 
         const updatedData = {
@@ -519,54 +531,79 @@ export default function JudgeModal(props: IJudgeModalProps) {
           >
             <InputLabel sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>Cluster</InputLabel>
             <Select
-              value={clusterId}
-              label="Cluster"
-              disabled={isChampionshipOrRedesignJudge}
-              sx={{ 
-                textAlign: "left",
-                fontSize: { xs: "0.9rem", sm: "1rem" }
-              }}
-              onChange={(e) => {
-                const newClusterId = Number(e.target.value);
-                setClusterId(newClusterId);
+  value={clusterId}
+  label="Cluster"
+  disabled={isChampionshipOrRedesignJudge}
+  sx={{ 
+    textAlign: "left",
+    fontSize: { xs: "0.9rem", sm: "1rem" }
+  }}
+  onChange={(e) => {
+    const newClusterId = Number(e.target.value);
+    setClusterId(newClusterId);
 
-                // Update scoresheet options based on cluster type
-                if (newClusterId !== -1 && clusters) {
-                  const selectedCluster = clusters.find(c => c.id === newClusterId);
-                  if (selectedCluster) {
-                    const clusterType = getClusterType(selectedCluster);
+    // Update scoresheet options based on cluster type
+    if (newClusterId !== -1 && clusters) {
+      const selectedCluster = clusters.find(c => c.id === newClusterId);
+      if (selectedCluster) {
+        const clusterType = getClusterType(selectedCluster);
 
-                    if (clusterType === 'championship') {
-                      // Championship clusters can only have championship scoresheets
-                      setSelectedSheets(["championshipSS"]);
-                    } else if (clusterType === 'redesign') {
-                      // Redesign clusters can only have redesign scoresheets
-                      setSelectedSheets(["redesignSS"]);
-                    } else {
-                      // Preliminary clusters - allow multiple scoresheets, default to common ones
-                      setSelectedSheets(["presSS", "journalSS", "mdoSS"]);
-                    }
-                  }
-                } else if (newClusterId === -1) {
-                  // Reset when no cluster selected
-                  setSelectedSheets([]);
-                }
+        if (clusterType === 'championship') {
+          // Championship clusters can only have championship scoresheets
+          setSelectedSheets(["championshipSS"]);
+        } else if (clusterType === 'redesign') {
+          // Redesign clusters can only have redesign scoresheets
+          setSelectedSheets(["redesignSS"]);
+        } else {
+          // Preliminary clusters - allow multiple scoresheets, default to common ones
+          setSelectedSheets(["presSS", "journalSS", "mdoSS"]);
+        }
+      }
+    } else if (newClusterId === -1) {
+      // Reset when no cluster selected
+      setSelectedSheets([]);
+    }
+  }}
+>
+  {clusters
+    ?.filter(cluster => {
+      // In edit mode, only show preliminary clusters (never show championship/redesign)
+      if (mode === "edit") {
+        return getClusterType(cluster) === 'preliminary';
+      }
+      return true;
+    })
+    ?.map((clusterItem) => {
+      const clusterType = clusterItem.cluster_type || 
+        (clusterItem.cluster_name?.toLowerCase().includes('championship') ? 'championship' :
+         clusterItem.cluster_name?.toLowerCase().includes('redesign') ? 'redesign' : 'preliminary');
+      
+      return (
+        <MenuItem key={clusterItem.id} value={clusterItem.id} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+            <span>{clusterItem.cluster_name}</span>
+            <Chip 
+              label={clusterType.charAt(0).toUpperCase() + clusterType.slice(1)}
+              size="small"
+              sx={{
+                ml: 1,
+                height: 20,
+                fontSize: "0.7rem",
+                backgroundColor: 
+                  clusterType === 'championship' ? theme.palette.warning.light :
+                  clusterType === 'redesign' ? theme.palette.info.light :
+                  theme.palette.success.light,
+                color: 
+                  clusterType === 'championship' ? theme.palette.warning.dark :
+                  clusterType === 'redesign' ? theme.palette.info.dark :
+                  theme.palette.success.dark,
               }}
-            >
-              {clusters
-                ?.filter(cluster => {
-                  // In edit mode, only show preliminary clusters (never show championship/redesign)
-                  if (mode === "edit") {
-                    return getClusterType(cluster) === 'preliminary';
-                  }
-                  return true;
-                })
-                ?.map((clusterItem) => (
-                <MenuItem key={clusterItem.id} value={clusterItem.id} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
-                  {clusterItem.cluster_name}
-                </MenuItem>
-              ))}
-            </Select>
+            />
+          </Box>
+        </MenuItem>
+      );
+    })}
+</Select>
             {errors.cluster && !errorMessage && (
               <FormHelperText error sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
                 {isChampionshipOrRedesignJudge 

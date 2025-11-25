@@ -64,7 +64,7 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
         }
       },
 
-      clearAllSubmittedForContests: async () => {
+      clearAllSubmittedForContests: () => {
         try {
           set({ allSubmittedForContests: {} });
           set({ mapScoreSheetError: null });
@@ -75,16 +75,12 @@ export const useMapScoreSheetStore = create<MapScoreSheetState>()(
         }
       },
 
-      clearMappings: async () => {
-        try {
-          set({ mappings: {} });
-          set({ mapScoreSheetError: null });
-        } catch (error) {
-          const errorMessage = "Error clearing out mappings in state";
-          set({ mapScoreSheetError: errorMessage });
-          throw new Error(errorMessage);
-        }
+      clearMappings: () => {
+        console.log("[mapScoreSheetStore] clearMappings called");
+        console.trace(); 
+        set({ mappings: {} });
       },
+
 
       fetchScoreSheetsByJudge: async (judgeId: number) => {
         set({ isLoadingMapScoreSheet: true });

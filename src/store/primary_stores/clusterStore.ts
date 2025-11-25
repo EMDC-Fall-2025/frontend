@@ -1,13 +1,39 @@
+// ==============================
+// Store: Cluster Store
+// Manages cluster data and CRUD operations.
+// Handles cluster creation, editing, and deletion with data change notifications.
+// ==============================
+
+// ==============================
+// Core Dependencies
+// ==============================
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+
+// ==============================
+// API & Utilities
+// ==============================
 import { api } from "../../lib/api";
-import { Cluster } from "../../types";
 import { dispatchDataChange } from "../../utils/dataChangeEvents";
 
+// ==============================
+// Types
+// ==============================
+import { Cluster } from "../../types";
+
+// ==============================
+// Types & Interfaces
+// ==============================
+
 interface ClusterState {
+  // Cluster data
   cluster: Cluster | null;
+
+  // Loading and error states
   isLoadingCluster: boolean;
   clusterError: string | null;
+
+  // CRUD operations
   fetchClusterById: (clusterId: number) => Promise<void>;
   createCluster: (data: {
     cluster_name: string;
@@ -16,6 +42,8 @@ interface ClusterState {
   }) => Promise<Cluster>;
   editCluster: (data: { id: number; cluster_name: string; cluster_type?: string }) => Promise<Cluster>;
   deleteCluster: (clusterId: number) => Promise<void>;
+
+  // Utility functions
   clearCluster: () => void;
 }
 

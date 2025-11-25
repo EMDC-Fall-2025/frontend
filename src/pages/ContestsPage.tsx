@@ -1,23 +1,57 @@
+// ==============================
+// Component: ContestsPage
+// Main contests listing page with interactive navigation.
+// Displays available contests with status indicators and navigation to results.
+// ==============================
+
+// ==============================
+// React Core
+// ==============================
 import { useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom"; // 
+
+// ==============================
+// Router
+// ==============================
+import { useNavigate, Link } from "react-router-dom";
+
+// ==============================
+// UI Libraries & Theme
+// ==============================
 import Typography from "@mui/material/Typography";
 import { Container, Stack, Button, Box } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../theme";
-import { useContestStore } from "../store/primary_stores/contestStore";
-import ContestTable from "../components/Tables/ContestTable";
-import InteractiveGrid from "../components/Cube";
 import toast from "react-hot-toast";
 
-// FILE OVERVIEW: page for displaying contests
+// ==============================
+// Store Hooks
+// ==============================
+import { useContestStore } from "../store/primary_stores/contestStore";
+
+// ==============================
+// Local Components
+// ==============================
+import ContestTable from "../components/Tables/ContestTable";
+import InteractiveGrid from "../components/Cube";
 export default function Contests() {
+  // ------------------------------
+  // Store State & Actions
+  // ------------------------------
   const { allContests, fetchAllContests, isLoadingContest } = useContestStore();
+
+  // ------------------------------
+  // Navigation
+  // ------------------------------
   const navigate = useNavigate();
 
-  // Get all contests
+  // ==============================
+  // Data Loading & Effects
+  // ==============================
+
+  // Fetch all contests on component mount
   useEffect(() => {
     fetchAllContests();
-  }, []);
+  }, [fetchAllContests]);
 
   // function to create data row
   function createData(
@@ -75,7 +109,7 @@ export default function Contests() {
     .map((contest: { id: number; name: string; date: string; is_open: boolean; is_tabulated: boolean }) =>
       createData(contest.id, contest.name, contest.date, contest.is_open, contest.is_tabulated)
     )
-
+    .filter((row: { status: string }) => row.status !== "Not Started")
     .sort((a: { status: string }, b: { status: string }) => {
       const order = { Finalized: 1, "In Progress": 2, "Not Started": 3 };
       return order[a.status as keyof typeof order] - order[b.status as keyof typeof order];
@@ -117,10 +151,10 @@ export default function Contests() {
           </Button>
         </Box>
 
-        <Stack 
-          direction="row" 
-          spacing={2} 
-          alignItems="center" 
+        <Stack
+          direction="row"
+          spacing={2}
+          alignItems="center"
           sx={{ mb: 1 }}
         >
           <Typography

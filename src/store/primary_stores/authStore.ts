@@ -1,29 +1,83 @@
+// ==============================
+// Store: Authentication Store
+// Manages user authentication state, login/logout functionality, and session persistence.
+// Includes preloader state management for login experience.
+// ==============================
+
+// ==============================
+// Core Dependencies
+// ==============================
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+
+// ==============================
+// API & Types
+// ==============================
 import { api } from "../../lib/api";
 import { Role } from "../../types";
 
+// ==============================
+// Types & Interfaces
+// ==============================
+
 interface AuthState {
+  // User authentication data
   user: null | { id: number; username: string };
   role: null | Role;
+
+  // Authentication state flags
   authError: string | null;
   isAuthenticated: boolean;
   isLoadingAuth: boolean;
+
+  // Preloader state for login experience
+  showPreloader: boolean; // Track if we should show preloader after login
+  preloaderProgress: string; // Progress message to show in preloader
+
+  // Authentication actions
   login: (username: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  setShowPreloader: (show: boolean) => void;
+  setPreloaderProgress: (progress: string) => void;
 }
+
+// ==============================
+// Store Implementation
+// ==============================
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
+      // ==============================
+      // Initial State
+      // ==============================
       user: null,
       role: null,
       authError: null,
       isAuthenticated: false,
       isLoadingAuth: false,
+      showPreloader: false,
+      preloaderProgress: '',
+
+      // ==============================
+      // Preloader Actions
+      // ==============================
+
+      setShowPreloader: (show: boolean) => {
+        set({ showPreloader: show });
+      },
+
+      setPreloaderProgress: (progress: string) => {
+        set({ preloaderProgress: progress });
+      },
+
+      // ==============================
+      // Authentication Actions
+      // ==============================
 
       login: async (username, password) => {
-        set({ isLoadingAuth: true, authError: null });
+        set({ isLoadingAuth: true, showPreloader: true }); // Show preloader immediately
+        set({ authError: null });
 
         try {
           const { data } = await api.post(`/api/login/`, {
@@ -36,34 +90,23 @@ export const useAuthStore = create<AuthState>()(
             role: data.role ?? null,
             isAuthenticated: true,
             isLoadingAuth: false,
-            authError: null,
           });
+          set({ authError: null });
         } catch (authError: any) {
-          console.error("Login error:", authError);
-          set({
-            isLoadingAuth: false,
-            isAuthenticated: false,
-            role: null,
-            authError: "Login failed",
-          });
+          set({ isLoadingAuth: false, showPreloader: false });
+          set({ authError: "Login Unsuccessful" });
           throw authError;
         }
       },
 
-      logout: () => {
+      logout: async () => {
         // Clear authentication state immediately for instant UI update
-        set({
-          user: null,
-          role: null,
-          isAuthenticated: false,
-          isLoadingAuth: false,
-          authError: null,
-        });
+        set({ user: null, role: null, isAuthenticated: false, showPreloader: false, preloaderProgress: '' });
         sessionStorage.clear();
 
         try {
           // Make logout API call (don't block UI on this)
-          api.post(`/api/logout/`, {});
+          await api.post(`/api/logout/`, {});
         } catch (error) {
           // Even if logout API fails, user is already logged out locally
           console.error("Logout API error:", error);
@@ -71,6 +114,9 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
+      // ==============================
+      // Persistence Configuration
+      // ==============================
       name: "auth-storage",
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({

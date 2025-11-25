@@ -102,7 +102,7 @@ export default function ScoreBreakdownTableGeneralPenalties() {
                   GeneralPenaltiesScoreSheetFields[
                     field as keyof typeof GeneralPenaltiesScoreSheetFields
                   ]
-                ].join(", ")
+                ].map((v: any) => Math.abs(Number(v) || 0)).join(", ")
               : "0"}
           </Typography>
         </TableCell>

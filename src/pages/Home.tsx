@@ -1,7 +1,16 @@
 import { Box, Container, Typography, Paper } from "@mui/material";
 import image from "../assets/group.webp";
+import { useEffect, useRef } from "react";
 
 export default function Home() {
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    if (imgRef.current) {
+      imgRef.current.setAttribute("fetchpriority", "high");
+    }
+  }, []);
+
   return (
     <Box sx={{ bgcolor: "#fafafa", minHeight: "100vh" }}>
       {/* Hero Image Section */}
@@ -17,6 +26,7 @@ export default function Home() {
           }}
         >
           <img
+            ref={imgRef}
             src={image}
             alt="Engineering Machine Design Contest Hero Image"
             width={1200}

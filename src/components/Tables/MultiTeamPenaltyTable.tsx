@@ -14,6 +14,8 @@ import {
   Typography,
   Button,
   Checkbox,
+ useTheme as useMuiTheme,   
+  useMediaQuery,          
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
@@ -24,9 +26,11 @@ import theme from "../../theme";
 import { useNavigate } from "react-router-dom";
 import AreYouSureModal from "../Modals/AreYouSureModal";
 import { useScoreSheetStore } from "../../store/primary_stores/scoreSheetStore";
-import { useMapScoreSheetStore } from "../../store/map_stores/mapScoreSheetStore";
+import { useMapScoreSheetStore } from "../../store/map_stores/mapScoreSheetStore"; // 👈 add this
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+
+
 
 type PenaltyQuestion = {
   id: number;
@@ -55,20 +59,23 @@ export default function MultiTeamPenaltyTable({
   title,
   penalties,
   judgeId,
-
 }: IMultiTeamPenaltyTableProps) {
+  const muiTheme = useMuiTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
+
   // Tracks expand/collapse state per penalty category
-  const [openRows, setOpenRows] = React.useState<{ [key: string]: boolean }>({});
+  const [openRows, setOpenRows] = React.useState<{ [key: string]: boolean }>(
+    {}
+  );
 
   // Store wiring
   const {
     multipleScoreSheets,
-    //fetchMultipleScoreSheets,
     updateMultipleScores,
     submitMultipleScoreSheets,
-    isLoadingScoreSheet
+    isLoadingScoreSheet,
   } = useScoreSheetStore();
-  
+
   // Mapping store to refresh judge dashboard after updates
   const { fetchScoreSheetsByJudge } = useMapScoreSheetStore();
 
@@ -90,12 +97,10 @@ export default function MultiTeamPenaltyTable({
     const currentSet = new Set(teamOrderRef.current);
     const incomingSet = new Set(ids);
 
-    // Keep existing order for ids that still exist, then append any new ids at the end
-    const reconciled = teamOrderRef.current.filter((id) => incomingSet.has(id)).concat(
-      ids.filter((id) => !currentSet.has(id))
-    );
+    const reconciled = teamOrderRef.current
+      .filter((id) => incomingSet.has(id))
+      .concat(ids.filter((id) => !currentSet.has(id)));
 
-    // Only update ref if order actually changed
     if (
       reconciled.length !== teamOrderRef.current.length ||
       reconciled.some((id, idx) => id !== teamOrderRef.current[idx])
@@ -122,14 +127,12 @@ export default function MultiTeamPenaltyTable({
       .map((id) => byId.get(id))
       .filter((t): t is { id: number; name: string } => !!t);
 
-    // Fallback if ref not initialized yet
     return ordered.length > 0 ? ordered : Array.from(byId.values());
   }, [multipleScoreSheets]);
 
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
   const navigate = useNavigate();
 
-  // Toggle a penalty category open/closed
   const handleToggle = (category: string) => {
     setOpenRows((prevState) => ({
       ...prevState,
@@ -137,35 +140,32 @@ export default function MultiTeamPenaltyTable({
     }));
   };
 
-  // Expand all categories
   const handleExpandAllRows = () => {
     const categories = [...new Set(penalties.map((p) => p.penaltyType))];
-    const expanded = categories.reduce((acc, cat) => ({ ...acc, [cat]: true }), {});
+    const expanded = categories.reduce(
+      (acc, cat) => ({ ...acc, [cat]: true }),
+      {}
+    );
     setOpenRows(expanded);
   };
 
-  // Collapse all categories
   const handleCollapseAllRows = () => {
     const categories = [...new Set(penalties.map((p) => p.penaltyType))];
-    const closed = categories.reduce((acc, cat) => ({ ...acc, [cat]: false }), {});
+    const closed = categories.reduce(
+      (acc, cat) => ({ ...acc, [cat]: false }),
+      {}
+    );
     setOpenRows(closed);
   };
 
   // Local form state: penaltyState[teamId][penaltyId] = count (0 or higher)
-  // For checkboxes: 0 = unchecked, 1 = checked
-  // For counters: 0, 1, 2, 3... (number of occurrences)
   const [penaltyState, setPenaltyState] = useState<{
     [teamId: number]: {
       [penaltyId: number]: number;
     };
   }>({});
 
-  
-  // This useEffect is kept for backwards compatibility but the parent handles fetching
-
   // Hydrate penaltyState from fetched sheets
-  // Backend stores: field value = count × pointValue
-  // So to get count: divide by pointValue
   useEffect(() => {
     if (multipleScoreSheets && multipleScoreSheets.length > 0) {
       const newPenaltyState: {
@@ -180,14 +180,15 @@ export default function MultiTeamPenaltyTable({
         newPenaltyState[sheet.teamId] = {};
 
         penalties.forEach((penalty) => {
-          const fieldValue = Number(sheet[penalty.field as keyof typeof sheet] || 0);
-          // Calculate count from stored value
-          const count = fieldValue === 0 ? 0 : Math.abs(fieldValue) / penalty.pointValue;
+          const fieldValue = Number(
+            sheet[penalty.field as keyof typeof sheet] || 0
+          );
+          const count =
+            fieldValue === 0 ? 0 : Math.abs(fieldValue) / penalty.pointValue;
           newPenaltyState[sheet.teamId][penalty.id] = count;
         });
       });
 
-      // Ensure every filtered team has an entry
       filteredTeams.forEach((team) => {
         if (!newPenaltyState[team.id]) {
           newPenaltyState[team.id] = {};
@@ -201,7 +202,6 @@ export default function MultiTeamPenaltyTable({
     }
   }, [multipleScoreSheets, filteredTeams, penalties]);
 
-  // Handle checkbox toggle (0 or 1)
   const handleCheckboxChange = (teamId: number, penaltyId: number) => {
     setPenaltyState((prev) => ({
       ...prev,
@@ -212,29 +212,39 @@ export default function MultiTeamPenaltyTable({
     }));
   };
 
-  // Handle increment (with upper bound)
-  const handleIncrement = (teamId: number, penaltyId: number, upperBound: number) => {
+  const handleIncrement = (
+    teamId: number,
+    penaltyId: number,
+    upperBound: number
+  ) => {
     setPenaltyState((prev) => ({
       ...prev,
       [teamId]: {
         ...(prev[teamId] || {}),
-        [penaltyId]: Math.min((prev[teamId]?.[penaltyId] || 0) + 1, upperBound),
+        [penaltyId]: Math.min(
+          (prev[teamId]?.[penaltyId] || 0) + 1,
+          upperBound
+        ),
       },
     }));
   };
 
-  // Handle decrement (with lower bound)
-  const handleDecrement = (teamId: number, penaltyId: number, lowerBound: number) => {
+  const handleDecrement = (
+    teamId: number,
+    penaltyId: number,
+    lowerBound: number
+  ) => {
     setPenaltyState((prev) => ({
       ...prev,
       [teamId]: {
         ...(prev[teamId] || {}),
-        [penaltyId]: Math.max((prev[teamId]?.[penaltyId] || 0) - 1, lowerBound),
+        [penaltyId]: Math.max(
+          (prev[teamId]?.[penaltyId] || 0) - 1,
+          lowerBound
+        ),
       },
     }));
   };
-
-  // Calculate penalty values: count × pointValue
 
   const calculatePenaltyValues = () => {
     const penaltyValues: {
@@ -246,14 +256,14 @@ export default function MultiTeamPenaltyTable({
 
       penalties.forEach((penalty) => {
         const count = penaltyState[team.id]?.[penalty.id] || 0;
-        penaltyValues[team.id][penalty.field] = count * penalty.pointValue;
+        penaltyValues[team.id][penalty.field] =
+          count * penalty.pointValue * -1;
       });
     });
 
     return penaltyValues;
   };
 
-  // Save as draft
   const handleSaveScoreSheets = async () => {
     if (!multipleScoreSheets || multipleScoreSheets.length === 0) return;
 
@@ -273,17 +283,15 @@ export default function MultiTeamPenaltyTable({
     if (updatedSheets.length > 0) {
       await updateMultipleScores(updatedSheets);
       toast.success("Scores saved successfully!");
-      
-      // Refresh mappings in judge dashboard instantly (non-blocking)
+
       if (judgeId) {
         fetchScoreSheetsByJudge(judgeId).catch(() => {
-          // Silently fail - updates already saved
+          // silently fail
         });
       }
     }
   };
 
-  // Final submit
   const handleSubmit = async () => {
     if (!multipleScoreSheets || multipleScoreSheets.length === 0) return;
 
@@ -303,20 +311,22 @@ export default function MultiTeamPenaltyTable({
     });
 
     if (updatedSheets.length > 0) {
+      // Navigate immediately to avoid showing loading state
+      setOpenAreYouSure(false);
+      navigate(-1);
+
+      // Submit in background
       await submitMultipleScoreSheets(updatedSheets);
-      
-      // Refresh mappings in judge dashboard instantly before navigating (non-blocking)
+
       if (judgeId) {
-        fetchScoreSheetsByJudge(judgeId).catch(() => {
-          // Silently fail - updates already saved
-        });
+        fetchScoreSheetsByJudge(judgeId).catch(() => {});
       }
+    } else {
+      setOpenAreYouSure(false);
+      navigate(-1);
     }
-    setOpenAreYouSure(false);
-    navigate(-1);
   };
 
-  // Group penalties by category
   const penaltiesByCategory = React.useMemo(() => {
     const grouped: { [category: string]: PenaltyQuestion[] } = {};
     penalties.forEach((penalty) => {
@@ -328,7 +338,6 @@ export default function MultiTeamPenaltyTable({
     return grouped;
   }, [penalties]);
 
-  // Show loading state
   if (isLoadingScoreSheet) {
     return (
       <>
@@ -376,7 +385,6 @@ export default function MultiTeamPenaltyTable({
     );
   }
 
-  // Show empty state if no teams
   if (!filteredTeams || filteredTeams.length === 0) {
     return (
       <>
@@ -414,8 +422,13 @@ export default function MultiTeamPenaltyTable({
             <Typography variant="h6" color="text.secondary">
               No scoresheets available for this judge and sheet type.
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Please ensure scoresheets have been created for the teams in this judge's cluster.
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 1 }}
+            >
+              Please ensure scoresheets have been created for the teams in this
+              judge&apos;s cluster.
             </Typography>
           </Box>
         </Container>
@@ -425,7 +438,7 @@ export default function MultiTeamPenaltyTable({
 
   return (
     <>
-      {/* Navigation back to judging dashboard - aligned with navbar */}
+      {/* Back button */}
       <Container
         maxWidth="lg"
         sx={{
@@ -464,12 +477,11 @@ export default function MultiTeamPenaltyTable({
           width: "100%",
         }}
       >
-        {/* Page title */}
-        <Typography 
-          variant="h1" 
-          sx={{ 
-            mt: { xs: 2, sm: 4 }, 
-            mb: { xs: 1.5, sm: 2 }, 
+        <Typography
+          variant="h1"
+          sx={{
+            mt: { xs: 2, sm: 4 },
+            mb: { xs: 1.5, sm: 2 },
             fontWeight: "bold",
             fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" },
             textAlign: "center",
@@ -494,342 +506,629 @@ export default function MultiTeamPenaltyTable({
             justifyContent: "center",
           }}
         >
-        {/* Instructions */}
-        <Box sx={{ mb: 2, textAlign: "center" }}>
-          <Typography variant="body2" color="text.secondary">
-            *Only mark penalty if it occurred
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            *Use checkboxes for yes/no penalties, counters for occurrences
-          </Typography>
-        </Box>
+          {/* Instructions */}
+          <Box sx={{ mb: 2, textAlign: "center" }}>
+            <Typography variant="body2" color="text.secondary">
+              *Only mark penalty if it occurred
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              *Use checkboxes for yes/no penalties, counters for occurrences
+            </Typography>
+          </Box>
 
-        {/* Action buttons */}
-        <Box sx={{ 
-          display: "flex", 
-          flexWrap: "wrap", 
-          gap: { xs: 1, sm: 1.5 }, 
-          mb: { xs: 1.5, sm: 2 },
-          flexDirection: { xs: "column", sm: "row" },
-          alignItems: { xs: "stretch", sm: "flex-start" },
-          width: "100%"
-        }}>
-          <Button
-            variant="contained"
-            onClick={handleSaveScoreSheets}
+          {/* Action buttons */}
+          <Box
             sx={{
-              bgcolor: theme.palette.success.main,
-              "&:hover": { bgcolor: theme.palette.success.dark },
-              color: "#fff",
-              minWidth: { xs: "100%", sm: 200 },
-              height: { xs: 40, sm: 44 },
-              textTransform: "none",
-              borderRadius: 2,
-              fontSize: { xs: "0.9rem", sm: "1rem" },
-              fontWeight: 600,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: { xs: 1, sm: 1.5 },
+              mb: { xs: 1.5, sm: 2 },
+              flexDirection: { xs: "column", sm: "row" },
+              alignItems: { xs: "stretch", sm: "flex-start" },
+              width: "100%",
             }}
           >
-            Save All
-          </Button>
+            <Button
+              variant="contained"
+              onClick={handleSaveScoreSheets}
+              sx={{
+                bgcolor: theme.palette.success.main,
+                "&:hover": { bgcolor: theme.palette.success.dark },
+                color: "#fff",
+                minWidth: { xs: "100%", sm: 200 },
+                height: { xs: 40, sm: 44 },
+                textTransform: "none",
+                borderRadius: 2,
+                fontSize: { xs: "0.9rem", sm: "1rem" },
+                fontWeight: 600,
+              }}
+            >
+              Save All
+            </Button>
 
-          <Button
-            variant="contained"
-            onClick={handleExpandAllRows}
-            sx={{
-              bgcolor: theme.palette.success.main,
-              "&:hover": { bgcolor: theme.palette.success.dark },
-              color: "#fff",
-              minWidth: { xs: "100%", sm: 200 },
-              height: { xs: 40, sm: 44 },
-              textTransform: "none",
-              borderRadius: 2,
-              fontSize: { xs: "0.9rem", sm: "1rem" },
-              fontWeight: 600,
-            }}
-          >
-            Expand Categories
-          </Button>
+            <Button
+              variant="contained"
+              onClick={handleExpandAllRows}
+              sx={{
+                bgcolor: theme.palette.success.main,
+                "&:hover": { bgcolor: theme.palette.success.dark },
+                color: "#fff",
+                minWidth: { xs: "100%", sm: 200 },
+                height: { xs: 40, sm: 44 },
+                textTransform: "none",
+                borderRadius: 2,
+                fontSize: { xs: "0.9rem", sm: "1rem" },
+                fontWeight: 600,
+              }}
+            >
+              Expand Categories
+            </Button>
 
-          <Button
-            variant="contained"
-            onClick={handleCollapseAllRows}
-            sx={{
-              bgcolor: theme.palette.success.main,
-              "&:hover": { bgcolor: theme.palette.success.dark },
-              color: "#fff",
-              minWidth: { xs: "100%", sm: 200 },
-              height: { xs: 40, sm: 44 },
-              textTransform: "none",
-              borderRadius: 2,
-              fontSize: { xs: "0.9rem", sm: "1rem" },
-              fontWeight: 600,
-            }}
-          >
-            Collapse All
-          </Button>
-        </Box>
+            <Button
+              variant="contained"
+              onClick={handleCollapseAllRows}
+              sx={{
+                bgcolor: theme.palette.success.main,
+                "&:hover": { bgcolor: theme.palette.success.dark },
+                color: "#fff",
+                minWidth: { xs: "100%", sm: 200 },
+                height: { xs: 40, sm: 44 },
+                textTransform: "none",
+                borderRadius: 2,
+                fontSize: { xs: "0.9rem", sm: "1rem" },
+                fontWeight: 600,
+              }}
+            >
+              Collapse All
+            </Button>
+          </Box>
 
-        {/* Penalty table */}
-        <TableContainer
-          component={Paper}
-          sx={{
-            borderRadius: 2,
-            border: `1px solid ${theme.palette.grey[200]}`,
-            overflow: { xs: "auto", sm: "hidden" },
-            width: "100%",
-            "&::-webkit-scrollbar": {
-              height: "8px",
-            },
-            "&::-webkit-scrollbar-track": {
-              backgroundColor: "#f1f1f1",
-              borderRadius: "4px",
-            },
-            "&::-webkit-scrollbar-thumb": {
-              backgroundColor: "#c1c1c1",
-              borderRadius: "4px",
-            },
-            "&::-webkit-scrollbar-thumb:hover": {
-              backgroundColor: "#a8a8a8",
-            },
-          }}
-        >
-          <Table sx={{
-            minWidth: { xs: "600px", sm: "auto" },
-            "& .MuiTableCell-root": {
-              fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-              py: { xs: 0.75, sm: 1.25 },
-              px: { xs: 0.5, sm: 1 }
-            }
-          }}>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ 
-                  width: { xs: '40px', sm: '50px' },
-                  minWidth: { xs: '40px', sm: '50px' }
-                }}></TableCell>
-                <TableCell sx={{ 
-                  width: { xs: '30%', sm: '35%' },
-                  minWidth: { xs: '200px', sm: '250px' }
-                }}>
-                  <Typography 
-                    variant="subtitle1" 
-                    sx={{ 
-                      fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                      fontWeight: 600
-                    }}
-                  >
-                    Penalty
-                  </Typography>
-                </TableCell>
-                <TableCell sx={{ 
-                  width: { xs: '15%', sm: '15%' },
-                  minWidth: { xs: '100px', sm: '120px' }
-                }}>
-                  <Typography 
-                    variant="subtitle1" 
-                    sx={{ 
-                      fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                      fontWeight: 600
-                    }}
-                  >
-                    Points
-                  </Typography>
-                </TableCell>
-                {filteredTeams.map((team) => (
-                  <TableCell 
-                    key={team.id} 
-                    align="center"
-                    sx={{
-                      minWidth: { xs: '120px', sm: '150px' }
-                    }}
-                  >
-                    <Typography 
-                      variant="subtitle1"
-                      sx={{
-                        fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                        fontWeight: 600,
-                      }}
-                    >
-                      {team.name}
-                    </Typography>
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-
-            <TableBody>
+          {/* ===== MOBILE LAYOUT: stacked cards ===== */}
+          {isMobile ? (
+            <Box sx={{ width: "100%", mt: 1 }}>
               {Object.entries(penaltiesByCategory)
-                .filter(([category, categoryPenalties]) => categoryPenalties.length > 0 && category !== "")
+                .filter(
+                  ([category, categoryPenalties]) =>
+                    categoryPenalties.length > 0 && category !== ""
+                )
                 .map(([category, categoryPenalties]) => (
-                <React.Fragment key={category}>
-                  {/* Category header row */}
-                  <TableRow
-                    onClick={() => handleToggle(category)}
+                  <Box
+                    key={category}
                     sx={{
-                      cursor: "pointer",
-                      bgcolor: theme.palette.grey[100],
-                      "&:hover": { bgcolor: theme.palette.grey[200] },
+                      mb: 2,
+                      borderRadius: 2,
+                      border: `1px solid ${theme.palette.grey[200]}`,
+                      overflow: "hidden",
+                      bgcolor: "#fafafa",
                     }}
                   >
-                    <TableCell>
-                      <IconButton aria-label="expand category" size="small">
-                        {openRows[category] ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                    {/* Category header */}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        px: 1,
+                        py: 0.75,
+                        cursor: "pointer",
+                        bgcolor: theme.palette.grey[100],
+                      }}
+                      onClick={() => handleToggle(category)}
+                    >
+                      <IconButton size="small">
+                        {openRows[category] ? (
+                          <KeyboardArrowUpIcon />
+                        ) : (
+                          <KeyboardArrowDownIcon />
+                        )}
                       </IconButton>
-                    </TableCell>
-                    <TableCell colSpan={2 + filteredTeams.length} sx={{ cursor: "pointer" }}>
-                      <Typography 
-                        variant="subtitle1" 
-                        sx={{ 
+                      <Typography
+                        sx={{
+                          ml: 0.5,
+                          fontSize: "0.8rem",
                           fontWeight: 600,
-                          fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                          cursor: "pointer"
                         }}
                       >
                         {category}
                       </Typography>
-                    </TableCell>
-                  </TableRow>
+                    </Box>
 
-                  {/* Penalty rows for this category */}
-                  <TableRow>
-                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={3 + filteredTeams.length}>
-                      <Collapse in={openRows[category]} timeout="auto" unmountOnExit>
-                        <Table size="small">
-                          <TableBody>
-                            {categoryPenalties.map((penalty) => (
-                              <TableRow key={penalty.id}>
-                                <TableCell sx={{ 
-                                  width: { xs: '40px', sm: '50px' },
-                                  minWidth: { xs: '40px', sm: '50px' }
-                                }}></TableCell>
-                                <TableCell sx={{ 
-                                  width: { xs: '30%', sm: '35%' },
-                                  minWidth: { xs: '200px', sm: '250px' }
-                                }}>
-                                  <Typography sx={{ 
-                                    fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                                    fontWeight: 400,
-                                    cursor: "default"
-                                  }}>
-                                    {penalty.questionText}
+                    <Collapse in={openRows[category]} timeout="auto">
+                      <Box sx={{ px: 1.25, pb: 1.25, pt: 0.75 }}>
+                        {categoryPenalties.map((penalty) => (
+                          <Box
+                            key={penalty.id}
+                            sx={{
+                              mb: 1.5,
+                              p: 1,
+                              borderRadius: 2,
+                              border: `1px solid ${theme.palette.grey[200]}`,
+                              bgcolor: "#fff",
+                            }}
+                          >
+                            {/* Penalty text + points */}
+                            <Typography
+                              sx={{
+                                fontSize: "0.75rem",
+                                fontWeight: 500,
+                                mb: 0.25,
+                              }}
+                            >
+                              {penalty.questionText}
+                            </Typography>
+                            <Typography
+                              sx={{
+                                fontSize: "0.7rem",
+                                color: "text.secondary",
+                                mb: 0.75,
+                              }}
+                            >
+                              {penalty.pointText}
+                            </Typography>
+
+                            {/* Per-team controls */}
+                            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                              {filteredTeams.map((team) => (
+                                <Box
+                                  key={team.id}
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    gap: 1,
+                                    py: 0.5,
+                                  }}
+                                >
+                                  <Typography
+                                    sx={{
+                                      fontSize: "0.75rem",
+                                      fontWeight: 500,
+                                      whiteSpace: "nowrap",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      maxWidth: "55%",
+                                    }}
+                                    title={team.name}
+                                  >
+                                    {team.name}
                                   </Typography>
-                                </TableCell>
-                                <TableCell sx={{ 
-                                  width: { xs: '15%', sm: '15%' },
-                                  minWidth: { xs: '100px', sm: '120px' }
-                                }}>
-                                  <Typography sx={{ 
-                                    fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                                    fontWeight: 400,
-                                    cursor: "default"
-                                  }}>
-                                    {penalty.pointText}
-                                  </Typography>
-                                </TableCell>
 
-                                {filteredTeams.map((team) => (
-                                  <TableCell key={team.id} align="center">
-                                    {penalty.isIncrement ? (
-                                      // Counter for occurrence-based penalties
-                                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
-                                        <IconButton
-                                          size="small"
-                                          onClick={() =>
-                                            handleDecrement(
-                                              team.id,
-                                              penalty.id,
-                                              penalty.incrementLowerBound || 0
-                                            )
-                                          }
-                                          sx={{
-                                            bgcolor: theme.palette.grey[200],
-                                            "&:hover": { bgcolor: theme.palette.grey[300] },
-                                          }}
-                                        >
-                                          <RemoveIcon fontSize="small" />
-                                        </IconButton>
-
-                                        <Typography sx={{ 
-                                          minWidth: "30px", 
-                                          textAlign: "center", 
-                                          fontWeight: 600,
-                                          fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                                          cursor: "default"
-                                        }}>
-                                          {penaltyState[team.id]?.[penalty.id] || 0}
-                                        </Typography>
-
-                                        <IconButton
-                                          size="small"
-                                          onClick={() =>
-                                            handleIncrement(
-                                              team.id,
-                                              penalty.id,
-                                              penalty.incrementUpperBound || 1000
-                                            )
-                                          }
-                                          sx={{
-                                            bgcolor: theme.palette.grey[200],
-                                            "&:hover": { bgcolor: theme.palette.grey[300] },
-                                          }}
-                                        >
-                                          <AddIcon fontSize="small" />
-                                        </IconButton>
-                                      </Box>
-                                    ) : (
-                                      // Checkbox for yes/no penalties
-                                      <Checkbox
-                                        checked={penaltyState[team.id]?.[penalty.id] === 1}
-                                        onChange={() => handleCheckboxChange(team.id, penalty.id)}
+                                  {penalty.isIncrement ? (
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 0.5,
+                                      }}
+                                    >
+                                      <IconButton
+                                        size="small"
+                                        onClick={() =>
+                                          handleDecrement(
+                                            team.id,
+                                            penalty.id,
+                                            penalty.incrementLowerBound || 0
+                                          )
+                                        }
                                         sx={{
-                                          color: theme.palette.grey[400],
-                                          "&.Mui-checked": {
-                                            color: theme.palette.error.main,
+                                          bgcolor: theme.palette.grey[200],
+                                          "&:hover": {
+                                            bgcolor: theme.palette.grey[300],
                                           },
                                         }}
-                                      />
-                                    )}
-                                  </TableCell>
-                                ))}
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </Collapse>
+                                      >
+                                        <RemoveIcon fontSize="small" />
+                                      </IconButton>
+                                      <Typography
+                                        sx={{
+                                          minWidth: "24px",
+                                          textAlign: "center",
+                                          fontWeight: 600,
+                                          fontSize: "0.75rem",
+                                        }}
+                                      >
+                                        {penaltyState[team.id]?.[penalty.id] || 0}
+                                      </Typography>
+                                      <IconButton
+                                        size="small"
+                                        onClick={() =>
+                                          handleIncrement(
+                                            team.id,
+                                            penalty.id,
+                                            penalty.incrementUpperBound || 1000
+                                          )
+                                        }
+                                        sx={{
+                                          bgcolor: theme.palette.grey[200],
+                                          "&:hover": {
+                                            bgcolor: theme.palette.grey[300],
+                                          },
+                                        }}
+                                      >
+                                        <AddIcon fontSize="small" />
+                                      </IconButton>
+                                    </Box>
+                                  ) : (
+                                    <Checkbox
+                                      checked={
+                                        penaltyState[team.id]?.[penalty.id] === 1
+                                      }
+                                      onChange={() =>
+                                        handleCheckboxChange(team.id, penalty.id)
+                                      }
+                                      sx={{
+                                        color: theme.palette.grey[400],
+                                        "&.Mui-checked": {
+                                          color: theme.palette.error.main,
+                                        },
+                                      }}
+                                    />
+                                  )}
+                                </Box>
+                              ))}
+                            </Box>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Collapse>
+                  </Box>
+                ))}
+            </Box>
+          ) : (
+            /* ===== DESKTOP/TABLET LAYOUT: table ===== */
+            <TableContainer
+              component={Paper}
+              sx={{
+                borderRadius: 2,
+                border: `1px solid ${theme.palette.grey[200]}`,
+                overflow: { xs: "auto", sm: "hidden" },
+                width: "100%",
+                "&::-webkit-scrollbar": {
+                  height: "8px",
+                },
+                "&::-webkit-scrollbar-track": {
+                  backgroundColor: "#f1f1f1",
+                  borderRadius: "4px",
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  backgroundColor: "#c1c1c1",
+                  borderRadius: "4px",
+                },
+                "&::-webkit-scrollbar-thumb:hover": {
+                  backgroundColor: "#a8a8a8",
+                },
+              }}
+            >
+              <Table
+                sx={{
+                  minWidth: { xs: "600px", sm: "auto" },
+                  "& .MuiTableCell-root": {
+                    fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+                    py: { xs: 0.75, sm: 1.25 },
+                    px: { xs: 0.5, sm: 1 },
+                  },
+                }}
+              >
+                <TableHead>
+                  <TableRow>
+                    <TableCell
+                      sx={{
+                        width: { xs: "40px", sm: "50px" },
+                        minWidth: { xs: "40px", sm: "50px" },
+                      }}
+                    ></TableCell>
+                    <TableCell
+                      sx={{
+                        width: { xs: "30%", sm: "35%" },
+                        minWidth: { xs: "200px", sm: "250px" },
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+                          fontWeight: 600,
+                        }}
+                      >
+                        Penalty
+                      </Typography>
                     </TableCell>
+                    <TableCell
+                      sx={{
+                        width: { xs: "15%", sm: "15%" },
+                        minWidth: { xs: "100px", sm: "120px" },
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+                          fontWeight: 600,
+                        }}
+                      >
+                        Points
+                      </Typography>
+                    </TableCell>
+                    {filteredTeams.map((team) => (
+                      <TableCell
+                        key={team.id}
+                        align="center"
+                        sx={{
+                          minWidth: { xs: "120px", sm: "150px" },
+                        }}
+                      >
+                        <Typography
+                          variant="subtitle1"
+                          sx={{
+                            fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+                            fontWeight: 600,
+                          }}
+                        >
+                          {team.name}
+                        </Typography>
+                      </TableCell>
+                    ))}
                   </TableRow>
-                </React.Fragment>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                </TableHead>
 
-        {/* Submit button */}
-        <Button
-          variant="contained"
-          onClick={() => setOpenAreYouSure(true)}
-          sx={{
-            mt: { xs: 2, sm: 3 },
-            bgcolor: theme.palette.success.main,
-            "&:hover": { bgcolor: theme.palette.success.dark },
-            color: "#fff",
-            minWidth: { xs: "100%", sm: 200 },
-            height: { xs: 40, sm: 44 },
-            textTransform: "none",
-            borderRadius: 2,
-            fontSize: { xs: "0.9rem", sm: "1rem" },
-            fontWeight: 600,
-          }}
-        >
-          Submit All
-        </Button>
+                <TableBody>
+                  {Object.entries(penaltiesByCategory)
+                    .filter(
+                      ([category, categoryPenalties]) =>
+                        categoryPenalties.length > 0 && category !== ""
+                    )
+                    .map(([category, categoryPenalties]) => (
+                      <React.Fragment key={category}>
+                        {/* Category header row */}
+                        <TableRow
+                          onClick={() => handleToggle(category)}
+                          sx={{
+                            cursor: "pointer",
+                            bgcolor: theme.palette.grey[100],
+                            "&:hover": {
+                              bgcolor: theme.palette.grey[200],
+                            },
+                          }}
+                        >
+                          <TableCell>
+                            <IconButton
+                              aria-label="expand category"
+                              size="small"
+                            >
+                              {openRows[category] ? (
+                                <KeyboardArrowUpIcon />
+                              ) : (
+                                <KeyboardArrowDownIcon />
+                              )}
+                            </IconButton>
+                          </TableCell>
+                          <TableCell
+                            colSpan={2 + filteredTeams.length}
+                            sx={{ cursor: "pointer" }}
+                          >
+                            <Typography
+                              variant="subtitle1"
+                              sx={{
+                                fontWeight: 600,
+                                fontSize: {
+                                  xs: "0.75rem",
+                                  sm: "0.9375rem",
+                                },
+                                cursor: "pointer",
+                              }}
+                            >
+                              {category}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
 
-        <AreYouSureModal
-          open={openAreYouSure}
-          handleClose={() => setOpenAreYouSure(false)}
-          title="Are you sure you want to submit penalties for all teams?"
-          handleSubmit={() => handleSubmit()}
-        />
+                        {/* Penalties in this category */}
+                        <TableRow>
+                          <TableCell
+                            style={{ paddingBottom: 0, paddingTop: 0 }}
+                            colSpan={3 + filteredTeams.length}
+                          >
+                            <Collapse
+                              in={openRows[category]}
+                              timeout="auto"
+                              unmountOnExit
+                            >
+                              <Table size="small">
+                                <TableBody>
+                                  {categoryPenalties.map((penalty) => (
+                                    <TableRow key={penalty.id}>
+                                      <TableCell
+                                        sx={{
+                                          width: { xs: "40px", sm: "50px" },
+                                          minWidth: {
+                                            xs: "40px",
+                                            sm: "50px",
+                                          },
+                                        }}
+                                      ></TableCell>
+                                      <TableCell
+                                        sx={{
+                                          width: { xs: "30%", sm: "35%" },
+                                          minWidth: {
+                                            xs: "200px",
+                                            sm: "250px",
+                                          },
+                                        }}
+                                      >
+                                        <Typography
+                                          sx={{
+                                            fontSize: {
+                                              xs: "0.75rem",
+                                              sm: "0.9375rem",
+                                            },
+                                            fontWeight: 400,
+                                            cursor: "default",
+                                          }}
+                                        >
+                                          {penalty.questionText}
+                                        </Typography>
+                                      </TableCell>
+                                      <TableCell
+                                        sx={{
+                                          width: { xs: "15%", sm: "15%" },
+                                          minWidth: {
+                                            xs: "100px",
+                                            sm: "120px",
+                                          },
+                                        }}
+                                      >
+                                        <Typography
+                                          sx={{
+                                            fontSize: {
+                                              xs: "0.75rem",
+                                              sm: "0.9375rem",
+                                            },
+                                            fontWeight: 400,
+                                            cursor: "default",
+                                          }}
+                                        >
+                                          {penalty.pointText}
+                                        </Typography>
+                                      </TableCell>
+
+                                      {filteredTeams.map((team) => (
+                                        <TableCell
+                                          key={team.id}
+                                          align="center"
+                                        >
+                                          {penalty.isIncrement ? (
+                                            <Box
+                                              sx={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                gap: 1,
+                                              }}
+                                            >
+                                              <IconButton
+                                                size="small"
+                                                onClick={() =>
+                                                  handleDecrement(
+                                                    team.id,
+                                                    penalty.id,
+                                                    penalty.incrementLowerBound ||
+                                                      0
+                                                  )
+                                                }
+                                                sx={{
+                                                  bgcolor:
+                                                    theme.palette.grey[200],
+                                                  "&:hover": {
+                                                    bgcolor:
+                                                      theme.palette.grey[300],
+                                                  },
+                                                }}
+                                              >
+                                                <RemoveIcon fontSize="small" />
+                                              </IconButton>
+
+                                              <Typography
+                                                sx={{
+                                                  minWidth: "30px",
+                                                  textAlign: "center",
+                                                  fontWeight: 600,
+                                                  fontSize: {
+                                                    xs: "0.75rem",
+                                                    sm: "0.9375rem",
+                                                  },
+                                                  cursor: "default",
+                                                }}
+                                              >
+                                                {penaltyState[team.id]?.[
+                                                  penalty.id
+                                                ] || 0}
+                                              </Typography>
+
+                                              <IconButton
+                                                size="small"
+                                                onClick={() =>
+                                                  handleIncrement(
+                                                    team.id,
+                                                    penalty.id,
+                                                    penalty.incrementUpperBound ||
+                                                      1000
+                                                  )
+                                                }
+                                                sx={{
+                                                  bgcolor:
+                                                    theme.palette.grey[200],
+                                                  "&:hover": {
+                                                    bgcolor:
+                                                      theme.palette.grey[300],
+                                                  },
+                                                }}
+                                              >
+                                                <AddIcon fontSize="small" />
+                                              </IconButton>
+                                            </Box>
+                                          ) : (
+                                            <Checkbox
+                                              checked={
+                                                penaltyState[team.id]?.[
+                                                  penalty.id
+                                                ] === 1
+                                              }
+                                              onChange={() =>
+                                                handleCheckboxChange(
+                                                  team.id,
+                                                  penalty.id
+                                                )
+                                              }
+                                              sx={{
+                                                color: theme.palette.grey[400],
+                                                "&.Mui-checked": {
+                                                  color:
+                                                    theme.palette.error.main,
+                                                },
+                                              }}
+                                            />
+                                          )}
+                                        </TableCell>
+                                      ))}
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </Collapse>
+                          </TableCell>
+                        </TableRow>
+                      </React.Fragment>
+                    ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+
+          {/* Submit */}
+          <Button
+            variant="contained"
+            onClick={() => setOpenAreYouSure(true)}
+            sx={{
+              mt: { xs: 2, sm: 3 },
+              bgcolor: theme.palette.success.main,
+              "&:hover": { bgcolor: theme.palette.success.dark },
+              color: "#fff",
+              minWidth: { xs: "100%", sm: 200 },
+              height: { xs: 40, sm: 44 },
+              textTransform: "none",
+              borderRadius: 2,
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              fontWeight: 600,
+            }}
+          >
+            Submit All
+          </Button>
+
+          <AreYouSureModal
+            open={openAreYouSure}
+            handleClose={() => setOpenAreYouSure(false)}
+            title="Are you sure you want to submit penalties for all teams?"
+            handleSubmit={handleSubmit}
+          />
         </Container>
       </Box>
     </>

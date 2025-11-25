@@ -1,4 +1,18 @@
+// ==============================
+// Component: OrganizerTeamsTable
+// Hierarchical table for managing teams organized by clusters.
+// Features expandable cluster rows, team management, and disqualification controls.
+// ==============================
+
+// ==============================
+// React Core
+// ==============================
 import * as React from "react";
+import { useState, useEffect } from "react";
+
+// ==============================
+// UI Libraries & Theme
+// ==============================
 import Box from "@mui/material/Box";
 import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
@@ -10,20 +24,34 @@ import TableRow from "@mui/material/TableRow";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { Button, CircularProgress, Typography } from "@mui/material";
-import ClusterModal from "../Modals/ClusterModal";
-import Modal from "../Modals/Modal";
 import theme from "../../theme";
-import { useState, useEffect } from "react";
-import TeamModal from "../Modals/TeamModal";
+import toast from "react-hot-toast";
+
+// ==============================
+// Store Hooks
+// ==============================
 import { useMapCoachToTeamStore } from "../../store/map_stores/mapCoachToTeamStore";
 import useMapClusterTeamStore from "../../store/map_stores/mapClusterToTeamStore";
 import { useClusterStore } from "../../store/primary_stores/clusterStore";
 import { useMapClusterToContestStore } from "../../store/map_stores/mapClusterToContestStore";
+
+// ==============================
+// Types
+// ==============================
 import { Cluster, TeamData } from "../../types";
+
+// ==============================
+// Local Components
+// ==============================
+import ClusterModal from "../Modals/ClusterModal";
+import TeamModal from "../Modals/TeamModal";
+import Modal from "../Modals/Modal";
 import DisqualificationModal from "../Modals/DisqualificationModal";
-import toast from "react-hot-toast";
 import DeleteTeamDialog from "../Modals/DeleteTeamDialog";
 
+// ==============================
+// Types & Interfaces
+// ==============================
 
 interface IOrganizerTeamsTableProps {
   clusters: any[];
@@ -32,21 +60,17 @@ interface IOrganizerTeamsTableProps {
 
 function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
   const { clusters, contestId } = props;
+
+  // ------------------------------
+  // Local UI State
+  // ------------------------------
   const [openClusterModal, setOpenClusterModal] = useState(false);
   const [openTeamModal, setOpenTeamModal] = useState(false);
   const [openClusterIds, setOpenClusterIds] = useState<number[]>(
     clusters.length > 0 ? [clusters[0].id] : []
   );
-  const [clusterData, setClusterData] = useState<Cluster | undefined>(
-    undefined
-  );
+  const [clusterData, setClusterData] = useState<Cluster | undefined>(undefined);
   const [teamData, setTeamData] = useState<TeamData | undefined>(undefined);
-  const { coachesByTeams } = useMapCoachToTeamStore();
-  // selector to subscribe to team updates
-  const teamsByClusterId = useMapClusterTeamStore((state) => state.teamsByClusterId);
-  const fetchTeamsByClusterId = useMapClusterTeamStore((state) => state.fetchTeamsByClusterId);
-  const { deleteCluster } = useClusterStore();
-  const { removeClusterFromContest } = useMapClusterToContestStore();
   const [openDisqualificationModal, setOpenDisqualificationModal] =
     useState(false);
   const [openDeleteConfirmModal, setOpenDeleteConfirmModal] = useState(false);
@@ -55,6 +79,18 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
   const [currentTeamId, setCurrentTeamId] = useState(0);
   const [currentTeamClusterId, setCurrentTeamClusterId] = useState(0);
 
+  // ------------------------------
+  // Store State & Actions
+  // ------------------------------
+  const { coachesByTeams } = useMapCoachToTeamStore();
+  const teamsByClusterId = useMapClusterTeamStore((state) => state.teamsByClusterId);
+  const fetchTeamsByClusterId = useMapClusterTeamStore((state) => state.fetchTeamsByClusterId);
+  const { deleteCluster } = useClusterStore();
+  const { removeClusterFromContest } = useMapClusterToContestStore();
+
+  // ==============================
+  // Event Handlers
+  // ==============================
 
   const handleCloseModal = (type: string) => {
     if (type === "cluster") {
@@ -83,11 +119,13 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
     if (clusterToDelete) {
       try {
         await deleteCluster(clusterToDelete);
+        toast.dismiss();
         toast.success('Cluster deleted successfully!');
         removeClusterFromContest(contestId, clusterToDelete);
         setOpenDeleteConfirmModal(false);
         setClusterToDelete(null);
       } catch (error) {
+        toast.dismiss();
         toast.error('Failed to delete cluster');
         console.error('Delete cluster error:', error);
       }
@@ -110,6 +148,10 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
     setTeamData(teamData);
     setOpenTeamModal(true);
   };
+
+  // ==============================
+  // Data Loading & Effects
+  // ==============================
 
   // Update teamData when coachesByTeams changes (e.g., after team edit)
   useEffect(() => {
@@ -357,6 +399,10 @@ function OrganizerTeamsTable(props: IOrganizerTeamsTableProps) {
       </Table>
     );
   }
+
+  // ==============================
+  // Main Component Render
+  // ==============================
 
   return teamsByClusterId ? (
     <TableContainer

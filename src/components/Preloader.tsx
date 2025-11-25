@@ -1,8 +1,27 @@
 // src/components/Preloader.tsx
 import { Box, Typography } from "@mui/material";
 import theme from "../theme";
+import { useEffect, useState } from "react";
 
-export default function Preloader() {
+interface PreloaderProps {
+  show: boolean;
+}
+
+export default function Preloader({ show }: PreloaderProps) {
+  const [visible, setVisible] = useState(show);
+
+  // Keep it mounted until fade-out finishes
+  useEffect(() => {
+    if (show) {
+      setVisible(true);
+    } else {
+      const timer = setTimeout(() => setVisible(false), 600); // match CSS transition
+      return () => clearTimeout(timer);
+    }
+  }, [show]);
+
+  if (!visible) return null;
+
   return (
     <Box
       sx={{
@@ -13,8 +32,9 @@ export default function Preloader() {
         alignItems: "center",
         justifyContent: "center",
         bgcolor: "#fff",
+        width: "100vw",   
+        transition: "opacity 0.6s ease-out",
         px: { xs: 2, sm: 3 },
-        transition: "opacity 0.4s ease-out",
       }}
     >
       <Box

@@ -103,14 +103,14 @@ export default function ChampionshipScoreBreakdownTableGeneralPenalties() {
                 // Simple normalization: treat each entry as either a count or a raw point value
                 const pv = Number(pointValue) || 0;
                 const normalizedCounts = values.map((v) => {
-                  const n = Number(v) || 0;
+                  const n = Math.abs(Number(v) || 0);
                   if (pv > 0 && n >= pv) return Math.round(n / pv);
                   return n; 
                 });
                 count = normalizedCounts.reduce((sum, n) => sum + n, 0);
               } else {
-                // Count truthy/positive entries as occurrences
-                count = values.reduce((sum, v) => sum + ((Number(v) || 0) > 0 ? 1 : 0), 0);
+                // Count truthy entries as occurrences (use abs to handle negative values)
+                count = values.reduce((sum, v) => sum + (Math.abs(Number(v) || 0) > 0 ? 1 : 0), 0);
               }
               const deducted = count * Number(pointValue || 0);
               return `${deducted}`;

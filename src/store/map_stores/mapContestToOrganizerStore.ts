@@ -50,7 +50,7 @@ export const useMapContestOrganizerStore = create<MapContestOrganizerState>()(
         set({ mapContestOrganizerError: null });
       },
 
-      clearContests: async () => {
+      clearContests: () => {
         try {
           set({ contests: [] });
           set({ mapContestOrganizerError: null });

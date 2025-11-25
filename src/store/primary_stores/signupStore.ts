@@ -1,11 +1,33 @@
+// ==============================
+// Store: Signup Store
+// Manages user registration and account creation.
+// Handles signup authentication and user creation flow.
+// ==============================
+
+// ==============================
+// Core Dependencies
+// ==============================
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+
+// ==============================
+// API
+// ==============================
 import { api } from "../../lib/api";
 
+// ==============================
+// Types & Interfaces
+// ==============================
+
 interface SignupState {
+  // User data
   user: null | { id: number; username: string };
+
+  // Loading and error states
   authError: string | null;
   isLoadingSignup: boolean;
+
+  // Authentication operations
   signup: (username: string, password: string) => Promise<void>;
 }
 

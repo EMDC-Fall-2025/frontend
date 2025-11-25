@@ -1,31 +1,76 @@
+// ==============================
+// Component: MultiTeamPresentationScore
+// Multi-team scoring interface for presentation scoresheets.
+// Allows judges to score multiple teams across their assigned clusters in one interface.
+// ==============================
+
+// ==============================
+// React Core
+// ==============================
 import { useEffect, useState } from "react";
+
+// ==============================
+// Router
+// ==============================
 import { useParams, useNavigate } from "react-router-dom";
+
+// ==============================
+// Store Hooks
+// ==============================
 import { useAuthStore } from "../store/primary_stores/authStore";
-import { presentationQuestions } from "../data/presentationQuestions";
-import MultiTeamScoreSheet from "../components/Tables/MultiTeamScoreTable";
 import { useMapClusterJudgeStore } from "../store/map_stores/mapClusterToJudgeStore";
 import useClusterTeamStore from "../store/map_stores/mapClusterToTeamStore";
 import { useScoreSheetStore } from "../store/primary_stores/scoreSheetStore";
+
+// ==============================
+// API & Data
+// ==============================
 import { api } from "../lib/api";
+import { presentationQuestions } from "../data/presentationQuestions";
+
+// ==============================
+// Types
+// ==============================
 import { ClusterWithContest, ScoreSheetMappingWithSheet, Team, ScoreSheet, Question } from "../types";
 
+// ==============================
+// Local Components
+// ==============================
+import MultiTeamScoreSheet from "../components/Tables/MultiTeamScoreTable";
+
 export default function MultiTeamPresentationScore() {
+  // ------------------------------
+  // Route Parameters & Authentication
+  // ------------------------------
   const { role } = useAuthStore();
   const { judgeId, contestId } = useParams();
   const navigate = useNavigate();
   const parsedJudgeId = judgeId ? parseInt(judgeId, 10) : null;
-  
+
+  // ------------------------------
+  // Store State & Actions
+  // ------------------------------
   const { fetchAllClustersByJudgeId } = useMapClusterJudgeStore();
   const fetchTeamsByClusterId = useClusterTeamStore((state) => state.fetchTeamsByClusterId);
+
+  // ------------------------------
+  // Local UI State
+  // ------------------------------
   const [teams, setTeams] = useState<Array<{ id: number; name: string }>>([]);
   const [isDataReady, setIsDataReady] = useState(false);
 
+  // ==============================
+  // Data Loading & Effects
+  // ==============================
+
+  // Redirect judges to their own scoring interface if accessing another judge's URL
   useEffect(() => {
     if (role?.user_type === 3 && parsedJudgeId !== role.user.id) {
       navigate(`/multi-team-presentation-score/${role.user.id}/${contestId}/`);
     }
-  }, [judgeId, role, contestId, navigate]);
+  }, [judgeId, role, contestId, navigate, parsedJudgeId]);
 
+  // Fetch clusters, teams, and scoresheets data for multi-team scoring interface
   useEffect(() => {
     const fetchData = async () => {
       if (!parsedJudgeId) return;
@@ -108,7 +153,16 @@ export default function MultiTeamPresentationScore() {
     fetchData();
   }, [parsedJudgeId, contestId, fetchAllClustersByJudgeId, fetchTeamsByClusterId]);
 
+  // ==============================
+  // Early Returns & Conditional Rendering
+  // ==============================
+
+  // Invalid judge ID - cannot proceed
   if (parsedJudgeId === null) return null;
+
+  // ==============================
+  // Main Component Render
+  // ==============================
 
   return (
     <MultiTeamScoreSheet
