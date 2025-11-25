@@ -1,23 +1,67 @@
+// ==============================
+// Component: PublicScoreBreakdown
+// Displays detailed score breakdown for a team's performance across all scoring categories.
+// ==============================
+
+// ==============================
+// React Core
+// ==============================
+import { useEffect, useRef } from "react";
+
+// ==============================
+// UI Libraries & Theme
+// ==============================
 import { Typography, Button, Box, Skeleton } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import theme from "../theme";
-import ScoreBreakdownTableStandard from "../components/Tables/ScoreBreakdownTableStandard";
+
+// ==============================
+// Router
+// ==============================
+import { useParams, useNavigate } from "react-router-dom";
+
+// ==============================
+// Store Hooks
+// ==============================
+import { useScoreSheetStore } from "../store/primary_stores/scoreSheetStore";
+
+// ==============================
+// Data & Questions
+// ==============================
 import { journalQuestions } from "../data/journalQuestions";
 import { presentationQuestions } from "../data/presentationQuestions";
 import { machineDesignQuestions } from "../data/machineDesignQuestions";
-import { useEffect, useRef } from "react";
-import { useScoreSheetStore } from "../store/primary_stores/scoreSheetStore";
-import { useParams, useNavigate } from "react-router-dom";
+
+// ==============================
+// Local Table Components
+// ==============================
+import ScoreBreakdownTableStandard from "../components/Tables/ScoreBreakdownTableStandard";
 import ScoreBreakdownTableGeneralPenalties from "../components/Tables/ScoreBreakdownTableGeneralPenalties";
 import ScoreBreakdownTableRunPenalties from "../components/Tables/ScoreBreakdownTableRunPenalties";
 
-export default function PulicScoreBreakdown() {
+export default function PublicScoreBreakdown() {
+  // ------------------------------
+  // Route Parameters
+  // ------------------------------
   const { teamId } = useParams();
   const parsedTeamId = teamId ? parseInt(teamId, 10) : undefined;
+
+  // ------------------------------
+  // Store State & Actions
+  // ------------------------------
   const { getScoreSheetBreakdown, isLoadingScoreSheet, clearScoreBreakdown } =
     useScoreSheetStore();
+
+  // ------------------------------
+  // Navigation
+  // ------------------------------
   const navigate = useNavigate();
 
+  // ------------------------------
+  // Data Loading & Effects
+  // ------------------------------
+
+  // Fetch score breakdown data once on mount (prevent double-invocation in React 18 StrictMode)
   const fetchedRef = useRef(false);
   useEffect(() => {
     if (fetchedRef.current) return;
@@ -28,8 +72,9 @@ export default function PulicScoreBreakdown() {
     return () => {
       clearScoreBreakdown();
     };
-  }, [parsedTeamId]);
+  }, [parsedTeamId, getScoreSheetBreakdown, clearScoreBreakdown]);
 
+  // Clear data on page hide/unload to prevent memory leaks
   useEffect(() => {
     const handlePageHide = () => {
       clearScoreBreakdown();
@@ -40,9 +85,14 @@ export default function PulicScoreBreakdown() {
     return () => {
       window.removeEventListener("pagehide", handlePageHide);
     };
-  }, []);
+  }, [clearScoreBreakdown]);
 
-  return isLoadingScoreSheet ? (
+  // ==============================
+  // Loading State Render
+  // ==============================
+
+  if (isLoadingScoreSheet) {
+    return (
     <>
       <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 }, ml: { xs: 2, sm: 3 } }}>
         <Skeleton variant="rectangular" width={180} height={36} sx={{ borderRadius: 1 }} />
@@ -75,8 +125,17 @@ export default function PulicScoreBreakdown() {
         <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 2 }} />
       </Box>
     </>
-  ) : (
+  );
+
+  // ==============================
+  // Main Content Render
+  // ==============================
+
+  return (
     <>
+      {/* ==============================
+          Page Header & Navigation
+          ============================== */}
       <Box sx={{ mb: 2, mt: { xs: 2, sm: 3 }, ml: { xs: 2, sm: 3 } }}>
         <Button
           onClick={() => navigate(-1)}
@@ -115,7 +174,12 @@ export default function PulicScoreBreakdown() {
       >
         Score Breakdown
       </Typography>
-      
+
+      {/* ==============================
+          Scoring Category Sections
+          ============================== */}
+
+      {/* Journal Scores Section */}
       <Typography 
         variant="h2" 
         sx={{ 
@@ -130,6 +194,8 @@ export default function PulicScoreBreakdown() {
         Journal
       </Typography>
       <ScoreBreakdownTableStandard type={2} questions={journalQuestions} />
+
+      {/* Presentation Scores Section */}
       <Typography 
         variant="h2" 
         sx={{ 
@@ -144,6 +210,8 @@ export default function PulicScoreBreakdown() {
         Presentation
       </Typography>
       <ScoreBreakdownTableStandard type={1} questions={presentationQuestions} />
+
+      {/* Machine Design Scores Section */}
       <Typography 
         variant="h2" 
         sx={{ 
@@ -161,6 +229,8 @@ export default function PulicScoreBreakdown() {
         type={3}
         questions={machineDesignQuestions}
       />
+
+      {/* General Penalties Section */}
       <Typography 
         variant="h2" 
         sx={{ 
@@ -177,6 +247,8 @@ export default function PulicScoreBreakdown() {
         General Penalties
       </Typography>
       <ScoreBreakdownTableGeneralPenalties />
+
+      {/* Run Penalties Section */}
       <Typography 
         variant="h2" 
         sx={{ 
@@ -195,4 +267,5 @@ export default function PulicScoreBreakdown() {
       <ScoreBreakdownTableRunPenalties />
     </>
   );
+}
 }

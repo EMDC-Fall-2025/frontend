@@ -1,0 +1,113 @@
+name: Deploy Frontend
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+  push:
+    branches:
+      - main
+    # Uncomment to enable automatic deployment on push to main
+    # paths:
+    #   - 'src/**'
+    #   - 'package.json'
+    #   - 'vite.config.ts'
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment || 'production' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }}
+
+      # Option 1: Deploy to Static Hosting (Vercel, Netlify, etc.)
+      # Uncomment and configure based on your hosting provider
+      
+      # - name: Deploy to Vercel
+      #   uses: amondnet/vercel-action@v25
+      #   with:
+      #     vercel-token: ${{ secrets.VERCEL_TOKEN }}
+      #     vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+      #     vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+      #     working-directory: ./
+
+      # - name: Deploy to Netlify
+      #   uses: nwtgck/actions-netlify@v2
+      #   with:
+      #     publish-dir: './dist'
+      #     production-branch: main
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     deploy-message: "Deploy from GitHub Actions"
+      #   env:
+      #     NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      #     NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+
+      # Option 2: Deploy to DigitalOcean App Platform
+      # - name: Deploy to DigitalOcean
+      #   uses: digitalocean/app_action@main
+      #   with:
+      #     app_name: emdc-frontend
+      #     token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      # Option 3: Deploy via SSH to VPS
+      # - name: Deploy to VPS via SSH
+      #   uses: appleboy/scp-action@master
+      #   with:
+      #     host: ${{ secrets.SSH_HOST }}
+      #     username: ${{ secrets.SSH_USERNAME }}
+      #     key: ${{ secrets.SSH_PRIVATE_KEY }}
+      #     port: ${{ secrets.SSH_PORT || 22 }}
+      #     source: "dist/*"
+      #     target: "/var/www/emdc-frontend"
+
+      # - name: Restart web server
+      #   uses: appleboy/ssh-action@master
+      #   with:
+      #     host: ${{ secrets.SSH_HOST }}
+      #     username: ${{ secrets.SSH_USERNAME }}
+      #     key: ${{ secrets.SSH_PRIVATE_KEY }}
+      #     port: ${{ secrets.SSH_PORT || 22 }}
+      #     script: |
+      #       sudo systemctl restart nginx
+
+      # Option 4: Deploy Docker container
+      # - name: Deploy Docker container
+      #   uses: appleboy/ssh-action@master
+      #   with:
+      #     host: ${{ secrets.SSH_HOST }}
+      #     username: ${{ secrets.SSH_USERNAME }}
+      #     key: ${{ secrets.SSH_PRIVATE_KEY }}
+      #     script: |
+      #       cd /opt/emdc
+      #       docker-compose pull web
+      #       docker-compose up -d web
+
+      - name: Deployment complete
+        run: |
+          echo "✅ Deployment to ${{ github.event.inputs.environment || 'production' }} completed successfully!"
+          echo "🔗 Application URL: ${{ secrets.APP_URL }}"
+

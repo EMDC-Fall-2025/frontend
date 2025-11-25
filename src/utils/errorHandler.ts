@@ -33,6 +33,14 @@ export const extractErrorMessage = (error: any): string => {
       if (Array.isArray(data.errors)) {
         return data.errors.join(', ');
       }
+      // Check for nested detail field in errors object
+      if (data.errors.detail && typeof data.errors.detail === 'string') {
+        return data.errors.detail;
+      }
+      // If it's an array within the errors object, join it
+      if (data.errors.detail && Array.isArray(data.errors.detail)) {
+        return data.errors.detail.join(', ');
+      }
       // If it's an object, stringify it 
       return JSON.stringify(data.errors);
     }
@@ -164,7 +172,11 @@ export const handleAccountError = (
   const errorMessage = extractErrorMessage(error);
   
   if (isDuplicateError(errorMessage)) {
-    toast.error("Account already exists in the system");
+    // Use the detailed error message from backend if available, otherwise use generic message
+    const displayMessage = errorMessage && errorMessage !== "An unexpected error occurred" 
+      ? errorMessage 
+      : "An account already exists under that name.";
+    toast.error(displayMessage);
     return errorMessage;
   }
   

@@ -1,30 +1,57 @@
-// ContestScores.tsx
+// ==============================
+// Component: ContestScores
+// Displays contest results with tabs for preliminary, championship, awards, and highlights.
+// Features confetti celebration for preliminary results and optimized data loading.
+// ==============================
+
+// ==============================
+// React Core
+// ==============================
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
+
+// ==============================
+// UI Libraries & Theme
+// ==============================
 import { Typography, Container, Tabs, Tab, Box, Stack, Alert, Button } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import theme from "../theme";
-import confetti from "canvas-confetti";
-import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
-import useSpecialAwardStore from "../store/map_stores/mapAwardToTeamStore";
-import { useMapCoachToTeamStore } from "../store/map_stores/mapCoachToTeamStore";
-import ContestResultsTable from "../components/Tables/ContestResultsTable";
-import AwardWinners from "../components/Tables/AwardWinners";
-import ContestHighlightPage from "../components/Tables/ContestHighlight";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import MilitaryTechIcon from "@mui/icons-material/MilitaryTech";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import StarIcon from "@mui/icons-material/Star";
+import theme from "../theme";
+import confetti from "canvas-confetti";
+
+// ==============================
+// Store Hooks
+// ==============================
+import { useMapContestToTeamStore } from "../store/map_stores/mapContestToTeamStore";
+import useSpecialAwardStore from "../store/map_stores/mapAwardToTeamStore";
+import { useMapCoachToTeamStore } from "../store/map_stores/mapCoachToTeamStore";
 import { useContestStore } from "../store/primary_stores/contestStore";
 import { useMapClusterToContestStore } from "../store/map_stores/mapClusterToContestStore";
 import useContestJudgeStore from "../store/map_stores/mapContestToJudgeStore";
 import { useAuthStore } from "../store/primary_stores/authStore";
 
+// ==============================
+// Local Components
+// ==============================
+import ContestResultsTable, { type ThemeType } from "../components/Tables/ContestResultsTable";
+import AwardWinners from "../components/Tables/AwardWinners";
+import ContestHighlightPage from "../components/Tables/ContestHighlight";
+
 export default function ContestScores() {
+  // ------------------------------
+  // Route Parameters & Authentication
+  // ------------------------------
   const { contestId } = useParams<{ contestId: string }>();
   const contestIdNumber = contestId ? parseInt(contestId, 10) : null;
   const { role } = useAuthStore();
   const isCoach = role?.user_type === 4;
+
+  // ------------------------------
+  // Store State & Actions
+  // ------------------------------
   const { fetchContestById, contest } = useContestStore();
   const { fetchClustersByContestId } = useMapClusterToContestStore();
   const { getAllJudgesByContestId } = useContestJudgeStore();
@@ -38,25 +65,74 @@ export default function ContestScores() {
   const { awards, AwardsByTeamTable } = useSpecialAwardStore();
   const { coachesByTeams, fetchCoachesByTeams } = useMapCoachToTeamStore();
 
+  // ------------------------------
+  // Local UI State
+  // ------------------------------
   const [activeTab, setActiveTab] = useState("prelim");
   const [hasCelebrated, setHasCelebrated] = useState(false);
   const lastContestIdRef = useRef<number | null>(null);
+  const [resultsTheme, setResultsTheme] = useState<ThemeType>("green");
 
-  // Check if championship advancement has occurred (memoized)
+  // Theme primary color mapping
+  const THEME_PRIMARY: Record<ThemeType, string> = {
+    green: "#166534",
+    brown: "#8B4513",
+    black: "#111827",
+  };
+
+  const themePrimary = THEME_PRIMARY[resultsTheme];
+  const isGreenTheme = resultsTheme === "green";
+  const mainTitleColor = isGreenTheme ? THEME_PRIMARY.green : "#111827"; // Contest Results title logic
+
+  // Reusable section title styles for all sub-headings
+ 
+  const sectionHeadingSx = {
+    fontWeight: 400,
+    mt: 0.5,
+    mb: 2.5,
+    textAlign: "center",
+    fontSize: { xs: "1.25rem", sm: "1.6rem", md: "1.8rem" },
+    fontFamily: '"DM Serif Display", "Georgia", serif',
+    letterSpacing: "0.04em",
+    lineHeight: 1.2,
+    color: theme.palette.text.primary, // keep section text black
+    position: "relative" as const,
+    display: "inline-block",
+    px: { xs: 1.5, sm: 2.5 },
+    "&::after": {
+      content: '""',
+      position: "absolute",
+      left: "50%",
+      transform: "translateX(-50%)",
+      bottom: -8,
+      width: "55%",
+      height: 3,
+      borderRadius: 999,
+      // underline follows resultsTheme color
+      background: `linear-gradient(90deg, ${themePrimary}33, ${themePrimary}, ${themePrimary}33)`,
+    },
+  } as const;
+
+  // ==============================
+  // Computed Values
+  // ==============================
+
   const hasChampionshipAdvance = useMemo(
     () => teamsByContest.some((team) => team.advanced_to_championship === true),
     [teamsByContest]
   );
 
-  // Fetch data on mount or contest change - fetchTeamsByContest uses cache internally for instant display
+  // ==============================
+  // Data Loading & Effects
+  // ==============================
+
   useEffect(() => {
     if (!contestIdNumber) return;
 
     lastContestIdRef.current = contestIdNumber;
 
-    // Fetch all data in parallel 
     Promise.all([
-      fetchTeamsByContest(contestIdNumber), // Uses cache if available for instant render
+      fetchTeamsByContest(contestIdNumber),
       fetchContestById(contestIdNumber),
       fetchClustersByContestId(contestIdNumber),
       getAllJudgesByContestId(contestIdNumber),
@@ -65,19 +141,20 @@ export default function ContestScores() {
     });
   }, [contestIdNumber, fetchTeamsByContest, fetchContestById, fetchClustersByContestId, getAllJudgesByContestId]);
 
-  // Fetch coaches and awards only for teams missing data (optimized)
+  useEffect(() => {
+    setHasCelebrated(false);
+  }, [contestIdNumber]);
+
   useEffect(() => {
     if (teamsByContest.length === 0) return;
 
     const teamData = teamsByContest.map((team) => ({ id: team.id }));
-    
-    // Only fetch coaches for teams that don't have coach data
+
     const teamsNeedingCoaches = teamData.filter((team) => !coachesByTeams[team.id]);
     if (teamsNeedingCoaches.length > 0) {
       fetchCoachesByTeams(teamsNeedingCoaches);
     }
-    
-    // Only fetch awards for teams that don't have award data
+
     teamsByContest.forEach((team) => {
       if (!awards[team.id]) {
         AwardsByTeamTable(team.id);
@@ -85,7 +162,10 @@ export default function ContestScores() {
     });
   }, [teamsByContest, coachesByTeams, awards, fetchCoachesByTeams, AwardsByTeamTable]);
 
-  // Memoize coach names and awards computation for instant rendering
+  // ==============================
+  // Memoized Data Transformations
+  // ==============================
+
   const coachNames = useMemo(() => {
     return teamsByContest.reduce((acc, team) => {
       const teamCoachData = coachesByTeams[team.id];
@@ -109,103 +189,123 @@ export default function ContestScores() {
     }, {} as { [key: number]: string });
   }, [teamsByContest, awards]);
 
-  // Memoize rows computation for instant rendering
   const rows = useMemo(() => {
     return teamsByContest.map((team) => ({
       id: team.id,
       team_name: team.team_name,
       school_name: (team as any).school_name || "",
       team_rank: team.team_rank || 0,
-      // Use preliminary_total_score for preliminary results 
- 
       total_score: (team as any).preliminary_total_score ?? team.total_score ?? 0,
       coachName: coachNames[team.id] || "N/A",
       awards: teamAwards[team.id] || "N/A",
     }));
   }, [teamsByContest, coachNames, teamAwards]);
 
-  // Memoize ranked rows to prevent recalculation
   const rankedRows = useMemo(() => {
     const sorted = [...rows].sort((a, b) => b.total_score - a.total_score);
     return sorted.map((team, index) => ({
       ...team,
-      team_rank: index + 1
+      team_rank: index + 1,
     }));
   }, [rows]);
 
-  // Trigger celebration sprinklers on first load when results are available
+  // ==============================
+  // Celebration Effects
+  // ==============================
+
+  const hasPrelimResults = rankedRows.length > 0;
+
   useEffect(() => {
-    if (rankedRows.length > 0 && !hasCelebrated && activeTab === "prelim") {
-      // Main confetti burst from center
+    if (!hasPrelimResults || hasCelebrated || activeTab !== "prelim") return;
+
+    setHasCelebrated(true);
+
+    requestAnimationFrame(() => {
       confetti({
         particleCount: 100,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ['#4caf50', '#ffeb99', '#C0C0C0', '#CD7F32', '#00a353']
+        colors: ["#4caf50", "#ffeb99", "#C0C0C0", "#CD7F32", "#00a353"],
       });
-      
-      // Left side burst
+
       setTimeout(() => {
         confetti({
           particleCount: 50,
           angle: 60,
           spread: 55,
           origin: { x: 0 },
-          colors: ['#4caf50', '#ffeb99', '#C0C0C0']
+          colors: ["#4caf50", "#ffeb99", "#C0C0C0"],
         });
       }, 250);
-      
-      // Right side burst
+
       setTimeout(() => {
         confetti({
           particleCount: 50,
           angle: 120,
           spread: 55,
           origin: { x: 1 },
-          colors: ['#4caf50', '#ffeb99', '#C0C0C0']
+          colors: ["#4caf50", "#ffeb99", "#C0C0C0"],
         });
       }, 400);
-      
-      setHasCelebrated(true);
-    }
-  }, [rankedRows.length, hasCelebrated, activeTab]);
+    });
+  }, [hasPrelimResults, hasCelebrated, activeTab]);
 
-  // Memoize championship rows for instant rendering
   const championshipRows = useMemo(() => {
     const championshipTeams = teamsByContest.filter((team) => team.advanced_to_championship);
-    return championshipTeams
+    const sorted = championshipTeams
       .map((team) => {
-        const championshipScore = (team as any).championship_total_score || (team as any).championship_score || team.total_score || 0;
+        const championshipScore =
+          (team as any).championship_total_score ||
+          (team as any).championship_score ||
+          team.total_score ||
+          0;
         return {
           id: team.id,
           team_name: team.team_name,
           school_name: (team as any).school_name || "",
-          team_rank: (team as any).championship_rank || 0,
+          team_rank: 0,
           total_score: championshipScore,
           coachName: coachNames[team.id] || "N/A",
           awards: teamAwards[team.id] || "N/A",
         };
       })
       .sort((a, b) => b.total_score - a.total_score)
-      .slice(0, 6);
+      .slice(0, 6)
+      .map((team, index) => ({
+        ...team,
+        team_rank: index + 1,
+      }));
+    return sorted;
   }, [teamsByContest, coachNames, teamAwards]);
 
-  // Memoize redesign rows for instant rendering
   const redesignRows = useMemo(() => {
     const redesignTeams = teamsByContest.filter((team) => !team.advanced_to_championship);
-    return redesignTeams
+    const sorted = redesignTeams
       .map((team) => ({
         id: team.id,
         team_name: team.team_name,
         school_name: (team as any).school_name || "",
-        team_rank: (team as any).redesign_rank || 0,
-        total_score: (team as any).redesign_total_score || (team as any).redesign_score || team.total_score || 0,
+        team_rank: 0,
+        total_score:
+          (team as any).redesign_total_score ||
+          (team as any).redesign_score ||
+          team.total_score ||
+          0,
         coachName: coachNames[team.id] || "N/A",
         awards: teamAwards[team.id] || "N/A",
       }))
       .sort((a, b) => b.total_score - a.total_score)
-      .slice(0, 3);
+      .slice(0, 3)
+      .map((team, index) => ({
+        ...team,
+        team_rank: index + 1,
+      }));
+    return sorted;
   }, [teamsByContest, coachNames, teamAwards]);
+
+  // ==============================
+  // Early Returns
+  // ==============================
 
   if (isCoach && contest && contest.is_open === true) {
     return (
@@ -215,9 +315,13 @@ export default function ContestScores() {
     );
   }
 
+  // ==============================
+  // Main Render
+  // ==============================
+
   return (
     <>
-      {/* Page Title */}
+      {/* Header & Navigation */}
       <Container
         maxWidth="lg"
         sx={{
@@ -226,8 +330,6 @@ export default function ContestScores() {
           mb: 2,
         }}
       >
-
-        {/* Back link */}
         <Box sx={{ mb: 1, mt: { xs: 1, sm: 2 } }}>
           <Button
             component={Link}
@@ -261,13 +363,14 @@ export default function ContestScores() {
               fontFamily: '"DM Serif Display", "Georgia", serif',
               letterSpacing: "0.02em",
               lineHeight: 1.2,
+              color: mainTitleColor, // dynamic: green for green theme, black otherwise
             }}
           >
             Contest Results
           </Typography>
         </Stack>
 
-        {/* Tabs Section */}
+        {/* Tabs */}
         <Box sx={{ width: "100%", mt: 0 }}>
           <Tabs
             value={activeTab}
@@ -278,6 +381,13 @@ export default function ContestScores() {
             sx={{
               borderBottom: `1px solid ${theme.palette.grey[300]}`,
               mb: 0,
+              "& .MuiTabs-indicator": {
+                backgroundColor: themePrimary,
+              },
+              "& .MuiTab-root.Mui-selected": {
+                color: themePrimary,
+                fontWeight: 700,
+              },
               "& .MuiTab-root": {
                 minHeight: 64,
                 px: { xs: 1.5, sm: 2.5 },
@@ -303,7 +413,7 @@ export default function ContestScores() {
                 label={
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>
-                      Championship & Redesign
+                      Championship &amp; Redesign
                     </span>
                   </Stack>
                 }
@@ -333,7 +443,7 @@ export default function ContestScores() {
         </Box>
       </Container>
 
-      {/* Prelim Tab */}
+      {/* Preliminary */}
       {activeTab === "prelim" && (
         <Container
           maxWidth="lg"
@@ -344,39 +454,45 @@ export default function ContestScores() {
             mb: 5,
           }}
         >
-          <Typography
-            variant="h5"
-            sx={{ 
-              fontWeight: 400, 
-              mb: 2, 
-              mt: 0,
-              textAlign: "center", 
-              fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
-              fontFamily: '"DM Serif Display", "Georgia", serif',
-              letterSpacing: "0.02em",
-              lineHeight: 1.2,
-            }}
-          >
-            Preliminary Round – Top 6
-          </Typography>
-          {rankedRows.length > 0 ? (
-            <ContestResultsTable rows={rankedRows.slice(0, 6)} />
-          ) : !isLoadingMapContestToTeam ? (
-            <Typography 
-              sx={{ 
-                textAlign: "center", 
-                color: "text.secondary", 
+          <Box sx={{ textAlign: "center" }}>
+            <Typography variant="h5" sx={sectionHeadingSx}>
+              Preliminary Round – Top 6
+            </Typography>
+          </Box>
+
+          {hasPrelimResults ? (
+            <ContestResultsTable
+              rows={rankedRows.slice(0, 6)}
+              theme={resultsTheme}
+              onThemeChange={setResultsTheme}
+            />
+          ) : isLoadingMapContestToTeam ? (
+            <Typography
+              sx={{
+                textAlign: "center",
+                color: "text.secondary",
                 py: 6,
-                fontSize: { xs: "0.95rem", sm: "1rem" }
+                fontSize: { xs: "0.95rem", sm: "1rem" },
+              }}
+            >
+              Loading results…
+            </Typography>
+          ) : (
+            <Typography
+              sx={{
+                textAlign: "center",
+                color: "text.secondary",
+                py: 6,
+                fontSize: { xs: "0.95rem", sm: "1rem" },
               }}
             >
               No preliminary results available.
             </Typography>
-          ) : null}
+          )}
         </Container>
       )}
 
-      {/* Championship/Redesign Tab */}
+      {/* Championship & Redesign */}
       {activeTab === "championship" && (
         <Container
           maxWidth="lg"
@@ -387,60 +503,50 @@ export default function ContestScores() {
             mb: 5,
           }}
         >
-          <Typography
-            variant="h5"
-            sx={{ 
-              fontWeight: 400, 
-              mb: 2, 
-              mt: 0,
-              textAlign: "center", 
-              fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
-              fontFamily: '"DM Serif Display", "Georgia", serif',
-              letterSpacing: "0.02em",
-              lineHeight: 1.2,
-            }}
-          >
-            Championship Round - Top 6
-          </Typography>
+          <Box sx={{ textAlign: "center" }}>
+            <Typography variant="h5" sx={sectionHeadingSx}>
+              Championship Round – Top 6
+            </Typography>
+          </Box>
+
           {championshipRows.length > 0 ? (
-            <ContestResultsTable rows={championshipRows} />
+            <ContestResultsTable
+              rows={championshipRows}
+              theme={resultsTheme}
+              onThemeChange={setResultsTheme}
+            />
           ) : (
-            <Typography 
-              sx={{ 
-                textAlign: "center", 
-                color: "text.secondary", 
+            <Typography
+              sx={{
+                textAlign: "center",
+                color: "text.secondary",
                 py: 6,
-                fontSize: { xs: "0.95rem", sm: "1rem" }
+                fontSize: { xs: "0.95rem", sm: "1rem" },
               }}
             >
               No championship teams available.
             </Typography>
           )}
 
-          <Typography
-            variant="h5"
-            sx={{ 
-              fontWeight: 400, 
-              mb: 2, 
-              textAlign: "center", 
-              mt: 3, 
-              fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
-              fontFamily: '"DM Serif Display", "Georgia", serif',
-              letterSpacing: "0.02em",
-              lineHeight: 1.2,
-            }}
-          >
-            Redesign Round – Top 3
-          </Typography>
+          <Box sx={{ textAlign: "center", mt: 4 }}>
+            <Typography variant="h5" sx={sectionHeadingSx}>
+              Redesign Round – Top 3
+            </Typography>
+          </Box>
+
           {redesignRows.length > 0 ? (
-            <ContestResultsTable rows={redesignRows} />
+            <ContestResultsTable
+              rows={redesignRows}
+              theme={resultsTheme}
+              onThemeChange={setResultsTheme}
+            />
           ) : (
-            <Typography 
-              sx={{ 
-                textAlign: "center", 
-                color: "text.secondary", 
+            <Typography
+              sx={{
+                textAlign: "center",
+                color: "text.secondary",
                 py: 6,
-                fontSize: { xs: "0.95rem", sm: "1rem" }
+                fontSize: { xs: "0.95rem", sm: "1rem" },
               }}
             >
               No redesign teams available.
@@ -449,7 +555,7 @@ export default function ContestScores() {
         </Container>
       )}
 
-      {/* Award Winners Tab */}
+      {/* Award Winners */}
       {activeTab === "winners" && (
         <Container
           maxWidth="lg"
@@ -460,21 +566,12 @@ export default function ContestScores() {
             mb: 5,
           }}
         >
-          <Typography
-            variant="h5"
-            sx={{ 
-              fontWeight: 400, 
-              mb: 2, 
-              mt: 0,
-              textAlign: "center", 
-              fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
-              fontFamily: '"DM Serif Display", "Georgia", serif',
-              letterSpacing: "0.02em",
-              lineHeight: 1.2,
-            }}
-          >
-            Award Winners
-          </Typography>
+          <Box sx={{ textAlign: "center" }}>
+            <Typography variant="h5" sx={sectionHeadingSx}>
+              Award Winners
+            </Typography>
+          </Box>
+
           <AwardWinners
             awards={rows
               .filter((team) => team.awards !== "N/A")
@@ -487,7 +584,7 @@ export default function ContestScores() {
         </Container>
       )}
 
-      {/* Highlights Tab */}
+      {/* Highlights */}
       {activeTab === "highlights" && (
         <Container
           maxWidth="lg"
@@ -498,21 +595,12 @@ export default function ContestScores() {
             mb: 5,
           }}
         >
-          <Typography
-            variant="h5"
-            sx={{ 
-              fontWeight: 400, 
-              mb: 2, 
-              mt: 0,
-              textAlign: "center", 
-              fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
-              fontFamily: '"DM Serif Display", "Georgia", serif',
-              letterSpacing: "0.02em",
-              lineHeight: 1.2,
-            }}
-          >
-            Contest Highlights
-          </Typography>
+          <Box sx={{ textAlign: "center" }}>
+            <Typography variant="h5" sx={sectionHeadingSx}>
+              Contest Highlights
+            </Typography>
+          </Box>
+
           <ContestHighlightPage />
         </Container>
       )}

@@ -1,35 +1,75 @@
+// ==============================
+// Store: Judge Store
+// Manages judge data, CRUD operations, submission tracking, and team disqualification.
+// Handles judge-related state management with data change notifications.
+// ==============================
+
+// ==============================
+// Core Dependencies
+// ==============================
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+
+// ==============================
+// API & Utilities
+// ==============================
 import { api } from "../../lib/api";
-import { EditedJudge, Judge, NewJudge } from "../../types";
 import { extractErrorMessage } from "../../utils/errorHandler";
 import { dispatchDataChange } from "../../utils/dataChangeEvents";
 
+// ==============================
+// Types
+// ==============================
+import { EditedJudge, Judge, NewJudge } from "../../types";
+
+// ==============================
+// Types & Interfaces
+// ==============================
+
 interface JudgeState {
+  // Judge data
   judge: Judge | null;
+
+  // Loading and error states
   isLoadingJudge: boolean;
   judgeError: string | null;
+
+  // Submission tracking by cluster
   submissionStatus: { [clusterId: number]: { [judgeId: number]: boolean } } | null;
+
+  // CRUD operations
   fetchJudgeById: (judgeId: number) => Promise<void>;
   createJudge: (newJudge: NewJudge) => Promise<Judge>;
   editJudge: (editedJudge: EditedJudge) => Promise<Judge>;
   deleteJudge: (judgeId: number) => Promise<void>;
+
+  // Business logic actions
   checkAllScoreSheetsSubmitted: (judges: Judge[], clusterId?: number) => Promise<void>;
-  judgeDisqualifyTeam: (
-    teamId: number,
-    isDisqualified: boolean
-  ) => Promise<void>;
+  judgeDisqualifyTeam: (teamId: number, isDisqualified: boolean) => Promise<void>;
+
+  // Utility functions
   clearSubmissionStatus: () => void;
   clearJudge: () => void;
 }
 
+// ==============================
+// Store Implementation
+// ==============================
+
 export const useJudgeStore = create<JudgeState>()(
   persist(
     (set) => ({
+      // ==============================
+      // Initial State
+      // ==============================
       judge: null,
       isLoadingJudge: false,
       judgeError: null,
       submissionStatus: null,
+
+      // ==============================
+      // Utility Functions
+      // ==============================
 
       clearJudge: async () => {
         try {
@@ -51,6 +91,10 @@ export const useJudgeStore = create<JudgeState>()(
         }
       },
 
+      // ==============================
+      // Data Fetching Actions
+      // ==============================
+
       fetchJudgeById: async (judgeId: number) => {
         set({ isLoadingJudge: true });
         try {
@@ -65,6 +109,10 @@ export const useJudgeStore = create<JudgeState>()(
           set({ isLoadingJudge: false });
         }
       },
+
+      // ==============================
+      // CRUD Operations
+      // ==============================
 
       createJudge: async (newJudge: NewJudge) => {
         set({ isLoadingJudge: true });
@@ -81,7 +129,7 @@ export const useJudgeStore = create<JudgeState>()(
           // Convert error to string to prevent React rendering issues
           const errorMessage = extractErrorMessage(judgeError) || "Error creating judge";
           set({ judgeError: errorMessage });
-          throw judgeError; 
+          throw judgeError;
         } finally {
           set({ isLoadingJudge: false });
         }
@@ -127,12 +175,16 @@ export const useJudgeStore = create<JudgeState>()(
         }
       },
 
+      // ==============================
+      // Business Logic Actions
+      // ==============================
+
       checkAllScoreSheetsSubmitted: async (judges: Judge[], clusterId?: number) => {
         set({ isLoadingJudge: true });
         try {
           const url = clusterId ? `/api/judge/allScoreSheetsSubmitted/?cluster_id=${clusterId}` : `/api/judge/allScoreSheetsSubmitted/`;
           const { data } = await api.post(url, judges);
-          
+
           // Store submission status per cluster to avoid overwriting other clusters
           if (clusterId) {
             set((state) => ({
@@ -174,6 +226,9 @@ export const useJudgeStore = create<JudgeState>()(
       },
     }),
     {
+      // ==============================
+      // Persistence Configuration
+      // ==============================
       name: "judge-storage",
       storage: createJSONStorage(() => sessionStorage),
     }

@@ -1,3 +1,12 @@
+// ==============================
+// Component: ScoreBreakdownTableStandard
+// Standard table component for displaying detailed score breakdowns.
+// Shows individual criteria scores with responsive design and custom styling.
+// ==============================
+
+// ==============================
+// UI Libraries & Theme
+// ==============================
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -5,7 +14,15 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import { Box, CircularProgress, Typography } from "@mui/material";
+
+// ==============================
+// Store Hooks
+// ==============================
 import { useScoreSheetStore } from "../../store/primary_stores/scoreSheetStore";
+
+// ==============================
+// Types
+// ==============================
 import {
   JournalScoreSheetFields,
   MachineDesignScoreSheetFields,

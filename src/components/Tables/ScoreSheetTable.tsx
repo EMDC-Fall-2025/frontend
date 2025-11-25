@@ -13,8 +13,7 @@ import {
   Typography,
   TextField,
   Button,
-  
-  Divider, // optional separator for a cleaner card look
+  Divider,
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
@@ -30,17 +29,14 @@ import CheckIcon from "@mui/icons-material/Check";
 import AreYouSureModal from "../Modals/AreYouSureModal";
 import toast from "react-hot-toast";
 
-/**
- * Props that control which sheet to load and how to render it
- */
 type IScoreSheetTableProps = {
-  sheetType: number;            // which sheet (e.g., presentation = 1)
-  title: string;                // page title
-  teamName: string;             // for the subtitle
-  questions: any[];             // list of question configs for this sheet
-  seperateJrAndSr: boolean;     // whether to show separate Jr/Sr criteria text for question 4
-  teamId: number | null;        // which team is being scored
-  judgeId: number | null;       // which judge is scoring
+  sheetType: number;
+  title: string;
+  teamName: string;
+  questions: any[];
+  seperateJrAndSr: boolean;
+  teamId: number | null;
+  judgeId: number | null;
 };
 
 export default function ScoreSheetTable({
@@ -52,10 +48,9 @@ export default function ScoreSheetTable({
   judgeId,
   seperateJrAndSr,
 }: IScoreSheetTableProps) {
-  // Track which rows are expanded (questionId -> open/closed)
   const [openRows, setOpenRows] = React.useState<{ [key: number]: boolean }>({});
+  const [openAreYouSure, setOpenAreYouSure] = useState(false);
 
-  // Store hooks for retrieving the score sheet mapping and data
   const { fetchScoreSheetWithData } = useMapScoreSheetStore();
   const {
     scoreSheet,
@@ -66,15 +61,11 @@ export default function ScoreSheetTable({
     setScoreSheet,
   } = useScoreSheetStore();
 
-  // Confirm-submit modal
-  const [openAreYouSure, setOpenAreYouSure] = useState(false);
-
   const navigate = useNavigate();
 
-  /**
-   * Toggle a question row open/closed
-   * Memoized to prevent recreation on every render
-   */
+  // NEW: only show spinner for first load, not on every save
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+
   const handleToggle = useCallback((id: number) => {
     setOpenRows((prevState) => ({
       ...prevState,
@@ -82,37 +73,28 @@ export default function ScoreSheetTable({
     }));
   }, []);
 
-  /**
-   * On mount / when team/judge change:
-   * fetch both the scoreSheetId and the full scoresheet data in one optimized call
-   */
   useEffect(() => {
     if (teamId && judgeId) {
       // Clear the current scoresheet to prevent showing old data
       clearScoreSheet();
-      
-      // Use optimized method that gets both mapping and data in one call
+
       fetchScoreSheetWithData(judgeId, teamId, sheetType)
         .then((scoresheetData) => {
-          // Set the scoresheet data directly without needing a second API call
           setScoreSheet(scoresheetData);
         })
         .catch((error) => {
-          console.error('Error fetching scoresheet:', error);
+          console.error("Error fetching scoresheet:", error);
         });
     }
-  }, [teamId, judgeId, sheetType]); // Added sheetType to dependencies, removed clearScoreSheet and fetchScoreSheetId
+  }, [teamId, judgeId, sheetType]); // keep your original deps
 
-  /**
-   * Remove the second useEffect since we now get the data directly in the first call
-   * This eliminates the unnecessary second API call and loading state
-   */
+  // Mark initial load done once scoresheet has loaded at least once
+  useEffect(() => {
+    if (!isLoadingScoreSheet && !initialLoadComplete) {
+      setInitialLoadComplete(true);
+    }
+  }, [isLoadingScoreSheet, initialLoadComplete]);
 
-  /**
-   * Local form state: keyed by question.id.
-   * field1..field9 map to questions 1..9.
-   * 1-8 are numeric scores, 9 is free-text comments.
-   */
   const [formData, setFormData] = useState<{
     [key: number]: number | string | undefined;
   }>({
@@ -127,10 +109,6 @@ export default function ScoreSheetTable({
     9: undefined,
   });
 
-  /**
-   * When scoreSheet loads, populate formData from it.
-   * If no sheet yet, clear the form.
-   */
   useEffect(() => {
     if (scoreSheet) {
       setFormData({
@@ -147,55 +125,50 @@ export default function ScoreSheetTable({
     } else {
       setFormData({});
     }
-  }, [scoreSheet]); // Removed judgeId, teamId as they're not needed for form data updates
+  }, [scoreSheet]);
 
-  /**
-   * Update a single question's value in local form state
-   * Memoized to prevent recreation on every render
-   */
-  const handleScoreChange = useCallback((
-    questionId: number,
-    value: number | string | undefined
-  ) => {
-    setFormData((prevState) => ({
-      ...prevState,
-      [questionId]: value,
-    }));
-  }, []);
+  const handleScoreChange = useCallback(
+    (questionId: number, value: number | string | undefined) => {
+      setFormData((prevState) => ({
+        ...prevState,
+        [questionId]: value,
+      }));
+    },
+    []
+  );
 
-  /**
-   * Save current formData (draft) without submitting
-   * Memoized to prevent recreation on every render
-   */
-  const handleSaveScoreSheet = useCallback(() => {
-    if (scoreSheet) {
-      // Prepare data with proper handling of undefined/null values
-      const scoreData = {
-        id: scoreSheet.id,
-        field1: formData[1] !== undefined ? formData[1] : undefined,
-        field2: formData[2] !== undefined ? formData[2] : undefined,
-        field3: formData[3] !== undefined ? formData[3] : undefined,
-        field4: formData[4] !== undefined ? formData[4] : undefined,
-        field5: formData[5] !== undefined ? formData[5] : undefined,
-        field6: formData[6] !== undefined ? formData[6] : undefined,
-        field7: formData[7] !== undefined ? formData[7] : undefined,
-        field8: formData[8] !== undefined ? formData[8] : undefined,
-        field9: formData[9] !== undefined ? formData[9]?.toString() : undefined, // comments stored as string
-      };
-      
-      // Save score sheet data
-      updateScores(scoreData);
+
+  const handleSaveScoreSheet = useCallback(async () => {
+    if (!scoreSheet) return;
+
+    const scoreData = {
+      id: scoreSheet.id,
+      field1: formData[1] !== undefined ? formData[1] : undefined,
+      field2: formData[2] !== undefined ? formData[2] : undefined,
+      field3: formData[3] !== undefined ? formData[3] : undefined,
+      field4: formData[4] !== undefined ? formData[4] : undefined,
+      field5: formData[5] !== undefined ? formData[5] : undefined,
+      field6: formData[6] !== undefined ? formData[6] : undefined,
+      field7: formData[7] !== undefined ? formData[7] : undefined,
+      field8: formData[8] !== undefined ? formData[8] : undefined,
+      field9:
+        formData[9] !== undefined ? formData[9]?.toString() : undefined,
+    };
+
+    try {
+      await updateScores(scoreData);
+   
+      // no navigation, no reload
+    } catch (err) {
+      console.error("Error saving scoresheet:", err);
+
     }
   }, [scoreSheet, formData, updateScores]);
 
-  /**
-   * Check if all required score fields (1..8) are filled.
-   * field 9 (comments) is optional
-   */
   const allFieldsFilled = () => {
     const allFilled = Object.keys(formData).every((key) => {
       const fieldId = Number(key);
-      if (fieldId === 9) return true; // skip comments
+      if (fieldId === 9) return true;
       const isFilled =
         formData[fieldId] !== undefined &&
         formData[fieldId] !== 0 &&
@@ -205,10 +178,6 @@ export default function ScoreSheetTable({
     return allFilled;
   };
 
-  /**
-   * Find which questions are incomplete (undefined/empty/0)
-   * Used to expand only those rows
-   */
   const getIncompleteRows = () => {
     return questions
       .filter(
@@ -220,9 +189,6 @@ export default function ScoreSheetTable({
       .map((question) => question.id);
   };
 
-  /**
-   * Expand all incomplete rows to prompt the judge to fill them
-   */
   const expandIncompleteRows = () => {
     const incompleteRows = getIncompleteRows();
     const updatedOpenRows = incompleteRows.reduce(
@@ -235,20 +201,14 @@ export default function ScoreSheetTable({
     setOpenRows(updatedOpenRows);
   };
 
-  /**
-   * Collapse every row
-   */
   const handleCollapseAllRows = () => {
     const updatedOpenRows = questions.reduce((acc, question) => {
-      acc[question.id] = false; // Collapse each row
+      acc[question.id] = false;
       return acc;
     }, {} as { [key: number]: boolean });
     setOpenRows(updatedOpenRows);
   };
 
-  /**
-   * Submit the sheet (finalize). Navigates back after success.
-   */
   const handleSubmit = async () => {
     try {
       if (scoreSheet) {
@@ -268,26 +228,34 @@ export default function ScoreSheetTable({
         });
       }
       setOpenAreYouSure(false);
-      
-      // Small delay to ensure toast is visible before navigation
       setTimeout(() => {
-        navigate(-1); // back to previous page
+        navigate(-1);
       }, 100);
     } catch (error) {
-      console.error('Error submitting scoresheet:', error);
+      console.error("Error submitting scoresheet:", error);
       toast.error("Failed to submit scoresheet. Please try again.");
       setOpenAreYouSure(false);
     }
   };
 
-  // Show a spinner while the sheet is loading
-  return isLoadingScoreSheet ? (
-    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-      <CircularProgress />
-    </Box>
-  ) : (
+  // Spinner ONLY on first load
+  if (isLoadingScoreSheet && !initialLoadComplete) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "50vh",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
     <>
-      {/* Navigation back to judging dashboard  */}
       <Container
         maxWidth="lg"
         sx={{
@@ -318,7 +286,6 @@ export default function ScoreSheetTable({
         </Button>
       </Container>
 
-      {/* Page title + team name (subtitle) */}
       <Typography
         variant="h4"
         sx={{
@@ -339,7 +306,6 @@ export default function ScoreSheetTable({
         {teamName}
       </Typography>
 
-      {/* Main card container for actions + table */}
       <Container
         component="form"
         sx={{
@@ -353,7 +319,6 @@ export default function ScoreSheetTable({
           mb: 3,
         }}
       >
-        {/* Actions: save, expand incomplete, collapse all */}
         <Box
           sx={{
             display: "flex",
@@ -374,7 +339,7 @@ export default function ScoreSheetTable({
               height: { xs: 36, sm: 44 },
               textTransform: "none",
               borderRadius: 2,
-              fontSize: { xs: "0.75rem", sm: "0.9375rem" }
+              fontSize: { xs: "0.75rem", sm: "0.9375rem" },
             }}
           >
             Save
@@ -393,7 +358,7 @@ export default function ScoreSheetTable({
               height: { xs: 36, sm: 44 },
               textTransform: "none",
               borderRadius: 2,
-              fontSize: { xs: "0.75rem", sm: "0.9375rem" }
+              fontSize: { xs: "0.75rem", sm: "0.9375rem" },
             }}
           >
             Expand Incomplete Rows
@@ -404,12 +369,15 @@ export default function ScoreSheetTable({
             sx={{
               borderColor: theme.palette.grey[400],
               color: theme.palette.text.primary,
-              "&:hover": { borderColor: theme.palette.grey[600], bgcolor: theme.palette.grey[50] },
+              "&:hover": {
+                borderColor: theme.palette.grey[600],
+                bgcolor: theme.palette.grey[50],
+              },
               minWidth: { xs: 150, sm: 200 },
               height: { xs: 36, sm: 44 },
               textTransform: "none",
               borderRadius: 2,
-              fontSize: { xs: "0.75rem", sm: "0.9375rem" }
+              fontSize: { xs: "0.75rem", sm: "0.9375rem" },
             }}
           >
             Collapse All
@@ -418,7 +386,6 @@ export default function ScoreSheetTable({
 
         <Divider sx={{ mb: 2 }} />
 
-        {/* Scoring table: each question row can be expanded to show criteria + input */}
         <TableContainer
           component={Paper}
           sx={{
@@ -429,15 +396,19 @@ export default function ScoreSheetTable({
         >
           <Table
             sx={{
-              "& .MuiTableRow-root": { transition: "background-color 120ms ease" },
+              "& .MuiTableRow-root": {
+                transition: "background-color 120ms ease",
+              },
               "& td, & th": { borderColor: theme.palette.grey[200] },
             }}
           >
             <TableBody>
               {questions.map((question) => (
                 <React.Fragment key={question.id}>
-                  {/* Summary row: shows question text and status icon */}
-                  <TableRow onClick={() => handleToggle(question.id)} sx={{ cursor: "pointer" }}>
+                  <TableRow
+                    onClick={() => handleToggle(question.id)}
+                    sx={{ cursor: "pointer" }}
+                  >
                     <TableCell sx={{ width: 56 }}>
                       <IconButton aria-label="expand row" size="small">
                         {openRows[question.id] ? (
@@ -450,39 +421,53 @@ export default function ScoreSheetTable({
                     <TableCell
                       component="th"
                       scope="row"
-                      sx={{ 
-                        pl: { xs: 1, sm: 2 }, 
-                        textAlign: "left", 
-                        pr: { xs: 1, sm: 2 }, 
+                      sx={{
+                        pl: { xs: 1, sm: 2 },
+                        textAlign: "left",
+                        pr: { xs: 1, sm: 2 },
                         fontWeight: 600,
                         fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                        cursor: "pointer"
+                        cursor: "pointer",
                       }}
                     >
                       {question.questionText}
                     </TableCell>
                     <TableCell align="right" scope="row" sx={{ width: 56 }}>
-                      {/* For questions 1..8 show a check/close icon; question 9 is comments */}
                       {question.id != 9 &&
-                        (formData[question.id] === undefined || formData[question.id] === 0 || formData[question.id] === "" || formData[question.id] === null ? (
+                        (formData[question.id] === undefined ||
+                        formData[question.id] === 0 ||
+                        formData[question.id] === "" ||
+                        formData[question.id] === null ? (
                           <CloseIcon sx={{ color: theme.palette.error.main }} />
                         ) : (
-                          <CheckIcon sx={{ color: theme.palette.success.main }} />
+                          <CheckIcon
+                            sx={{ color: theme.palette.success.main }}
+                          />
                         ))}
                     </TableCell>
                   </TableRow>
 
-                  {/* Details row: criteria cards + score input (or comments for Q9) */}
                   <TableRow>
-                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
-                      <Collapse in={openRows[question.id]} timeout="auto" unmountOnExit>
+                    <TableCell
+                      style={{ paddingBottom: 0, paddingTop: 0 }}
+                      colSpan={6}
+                    >
+                      <Collapse
+                        in={openRows[question.id]}
+                        timeout="auto"
+                        unmountOnExit
+                      >
                         <Box
                           sx={{
                             mt: { xs: 1, sm: 2 },
                             mb: { xs: 1, sm: 2 },
                             display: "flex",
                             gap: { xs: 1, sm: 2 },
-                            flexDirection: { md: "row", sm: "column", xs: "column" },
+                            flexDirection: {
+                              md: "row",
+                              sm: "column",
+                              xs: "column",
+                            },
                             width: "100%",
                             alignItems: "stretch",
                             justifyContent: "center",
@@ -491,7 +476,7 @@ export default function ScoreSheetTable({
                         >
                           {question.id !== 9 ? (
                             <>
-                              {/* Criteria 1 card */}
+                              {/* Criteria 1 */}
                               <Box
                                 sx={{
                                   bgcolor: theme.palette.grey[50],
@@ -503,36 +488,78 @@ export default function ScoreSheetTable({
                               >
                                 {seperateJrAndSr && question.id == 4 ? (
                                   <>
-                                    <Typography sx={{ 
-                                      fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
-                                      fontWeight: 600, 
-                                      mb: { xs: 0.5, sm: 1 } 
-                                    }}>
+                                    <Typography
+                                      sx={{
+                                        fontSize: {
+                                          xs: "0.75rem",
+                                          sm: "0.9375rem",
+                                        },
+                                        fontWeight: 600,
+                                        mb: { xs: 0.5, sm: 1 },
+                                      }}
+                                    >
                                       Jr. Div.
                                     </Typography>
-                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria1Junior}</Typography>
-                                    <Typography sx={{ 
-                                      fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
-                                      fontWeight: 600, 
-                                      my: { xs: 0.5, sm: 1 } 
-                                    }}>
+                                    <Typography
+                                      sx={{
+                                        fontSize: {
+                                          xs: "0.75rem",
+                                          sm: "0.9375rem",
+                                        },
+                                      }}
+                                    >
+                                      {question.criteria1Junior}
+                                    </Typography>
+                                    <Typography
+                                      sx={{
+                                        fontSize: {
+                                          xs: "0.75rem",
+                                          sm: "0.9375rem",
+                                        },
+                                        fontWeight: 600,
+                                        my: { xs: 0.5, sm: 1 },
+                                      }}
+                                    >
                                       Sr. Div.
                                     </Typography>
-                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria1Senior}</Typography>
+                                    <Typography
+                                      sx={{
+                                        fontSize: {
+                                          xs: "0.75rem",
+                                          sm: "0.9375rem",
+                                        },
+                                      }}
+                                    >
+                                      {question.criteria1Senior}
+                                    </Typography>
                                   </>
                                 ) : (
-                                  <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria1}</Typography>
+                                  <Typography
+                                    sx={{
+                                      fontSize: {
+                                        xs: "0.75rem",
+                                        sm: "0.9375rem",
+                                      },
+                                    }}
+                                  >
+                                    {question.criteria1}
+                                  </Typography>
                                 )}
-                                <Typography sx={{ 
-                                  mt: { xs: 0.5, sm: 1 }, 
-                                  fontWeight: 600, 
-                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" } 
-                                }}>
+                                <Typography
+                                  sx={{
+                                    mt: { xs: 0.5, sm: 1 },
+                                    fontWeight: 600,
+                                    fontSize: {
+                                      xs: "0.75rem",
+                                      sm: "0.9375rem",
+                                    },
+                                  }}
+                                >
                                   {question.criteria1Points}
                                 </Typography>
                               </Box>
 
-                              {/* Criteria 2 card */}
+                              {/* Criteria 2 */}
                               <Box
                                 sx={{
                                   bgcolor: theme.palette.grey[50],
@@ -544,36 +571,78 @@ export default function ScoreSheetTable({
                               >
                                 {seperateJrAndSr && question.id == 4 ? (
                                   <>
-                                    <Typography sx={{ 
-                                      fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
-                                      fontWeight: 600, 
-                                      mb: { xs: 0.5, sm: 1 } 
-                                    }}>
+                                    <Typography
+                                      sx={{
+                                        fontSize: {
+                                          xs: "0.75rem",
+                                          sm: "0.9375rem",
+                                        },
+                                        fontWeight: 600,
+                                        mb: { xs: 0.5, sm: 1 },
+                                      }}
+                                    >
                                       Jr. Div.
                                     </Typography>
-                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria2Junior}</Typography>
-                                    <Typography sx={{ 
-                                      fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
-                                      fontWeight: 600, 
-                                      my: { xs: 0.5, sm: 1 } 
-                                    }}>
+                                    <Typography
+                                      sx={{
+                                        fontSize: {
+                                          xs: "0.75rem",
+                                          sm: "0.9375rem",
+                                        },
+                                      }}
+                                    >
+                                      {question.criteria2Junior}
+                                    </Typography>
+                                    <Typography
+                                      sx={{
+                                        fontSize: {
+                                          xs: "0.75rem",
+                                          sm: "0.9375rem",
+                                        },
+                                        fontWeight: 600,
+                                        my: { xs: 0.5, sm: 1 },
+                                      }}
+                                    >
                                       Sr. Div.
                                     </Typography>
-                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria2Senior}</Typography>
+                                    <Typography
+                                      sx={{
+                                        fontSize: {
+                                          xs: "0.75rem",
+                                          sm: "0.9375rem",
+                                        },
+                                      }}
+                                    >
+                                      {question.criteria2Senior}
+                                    </Typography>
                                   </>
                                 ) : (
-                                  <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria2}</Typography>
+                                  <Typography
+                                    sx={{
+                                      fontSize: {
+                                        xs: "0.75rem",
+                                        sm: "0.9375rem",
+                                      },
+                                    }}
+                                  >
+                                    {question.criteria2}
+                                  </Typography>
                                 )}
-                                <Typography sx={{ 
-                                  mt: { xs: 0.5, sm: 1 }, 
-                                  fontWeight: 600, 
-                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" } 
-                                }}>
+                                <Typography
+                                  sx={{
+                                    mt: { xs: 0.5, sm: 1 },
+                                    fontWeight: 600,
+                                    fontSize: {
+                                      xs: "0.75rem",
+                                      sm: "0.9375rem",
+                                    },
+                                  }}
+                                >
                                   {question.criteria2Points}
                                 </Typography>
                               </Box>
 
-                              {/* Criteria 3 card */}
+                              {/* Criteria 3 */}
                               <Box
                                 sx={{
                                   bgcolor: theme.palette.grey[50],
@@ -585,82 +654,127 @@ export default function ScoreSheetTable({
                               >
                                 {seperateJrAndSr && question.id == 4 ? (
                                   <>
-                                    <Typography sx={{ 
-                                      fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
-                                      fontWeight: 600, 
-                                      mb: { xs: 0.5, sm: 1 } 
-                                    }}>
+                                    <Typography
+                                      sx={{
+                                        fontSize: {
+                                          xs: "0.75rem",
+                                          sm: "0.9375rem",
+                                        },
+                                        fontWeight: 600,
+                                        mb: { xs: 0.5, sm: 1 },
+                                      }}
+                                    >
                                       Jr. Div.
                                     </Typography>
-                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria3Junior}</Typography>
-                                    <Typography sx={{ 
-                                      fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
-                                      fontWeight: 600, 
-                                      my: { xs: 0.5, sm: 1 } 
-                                    }}>
+                                    <Typography
+                                      sx={{
+                                        fontSize: {
+                                          xs: "0.75rem",
+                                          sm: "0.9375rem",
+                                        },
+                                      }}
+                                    >
+                                      {question.criteria3Junior}
+                                    </Typography>
+                                    <Typography
+                                      sx={{
+                                        fontSize: {
+                                          xs: "0.75rem",
+                                          sm: "0.9375rem",
+                                        },
+                                        fontWeight: 600,
+                                        my: { xs: 0.5, sm: 1 },
+                                      }}
+                                    >
                                       Sr. Div.
                                     </Typography>
-                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria3Senior}</Typography>
+                                    <Typography
+                                      sx={{
+                                        fontSize: {
+                                          xs: "0.75rem",
+                                          sm: "0.9375rem",
+                                        },
+                                      }}
+                                    >
+                                      {question.criteria3Senior}
+                                    </Typography>
                                   </>
                                 ) : (
-                                  <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>{question.criteria3}</Typography>
+                                  <Typography
+                                    sx={{
+                                      fontSize: {
+                                        xs: "0.75rem",
+                                        sm: "0.9375rem",
+                                      },
+                                    }}
+                                  >
+                                    {question.criteria3}
+                                  </Typography>
                                 )}
-                                <Typography sx={{ 
-                                  mt: { xs: 0.5, sm: 1 }, 
-                                  fontWeight: 600, 
-                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" } 
-                                }}>
+                                <Typography
+                                  sx={{
+                                    mt: { xs: 0.5, sm: 1 },
+                                    fontWeight: 600,
+                                    fontSize: {
+                                      xs: "0.75rem",
+                                      sm: "0.9375rem",
+                                    },
+                                  }}
+                                >
                                   {question.criteria3Points}
                                 </Typography>
                               </Box>
 
-                              {/* Numeric score input for Q1..Q8 */}
-                              <Box sx={{ 
-                                display: "flex", 
-                                alignItems: "flex-start", 
-                                justifyContent: "center",
-                                minWidth: { xs: "80px", sm: "120px" },
-                                maxWidth: { xs: "100px", sm: "140px" },
-                                mx: { xs: 0.5, sm: 2 }
-                              }}>
+                              {/* Numeric score input */}
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "flex-start",
+                                  justifyContent: "center",
+                                  minWidth: { xs: "80px", sm: "120px" },
+                                  maxWidth: { xs: "100px", sm: "140px" },
+                                  mx: { xs: 0.5, sm: 2 },
+                                }}
+                              >
                                 <TextField
                                   id="outlined-number"
                                   label="Score"
                                   type="number"
                                   value={
-                                    formData[question.id] !== undefined && 
-                                    formData[question.id] !== null && 
+                                    formData[question.id] !== undefined &&
+                                    formData[question.id] !== null &&
                                     formData[question.id] !== "" &&
                                     formData[question.id] !== 0
                                       ? formData[question.id]
                                       : ""
                                   }
-                                  // avoid accidental value change from mouse wheel
                                   onWheel={(e) => {
                                     const inputElement =
                                       e.target as HTMLInputElement;
                                     inputElement.blur();
                                   }}
                                   onChange={(e) => {
-                                    // enforce allowed range: [lowPoints, highPoints] or empty
                                     let value: any = e.target.value;
 
                                     if (value !== undefined) {
                                       if (value === "") {
-                                        value = undefined; // Clear the field
-                                      } else if (Number(value) < question.lowPoints) {
-                                        value = undefined; // Clear if below range
-                                      } else if (Number(value) > question.highPoints) {
-                                        value = undefined; // Clear if above range
+                                        value = undefined;
+                                      } else if (
+                                        Number(value) < question.lowPoints
+                                      ) {
+                                        value = undefined;
+                                      } else if (
+                                        Number(value) > question.highPoints
+                                      ) {
+                                        value = undefined;
                                       } else {
-                                        value = Number(value); // Convert to number if valid
+                                        value = Number(value);
                                       }
                                     }
 
                                     handleScoreChange(question.id, value);
                                   }}
                                   onKeyDown={(e) => {
-                                    // block up/down arrows to prevent accidental changes
                                     if (
                                       e.key === "ArrowUp" ||
                                       e.key === "ArrowDown"
@@ -681,9 +795,10 @@ export default function ScoreSheetTable({
                                   helperText={`Allowed: ${question.lowPoints} – ${question.highPoints}`}
                                   sx={{
                                     width: "100%",
-                                    "& .MuiOutlinedInput-root.Mui-focused fieldset": {
-                                      borderColor: theme.palette.success.main,
-                                    },
+                                    "& .MuiOutlinedInput-root.Mui-focused fieldset":
+                                      {
+                                        borderColor: theme.palette.success.main,
+                                      },
                                     "& label.Mui-focused": {
                                       color: theme.palette.success.main,
                                     },
@@ -691,23 +806,31 @@ export default function ScoreSheetTable({
                                       borderRadius: 2,
                                     },
                                     "& .MuiFormHelperText-root": {
-                                      fontSize: { xs: "0.6rem", sm: "0.75rem" },
+                                      fontSize: {
+                                        xs: "0.6rem",
+                                        sm: "0.75rem",
+                                      },
                                       mt: 0.5,
-                                      mx: 0
+                                      mx: 0,
                                     },
                                     "& .MuiInputLabel-root": {
-                                      fontSize: { xs: "0.75rem", sm: "0.9375rem" }
+                                      fontSize: {
+                                        xs: "0.75rem",
+                                        sm: "0.9375rem",
+                                      },
                                     },
                                     "& .MuiOutlinedInput-input": {
-                                      fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                                      py: { xs: 1, sm: 1.5 }
-                                    }
+                                      fontSize: {
+                                        xs: "0.75rem",
+                                        sm: "0.9375rem",
+                                      },
+                                      py: { xs: 1, sm: 1.5 },
+                                    },
                                   }}
                                 />
                               </Box>
                             </>
                           ) : (
-                            // Free-text comments for Q9
                             <TextField
                               id="outlined-multiline-flexible"
                               label="Enter Comments"
@@ -728,18 +851,25 @@ export default function ScoreSheetTable({
                               }
                               sx={{
                                 width: "90%",
-                                "& .MuiOutlinedInput-root.Mui-focused fieldset": {
-                                  borderColor: theme.palette.success.main,
-                                },
+                                "& .MuiOutlinedInput-root.Mui-focused fieldset":
+                                  {
+                                    borderColor: theme.palette.success.main,
+                                  },
                                 "& label.Mui-focused": {
                                   color: theme.palette.success.main,
                                 },
                                 "& .MuiInputLabel-root": {
-                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" }
+                                  fontSize: {
+                                    xs: "0.75rem",
+                                    sm: "0.9375rem",
+                                  },
                                 },
                                 "& .MuiOutlinedInput-input": {
-                                  fontSize: { xs: "0.75rem", sm: "0.9375rem" }
-                                }
+                                  fontSize: {
+                                    xs: "0.75rem",
+                                    sm: "0.9375rem",
+                                  },
+                                },
                               }}
                             />
                           )}
@@ -753,7 +883,6 @@ export default function ScoreSheetTable({
           </Table>
         </TableContainer>
 
-        {/* Final submit (opens confirmation modal). Disabled until all required fields are filled. */}
         <Button
           variant="contained"
           onClick={() => setOpenAreYouSure(true)}
@@ -767,20 +896,18 @@ export default function ScoreSheetTable({
             height: { xs: 36, sm: 44 },
             textTransform: "none",
             borderRadius: 2,
-            fontSize: { xs: "0.75rem", sm: "0.9375rem" }
+            fontSize: { xs: "0.75rem", sm: "0.9375rem" },
           }}
         >
           Submit
         </Button>
 
-        {/* Confirmation modal; shows error if any returned from the store */}
         <AreYouSureModal
           open={openAreYouSure}
           handleClose={() => setOpenAreYouSure(false)}
           title="Are you sure you want to submit?"
-          handleSubmit={() => handleSubmit()}
-      
-        ></AreYouSureModal>
+          handleSubmit={handleSubmit}
+        />
       </Container>
     </>
   );

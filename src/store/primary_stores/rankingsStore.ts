@@ -1,20 +1,49 @@
+// ==============================
+// Store: Rankings Store
+// Manages contest rankings, championship advancement, and cluster data.
+// Handles organizer-specific contest listings and advancement operations.
+// ==============================
+
+// ==============================
+// Core Dependencies
+// ==============================
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+
+// ==============================
+// API & Utilities
+// ==============================
 import { api } from "../../lib/api";
-import { Contest, Cluster } from "../../types";
 import { dispatchDataChange } from "../../utils/dataChangeEvents";
 
+// ==============================
+// Types
+// ==============================
+import { Contest, Cluster } from "../../types";
+
+// ==============================
+// Types & Interfaces
+// ==============================
+
 interface RankingsState {
+  // Rankings data
   contests: Contest[];
   clusters: Cluster[];
   selectedContest: Contest | null;
+
+  // Loading and error states
   isLoadingRankings: boolean;
   rankingsError: string | null;
-  
+
+  // Data fetching operations
   fetchContestsForOrganizer: (organizerId: number) => Promise<void>;
   fetchClustersWithTeamsForContest: (contestId: number) => Promise<void>;
+
+  // UI state management
   setSelectedContest: (contest: Contest | null) => void;
   clearRankings: () => void;
+
+  // Championship operations
   advanceToChampionship: (contestId: number, championshipTeamIds: number[]) => Promise<void>;
   undoChampionshipAdvancement: (contestId: number) => Promise<void>;
   listAdvancers: (contestId: number) => Promise<any>;
@@ -155,8 +184,15 @@ export const useRankingsStore = create<RankingsState>()(
             `/api/advance/advanceToChampionship/`,
             requestData
           );
-          
+
           if (response.data.ok) {
+            // Tell all listeners that scoresheets changed for this contest
+            dispatchDataChange({
+              type: "scoresheet",
+              action: "create",
+              contestId: contestId,
+            });
+
             // Refresh the clusters to show the new championship/redesign clusters
             const { fetchClustersWithTeamsForContest } = useRankingsStore.getState();
             await fetchClustersWithTeamsForContest(contestId);
@@ -169,6 +205,28 @@ export const useRankingsStore = create<RankingsState>()(
                 id: teamId,
                 contestId: contestId
               });
+            });
+
+            // Dispatch cluster update event to trigger judge and team refreshes
+            dispatchDataChange({
+              type: 'cluster',
+              action: 'update',
+              contestId: contestId
+            });
+
+            // Dispatch scoresheet update event to invalidate scoresheet cache
+            dispatchDataChange({
+              type: 'scoresheet',
+              action: 'create',
+              contestId: contestId
+            });
+
+            // Dispatch judge update event to refresh judge data
+            // (judge championship/redesign flags may have been updated)
+            dispatchDataChange({
+              type: 'judge',
+              action: 'update',
+              contestId: contestId
             });
           } else {
             throw new Error(response.data.message || "Failed to advance to championship");
@@ -201,6 +259,34 @@ export const useRankingsStore = create<RankingsState>()(
             // Refresh the clusters to show the reverted state
             const { fetchClustersWithTeamsForContest } = useRankingsStore.getState();
             await fetchClustersWithTeamsForContest(contestId);
+
+            // Dispatch data change events to notify all components to refresh
+            dispatchDataChange({
+              type: 'team',
+              action: 'update',
+              contestId: contestId
+            });
+
+            dispatchDataChange({
+              type: 'cluster',
+              action: 'update',
+              contestId: contestId
+            });
+
+            dispatchDataChange({
+              type: 'scoresheet',
+              action: 'delete',
+              contestId: contestId
+            });
+
+            dispatchDataChange({
+              type: 'judge',
+              action: 'update',
+              contestId: contestId
+            });
+
+            // Dispatch the championshipUndone event that Judging.tsx listens for
+            window.dispatchEvent(new CustomEvent('championshipUndone'));
           } else {
             throw new Error(response.data.message || "Failed to undo championship advancement");
           }

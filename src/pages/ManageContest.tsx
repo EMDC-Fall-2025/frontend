@@ -1,3 +1,21 @@
+// ==============================
+// Component: ManageContest
+// Handles judges, teams, clusters, and contest configuration with tabbed navigation.
+// ==============================
+
+// ==============================
+// React Core
+// ==============================
+import { useEffect, useMemo, useState, useRef } from "react";
+
+// ==============================
+// Router
+// ==============================
+import { useParams, Link as RouterLink } from "react-router-dom";
+
+// ==============================
+// UI Libraries & Theme
+// ==============================
 import {
   Box,
   Button,
@@ -6,29 +24,40 @@ import {
   Typography,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { useEffect, useMemo, useState, useRef } from "react";
-import { useParams, Link as RouterLink } from "react-router-dom";
-import theme from "../theme";
 import TabContext from "@mui/lab/TabContext";
 import TabList from "@mui/lab/TabList";
 import TabPanel from "@mui/lab/TabPanel";
-import OrganizerJudgesTable from "../components/Tables/OrganizerJudgesTable";
-import JudgeModal from "../components/Modals/JudgeModal";
-import OrganizerTeamsTable from "../components/Tables/OrganizerTeamsTable";
-import ClusterModal from "../components/Modals/ClusterModal";
-import TeamModal from "../components/Modals/TeamModal";
-import AssignJudgeToContestModal from "../components/Modals/AssignJudgeToContestModal";
+import theme from "../theme";
+
+// ==============================
+// Store Hooks
+// ==============================
+import { useAuthStore } from "../store/primary_stores/authStore";
 import { useContestStore } from "../store/primary_stores/contestStore";
 import { useMapClusterToContestStore } from "../store/map_stores/mapClusterToContestStore";
 import useContestJudgeStore from "../store/map_stores/mapContestToJudgeStore";
 import { useMapClusterJudgeStore } from "../store/map_stores/mapClusterToJudgeStore";
 import { useMapCoachToTeamStore } from "../store/map_stores/mapCoachToTeamStore";
 import useMapClusterTeamStore from "../store/map_stores/mapClusterToTeamStore";
-import { useAuthStore } from "../store/primary_stores/authStore";
+
+// ==============================
+// Local Components
+// ==============================
+import OrganizerJudgesTable from "../components/Tables/OrganizerJudgesTable";
+import OrganizerTeamsTable from "../components/Tables/OrganizerTeamsTable";
+import JudgeModal from "../components/Modals/JudgeModal";
+import ClusterModal from "../components/Modals/ClusterModal";
+import TeamModal from "../components/Modals/TeamModal";
+import AssignJudgeToContestModal from "../components/Modals/AssignJudgeToContestModal";
+
+// ==============================
+// Constants & Utilities
+// ==============================
 
 const ACTIVE_TAB_COOKIE = "manageContestActiveTab";
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
+// Cookie utility functions for tab persistence
 function getCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
   const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -43,48 +72,78 @@ function setCookie(name: string, value: string, maxAgeSeconds: number) {
   document.cookie = `${name}=${encodeURIComponent(value)};path=/;max-age=${maxAgeSeconds};samesite=lax`;
 }
 
-/**
- * ManageContest Component
- * 
- * Main page for managing contest details including judges, teams, and clusters.
- */
 export default function ManageContest() {
+  // ------------------------------
+  // Route Parameters
+  // ------------------------------
   const { contestId } = useParams();
   const parsedContestId = contestId ? parseInt(contestId, 10) : 0;
 
+  // ------------------------------
+  // Authentication
+  // ------------------------------
+  const { role } = useAuthStore();
+
+  // ------------------------------
+  // Local UI State
+  // ------------------------------
   const [value, setValue] = useState(() => getCookie(ACTIVE_TAB_COOKIE) || "1");
   const [hasLoaded, setHasLoaded] = useState(false);
   const isInitialLoadRef = useRef(true);
+
   // Modal state management for different creation/editing operations
   const [openJudgeModal, setOpenJudgeModal] = useState(false);
   const [openClusterModal, setOpenClusterModal] = useState(false);
   const [openTeamModal, setOpenTeamModal] = useState(false);
   const [openAssignJudgeModal, setOpenAssignJudgeModal] = useState(false);
 
-  const { role } = useAuthStore();
+  // ------------------------------
+  // Store State & Actions
+  // ------------------------------
 
   // Contest data management - use selector to subscribe to contest updates
   const contest = useContestStore((state) => state.contest);
   const fetchContestById = useContestStore((state) => state.fetchContestById);
-  
+
   const { getAllJudgesByContestId } = useContestJudgeStore();
-
   const { clusters, fetchClustersByContestId } = useMapClusterToContestStore();
-
   const { fetchTeamsByClusterId, teamsByClusterId } = useMapClusterTeamStore();
+
   // Judge-cluster mapping for organizing judges by clusters
   const { fetchJudgesByClusterId, judgesByClusterId } = useMapClusterJudgeStore();
+
   // Coach data management for teams
   const { fetchCoachesByTeams } = useMapCoachToTeamStore();
 
+  // ==============================
+  // Refs & State Tracking
+  // ==============================
+
+  // Track which clusters have been fetched to prevent duplicate calls
+  const fetchedClustersRef = useRef<Set<number>>(new Set());
+
+  // ==============================
+  // Computed Values
+  // ==============================
+
+  // Create sorted cluster IDs string for dependency tracking
   const clusterIds = useMemo(
     () => clusters.map(c => c.id).sort((a, b) => a - b).join(','),
     [clusters]
   );
 
+  // ==============================
+  // Refs & State Tracking
+  // ==============================
+
   // Track last fetched contest ID to prevent refetching on same contest
   const lastFetchedContestIdRef = useRef<number | null>(null);
 
+  // ==============================
+  // Data Loading & Effects
+  // ==============================
+
+  // Main data loading effect for contest, clusters, judges, teams, and coaches
   useEffect(() => {
     if (!parsedContestId) {
       setHasLoaded(true);
@@ -113,9 +172,6 @@ export default function ManageContest() {
       isInitialLoadRef.current = false;
     });
   }, [parsedContestId, fetchContestById, getAllJudgesByContestId, fetchClustersByContestId]);
-
-  // Track which clusters have been fetched to prevent duplicate calls
-  const fetchedClustersRef = useRef<Set<number>>(new Set());
 
   /**
    * Fetches teams and judges for clusters that don't have cached data.
@@ -213,9 +269,15 @@ export default function ManageContest() {
   };
 
 
+  // ==============================
+  // Main Component Render
+  // ==============================
+
   return (
   <>
-    {/* Header Section - Centered on larger screens */}
+    {/* ==============================
+        Page Header & Navigation
+        ============================== */}
     <Container
       sx={{
         maxWidth: 1200,

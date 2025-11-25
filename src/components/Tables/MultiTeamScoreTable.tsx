@@ -1,11 +1,23 @@
-/**
- * MultiTeamScoreTable Component
- * 
- * Allows judges to score multiple teams simultaneously with expandable criteria sections.
- * Supports draft saving and final submission for all teams at once.
- */
+// ==============================
+// Component: MultiTeamScoreTable
+// Advanced multi-team scoring interface with expandable criteria and bulk operations.
+// Supports draft saving, final submission, and responsive design for judges.
+// ==============================
 
+// ==============================
+// React Core
+// ==============================
 import * as React from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+
+// ==============================
+// Router
+// ==============================
+import { useNavigate } from "react-router-dom";
+
+// ==============================
+// UI Libraries & Theme
+// ==============================
 import {
   Table,
   TableBody,
@@ -25,22 +37,33 @@ import {
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import theme from "../../theme";
-import { useNavigate } from "react-router-dom";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckIcon from "@mui/icons-material/Check";
-import AreYouSureModal from "../Modals/AreYouSureModal";
-import { useScoreSheetStore } from "../../store/primary_stores/scoreSheetStore";
-import { useMapScoreSheetStore } from "../../store/map_stores/mapScoreSheetStore";
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useTheme as useMuiTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import theme from "../../theme";
 import toast from "react-hot-toast";
 
+// ==============================
+// Store Hooks
+// ==============================
+import { useScoreSheetStore } from "../../store/primary_stores/scoreSheetStore";
+import { useMapScoreSheetStore } from "../../store/map_stores/mapScoreSheetStore";
+
+// ==============================
+// Types
+// ==============================
 import { Question } from "../../types";
 
+// ==============================
+// Local Components
+// ==============================
+import AreYouSureModal from "../Modals/AreYouSureModal";
+
 type IMultiTeamScoreSheetProps = {
-  sheetType: number; 
-  title: string;   
-  teams: { id: number, name: string }[];
+  sheetType: number;
+  title: string;
+  teams: { id: number; name: string }[];
   questions: Question[];
   seperateJrAndSr: boolean;
   judgeId: number | null;
@@ -57,12 +80,16 @@ export default function MultiTeamScoreSheet({
   isDataReady = false,
 }: IMultiTeamScoreSheetProps) {
   const navigate = useNavigate();
-  
-  
+
+  const muiTheme = useMuiTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
+
   // Tracks expand/collapse state per question row
-  const [openRows, setOpenRows] = React.useState<{ [key: number]: boolean }>({});
+  const [openRows, setOpenRows] = React.useState<{ [key: number]: boolean }>(
+    {}
+  );
   const [openAreYouSure, setOpenAreYouSure] = useState(false);
-  
+
   // Form data state: teamId -> questionId -> value
   const [formData, setFormData] = useState<{
     [teamId: number]: {
@@ -71,18 +98,28 @@ export default function MultiTeamScoreSheet({
   }>({});
 
   // Score sheet store for data management - only subscribe to what we need
-  const multipleScoreSheets = useScoreSheetStore((state) => state.multipleScoreSheets);
-  const fetchMultipleScoreSheets = useScoreSheetStore((state) => state.fetchMultipleScoreSheets);
-  const updateMultipleScores = useScoreSheetStore((state) => state.updateMultipleScores);
-  const submitMultipleScoreSheets = useScoreSheetStore((state) => state.submitMultipleScoreSheets);
-  
+  const multipleScoreSheets = useScoreSheetStore(
+    (state) => state.multipleScoreSheets
+  );
+  const fetchMultipleScoreSheets = useScoreSheetStore(
+    (state) => state.fetchMultipleScoreSheets
+  );
+  const updateMultipleScores = useScoreSheetStore(
+    (state) => state.updateMultipleScores
+  );
+  const submitMultipleScoreSheets = useScoreSheetStore(
+    (state) => state.submitMultipleScoreSheets
+  );
+
   // Mapping store to refresh judge dashboard after updates
-  const fetchScoreSheetsByJudge = useMapScoreSheetStore((state) => state.fetchScoreSheetsByJudge);
+  const fetchScoreSheetsByJudge = useMapScoreSheetStore(
+    (state) => state.fetchScoreSheetsByJudge
+  );
 
   // Memoize team IDs to prevent unnecessary re-fetches
-  const teamIds = useMemo(() => teams.map(team => team.id), [teams]);
+  const teamIds = useMemo(() => teams.map((team) => team.id), [teams]);
   const teamIdsRef = useRef<number[]>([]);
-  
+
   // Update ref when teamIds change
   useEffect(() => {
     teamIdsRef.current = teamIds;
@@ -91,19 +128,19 @@ export default function MultiTeamScoreSheet({
   // Filter teams that have score sheets available
   const filteredTeams = useMemo(() => {
     if (!multipleScoreSheets) return [];
-    return teams.filter(team =>
-      multipleScoreSheets.some(sheet => sheet.teamId === team.id)
+    return teams.filter((team) =>
+      multipleScoreSheets.some((sheet) => sheet.teamId === team.id)
     );
   }, [teams, multipleScoreSheets]);
 
   // Fetch score sheets when component mounts or when teamIds change
   useEffect(() => {
     if (teamIds.length > 0 && judgeId) {
-      // Only fetch if teamIds actually changed
       const currentTeamIds = teamIdsRef.current;
-      const teamIdsChanged = currentTeamIds.length !== teamIds.length ||
+      const teamIdsChanged =
+        currentTeamIds.length !== teamIds.length ||
         currentTeamIds.some((id, idx) => id !== teamIds[idx]);
-      
+
       if (teamIdsChanged || currentTeamIds.length === 0) {
         fetchMultipleScoreSheets(teamIds, judgeId, sheetType);
       }
@@ -112,31 +149,29 @@ export default function MultiTeamScoreSheet({
 
   // Memoize sheet IDs string for comparison to prevent unnecessary formData updates
   const sheetIdsString = useMemo(() => {
-    if (!multipleScoreSheets || multipleScoreSheets.length === 0) return '';
+    if (!multipleScoreSheets || multipleScoreSheets.length === 0) return "";
     return multipleScoreSheets
-      .map(sheet => `${sheet.teamId}-${sheet.id}`)
+      .map((sheet) => `${sheet.teamId}-${sheet.id}`)
       .sort()
-      .join(',');
+      .join(",");
   }, [multipleScoreSheets]);
 
-  const sheetIdsRef = useRef<string>('');
+  const sheetIdsRef = useRef<string>("");
 
   // Initialize form data from fetched score sheets - only when sheets change
   useEffect(() => {
     if (!multipleScoreSheets || multipleScoreSheets.length === 0) return;
 
-    // Only update if sheet IDs actually changed
     if (sheetIdsString !== sheetIdsRef.current) {
       sheetIdsRef.current = sheetIdsString;
-      
+
       const newFormData: {
         [teamId: number]: {
           [questionId: number]: number | string | undefined;
         };
       } = {};
 
-      // Load existing values from score sheets
-      multipleScoreSheets.forEach(sheet => {
+      multipleScoreSheets.forEach((sheet) => {
         if (!sheet || sheet.teamId === undefined) return;
 
         newFormData[sheet.teamId] = {
@@ -152,8 +187,7 @@ export default function MultiTeamScoreSheet({
         };
       });
 
-      // Initialize empty data for teams without sheets
-      filteredTeams.forEach(team => {
+      filteredTeams.forEach((team) => {
         if (!newFormData[team.id]) {
           newFormData[team.id] = {
             1: undefined,
@@ -181,35 +215,39 @@ export default function MultiTeamScoreSheet({
   }, []);
 
   const handleExpandAllRows = useCallback(() => {
-    const expanded = questions.reduce((acc, q) => ({ ...acc, [q.id]: true }), {});
+    const expanded = questions.reduce(
+      (acc, q) => ({ ...acc, [q.id]: true }),
+      {}
+    );
     setOpenRows(expanded);
   }, [questions]);
 
   const handleCollapseAllRows = useCallback(() => {
-    const closed = questions.reduce((acc, q) => ({ ...acc, [q.id]: false }), {});
+    const closed = questions.reduce(
+      (acc, q) => ({ ...acc, [q.id]: false }),
+      {}
+    );
     setOpenRows(closed);
   }, [questions]);
 
-  // Update individual score/comment value
-  const handleScoreChange = useCallback((teamId: number, questionId: number, value: number | string | undefined) => {
-    setFormData(prev => ({
-      ...prev,
-      [teamId]: {
-        ...(prev[teamId] || {}),
-        [questionId]: value,
-      }
-    }));
-  }, []);
+  const handleScoreChange = useCallback(
+    (teamId: number, questionId: number, value: number | string | undefined) => {
+      setFormData((prev) => ({
+        ...prev,
+        [teamId]: {
+          ...(prev[teamId] || {}),
+          [questionId]: value,
+        },
+      }));
+    },
+    []
+  );
 
-  /**
-   * Maps team IDs to their corresponding score sheets for efficient lookups.
-   */
   const teamToSheetMap = useMemo(() => {
     if (!multipleScoreSheets) return new Map();
-    return new Map(multipleScoreSheets.map(sheet => [sheet.teamId, sheet]));
+    return new Map(multipleScoreSheets.map((sheet) => [sheet.teamId, sheet]));
   }, [multipleScoreSheets]);
 
-  // Save current form data as draft
   const handleSaveScoreSheets = useCallback(async () => {
     if (!multipleScoreSheets || multipleScoreSheets.length === 0) return;
 
@@ -247,17 +285,23 @@ export default function MultiTeamScoreSheet({
     if (updatedSheets.length > 0) {
       await updateMultipleScores(updatedSheets);
       toast.success("Scores saved successfully!");
-      
-      // Refresh mappings in judge dashboard instantly (non-blocking)
+
       if (judgeId) {
         fetchScoreSheetsByJudge(judgeId).catch(() => {
           // Silently fail
         });
       }
     }
-  }, [multipleScoreSheets, filteredTeams, formData, teamToSheetMap, updateMultipleScores, judgeId, fetchScoreSheetsByJudge]);
+  }, [
+    multipleScoreSheets,
+    filteredTeams,
+    formData,
+    teamToSheetMap,
+    updateMultipleScores,
+    judgeId,
+    fetchScoreSheetsByJudge,
+  ]);
 
-  // Validate that all required fields are completed - memoized to prevent recalculation
   const allFieldsFilled = useMemo(() => {
     if (!multipleScoreSheets || multipleScoreSheets.length === 0) return false;
 
@@ -265,10 +309,12 @@ export default function MultiTeamScoreSheet({
       const data = formData[team.id];
       if (!data) return false;
 
-      const complete = Object.keys(data).every(key => {
+      const complete = Object.keys(data).every((key) => {
         const id = Number(key);
-        // Comments (Q9) are optional
-        return id === 9 || (data[id] !== undefined && data[id] !== "" && data[id] !== 0);
+        return (
+          id === 9 ||
+          (data[id] !== undefined && data[id] !== "" && data[id] !== 0)
+        );
       });
 
       if (!complete) return false;
@@ -277,7 +323,6 @@ export default function MultiTeamScoreSheet({
     return true;
   }, [multipleScoreSheets, filteredTeams, formData]);
 
-  // Final submit: marks sheets as submitted and navigates back
   const handleSubmit = useCallback(async () => {
     if (!multipleScoreSheets || multipleScoreSheets.length === 0) return;
 
@@ -305,19 +350,25 @@ export default function MultiTeamScoreSheet({
 
     if (updatedSheets.length > 0) {
       await submitMultipleScoreSheets(updatedSheets);
-      
-      // Refresh mappings in judge dashboard instantly before navigating (non-blocking)
+
       if (judgeId) {
-        fetchScoreSheetsByJudge(judgeId).catch(() => {
-          // Silently fail - updates already saved
-        });
+        fetchScoreSheetsByJudge(judgeId).catch(() => {});
       }
     }
     setOpenAreYouSure(false);
-    navigate(-1); // Return to previous screen after submit
-  }, [multipleScoreSheets, filteredTeams, formData, teamToSheetMap, sheetType, submitMultipleScoreSheets, judgeId, fetchScoreSheetsByJudge, navigate]);
+    navigate(-1);
+  }, [
+    multipleScoreSheets,
+    filteredTeams,
+    formData,
+    teamToSheetMap,
+    sheetType,
+    submitMultipleScoreSheets,
+    judgeId,
+    fetchScoreSheetsByJudge,
+    navigate,
+  ]);
 
-  // Show message if no score sheets are available
   if (multipleScoreSheets && multipleScoreSheets.length === 0) {
     return (
       <>
@@ -355,8 +406,13 @@ export default function MultiTeamScoreSheet({
             <Typography variant="h6" color="text.secondary">
               No scoresheets available for this judge and sheet type.
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Please ensure scoresheets have been created for the teams in this judge's cluster.
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 1 }}
+            >
+              Please ensure scoresheets have been created for the teams in this
+              judge&apos;s cluster.
             </Typography>
           </Box>
         </Container>
@@ -364,9 +420,214 @@ export default function MultiTeamScoreSheet({
     );
   }
 
+  // Small helper for criteria block (used in mobile + desktop)
+  const renderCriteriaBlock = (question: Question) => {
+    if (question.id === 9) return null;
+
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          gap: { xs: 1.5, sm: 3 },
+          flexDirection: { xs: "column", sm: "row" },
+          width: "100%",
+          flexWrap: "wrap",
+        }}
+      >
+        {/* Criteria 1 */}
+        <Box
+          sx={{
+            bgcolor: theme.palette.grey[50],
+            border: `1px solid ${theme.palette.grey[200]}`,
+            p: { xs: 1, sm: 1.5 },
+            borderRadius: 2,
+            flex: 1,
+            minWidth: { xs: "200px", sm: "250px" },
+          }}
+        >
+          <Typography
+            sx={{
+              mt: { xs: 0.5, sm: 1 },
+              fontWeight: 800,
+              fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+            }}
+          >
+            {question.criteria1Points}
+          </Typography>
+          {seperateJrAndSr && question.id === 4 ? (
+            <>
+              <Typography
+                sx={{
+                  fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+                  fontWeight: 800,
+                  mb: { xs: 0.5, sm: 1 },
+                }}
+              >
+                Jr. Div.
+              </Typography>
+              <Typography
+                sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}
+              >
+                {question.criteria1Junior}
+              </Typography>
+
+              <Typography
+                sx={{
+                  fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+                  fontWeight: 800,
+                  mb: { xs: 0.5, sm: 1 },
+                  mt: { xs: 0.5, sm: 1 },
+                }}
+              >
+                Sr. Div.
+              </Typography>
+              <Typography
+                sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}
+              >
+                {question.criteria1Senior}
+              </Typography>
+            </>
+          ) : (
+            <Typography
+              sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}
+            >
+              {question.criteria1}
+            </Typography>
+          )}
+        </Box>
+
+        {/* Criteria 2 */}
+        <Box
+          sx={{
+            bgcolor: theme.palette.grey[50],
+            border: `1px solid ${theme.palette.grey[200]}`,
+            p: { xs: 1, sm: 1.5 },
+            borderRadius: 2,
+            flex: 1,
+            minWidth: { xs: "200px", sm: "250px" },
+          }}
+        >
+          <Typography
+            sx={{
+              mt: { xs: 0.5, sm: 1 },
+              fontWeight: 800,
+              fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+            }}
+          >
+            {question.criteria2Points}
+          </Typography>
+
+          {seperateJrAndSr && question.id === 4 ? (
+            <>
+              <Typography
+                sx={{
+                  fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+                  fontWeight: 800,
+                  mb: { xs: 0.5, sm: 1 },
+                }}
+              >
+                Jr. Div.
+              </Typography>
+              <Typography
+                sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}
+              >
+                {question.criteria2Junior}
+              </Typography>
+
+              <Typography
+                sx={{
+                  fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+                  fontWeight: 800,
+                  mb: { xs: 0.5, sm: 1 },
+                  mt: { xs: 0.5, sm: 1 },
+                }}
+              >
+                Sr. Div.
+              </Typography>
+              <Typography
+                sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}
+              >
+                {question.criteria2Senior}
+              </Typography>
+            </>
+          ) : (
+            <Typography
+              sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}
+            >
+              {question.criteria2}
+            </Typography>
+          )}
+        </Box>
+
+        {/* Criteria 3 */}
+        <Box
+          sx={{
+            bgcolor: theme.palette.grey[50],
+            border: `1px solid ${theme.palette.grey[200]}`,
+            p: { xs: 1, sm: 1.5 },
+            borderRadius: 2,
+            flex: 1,
+            minWidth: { xs: "200px", sm: "250px" },
+          }}
+        >
+          <Typography
+            sx={{
+              mt: { xs: 0.5, sm: 1 },
+              fontWeight: 800,
+              fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+            }}
+          >
+            {question.criteria3Points}
+          </Typography>
+
+          {seperateJrAndSr && question.id === 4 ? (
+            <>
+              <Typography
+                sx={{
+                  fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+                  fontWeight: 800,
+                  mb: { xs: 0.5, sm: 1 },
+                }}
+              >
+                Jr. Div.
+              </Typography>
+              <Typography
+                sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}
+              >
+                {question.criteria3Junior}
+              </Typography>
+
+              <Typography
+                sx={{
+                  fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+                  fontWeight: 800,
+                  mb: { xs: 0.5, sm: 1 },
+                  mt: { xs: 0.5, sm: 1 },
+                }}
+              >
+                Sr. Div.
+              </Typography>
+              <Typography
+                sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}
+              >
+                {question.criteria3Senior}
+              </Typography>
+            </>
+          ) : (
+            <Typography
+              sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}
+            >
+              {question.criteria3}
+            </Typography>
+          )}
+        </Box>
+      </Box>
+    );
+  };
+
   return (
     <>
-      {/* Navigation back to judging dashboard  */}
+      {/* Back button */}
       <Container
         maxWidth="lg"
         sx={{
@@ -406,11 +667,11 @@ export default function MultiTeamScoreSheet({
         }}
       >
         {/* Page title */}
-        <Typography 
-          variant="h1" 
-          sx={{ 
-            mt: { xs: 2, sm: 4 }, 
-            mb: { xs: 1.5, sm: 2 }, 
+        <Typography
+          variant="h1"
+          sx={{
+            mt: { xs: 2, sm: 4 },
+            mb: { xs: 1.5, sm: 2 },
             fontWeight: "bold",
             fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" },
             textAlign: "center",
@@ -434,525 +695,668 @@ export default function MultiTeamScoreSheet({
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            opacity: isDataReady && filteredTeams.length > 0 ? 1 : 0,
-            transform: isDataReady && filteredTeams.length > 0 ? 'translateY(0)' : 'translateY(10px)',
-            transition: 'opacity 0.4s ease-in-out, transform 0.4s ease-in-out',
+            opacity:
+              isDataReady && filteredTeams.length > 0
+                ? 1
+                : 0,
+            transform:
+              isDataReady && filteredTeams.length > 0
+                ? "translateY(0)"
+                : "translateY(10px)",
+            transition:
+              "opacity 0.4s ease-in-out, transform 0.4s ease-in-out",
           }}
         >
-        {/* Action buttons for form management */}
-        <Box sx={{ 
-          display: "flex", 
-          flexWrap: "wrap", 
-          gap: { xs: 1, sm: 1.5 }, 
-          mb: { xs: 1.5, sm: 2 },
-          flexDirection: { xs: "column", sm: "row" },
-          alignItems: { xs: "stretch", sm: "flex-start" },
-          width: "100%"
-        }}>
-          {/* Save draft button */}
-          <Button
-            variant="contained"
-            onClick={handleSaveScoreSheets}
+          {/* Action buttons */}
+          <Box
             sx={{
-              bgcolor: theme.palette.success.main,
-              "&:hover": { bgcolor: theme.palette.success.dark },
-              color: "#fff",
-              minWidth: { xs: "100%", sm: 200 },
-              height: { xs: 40, sm: 44 },
-              textTransform: "none",
-              borderRadius: 2,
-              fontSize: { xs: "0.9rem", sm: "1rem" },
-              fontWeight: 600,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: { xs: 1, sm: 1.5 },
+              mb: { xs: 1.5, sm: 2 },
+              flexDirection: { xs: "column", sm: "row" },
+              alignItems: { xs: "stretch", sm: "flex-start" },
+              width: "100%",
             }}
           >
-            Save All
-          </Button>
+            <Button
+              variant="contained"
+              onClick={handleSaveScoreSheets}
+              sx={{
+                bgcolor: theme.palette.success.main,
+                "&:hover": { bgcolor: theme.palette.success.dark },
+                color: "#fff",
+                minWidth: { xs: "100%", sm: 200 },
+                height: { xs: 40, sm: 44 },
+                textTransform: "none",
+                borderRadius: 2,
+                fontSize: { xs: "0.9rem", sm: "1rem" },
+                fontWeight: 600,
+              }}
+            >
+              Save All
+            </Button>
 
-          {/* Expand all rows to show criteria */}
-          <Button
-            variant="contained"
-            onClick={handleExpandAllRows}
-            sx={{
-              bgcolor: theme.palette.success.main,
-              "&:hover": { bgcolor: theme.palette.success.dark },
-              color: "#fff",
-              minWidth: { xs: "100%", sm: 200 },
-              height: { xs: 40, sm: 44 },
-              textTransform: "none",
-              borderRadius: 2,
-              fontSize: { xs: "0.9rem", sm: "1rem" },
-              fontWeight: 600,
-            }}
-          >
-            Expand Rows
-          </Button>
+            <Button
+              variant="contained"
+              onClick={handleExpandAllRows}
+              sx={{
+                bgcolor: theme.palette.success.main,
+                "&:hover": { bgcolor: theme.palette.success.dark },
+                color: "#fff",
+                minWidth: { xs: "100%", sm: 200 },
+                height: { xs: 40, sm: 44 },
+                textTransform: "none",
+                borderRadius: 2,
+                fontSize: { xs: "0.9rem", sm: "1rem" },
+                fontWeight: 600,
+              }}
+            >
+              Expand Rows
+            </Button>
 
-          {/* Collapse all rows */}
-          <Button
-            variant="contained"
-            onClick={handleCollapseAllRows}
-            sx={{
-              bgcolor: theme.palette.success.main,
-              "&:hover": { bgcolor: theme.palette.success.dark },
-              color: "#fff",
-              minWidth: { xs: "100%", sm: 200 },
-              height: { xs: 40, sm: 44 },
-              textTransform: "none",
-              borderRadius: 2,
-              fontSize: { xs: "0.9rem", sm: "1rem" },
-              fontWeight: 600,
-            }}
-          >
-            Collapse All
-          </Button>
-        </Box>
+            <Button
+              variant="contained"
+              onClick={handleCollapseAllRows}
+              sx={{
+                bgcolor: theme.palette.success.main,
+                "&:hover": { bgcolor: theme.palette.success.dark },
+                color: "#fff",
+                minWidth: { xs: "100%", sm: 200 },
+                height: { xs: 40, sm: 44 },
+                textTransform: "none",
+                borderRadius: 2,
+                fontSize: { xs: "0.9rem", sm: "1rem" },
+                fontWeight: 600,
+              }}
+            >
+              Collapse All
+            </Button>
+          </Box>
 
-        {/* Scoring table (Paper wrapper gives the subtle edge + border) */}
-        <TableContainer
-          component={Paper}
-          sx={{
-            borderRadius: 2,
-            border: `1px solid ${theme.palette.grey[200]}`,
-            overflow: { xs: "auto", sm: "hidden" },
-            width: "100%",
-            "&::-webkit-scrollbar": {
-              height: "8px",
-            },
-            "&::-webkit-scrollbar-track": {
-              backgroundColor: "#f1f1f1",
-              borderRadius: "4px",
-            },
-            "&::-webkit-scrollbar-thumb": {
-              backgroundColor: "#c1c1c1",
-              borderRadius: "4px",
-            },
-            "&::-webkit-scrollbar-thumb:hover": {
-              backgroundColor: "#a8a8a8",
-            },
-          }}
-        >
-          <Table sx={{
-            minWidth: { xs: "600px", sm: "auto" },
-            "& .MuiTableCell-root": {
-              fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-              py: { xs: 0.75, sm: 1.25 },
-              px: { xs: 0.5, sm: 1 }
-            }
-          }}>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ 
-                  width: { xs: '40px', sm: '50px' },
-                  minWidth: { xs: '40px', sm: '50px' }
-                }}></TableCell>
-                <TableCell sx={{ 
-                  width: { xs: '30%', sm: '35%' },
-                  minWidth: { xs: '200px', sm: '250px' }
-                }}>
-                  <Typography 
-                    variant="subtitle1" 
-                    sx={{ 
-                      fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                      fontWeight: 600
-                    }}
-                  >
-                    Criteria
-                  </Typography>
-                </TableCell>
-                {/* Team name columns */}
-                {filteredTeams.map(team => (
-                  <TableCell 
-                    key={team.id} 
-                    align="center"
-                    sx={{ 
-                      minWidth: { xs: '80px', sm: '100px' },
-                      maxWidth: { xs: '120px', sm: '150px' }
-                    }}
-                  >
-                    <Typography 
-                      variant="subtitle1" 
-                      sx={{ 
-                        fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                        fontWeight: 600,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis"
-                      }}
-                      title={team.name}
-                    >
-                      {team.name}
-                    </Typography>
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-
-            <TableBody>
-              {/* Expandable rows for each question */}
+          {/* ===== MOBILE LAYOUT (stacked cards) ===== */}
+          {isMobile ? (
+            <Box sx={{ width: "100%", mt: 1 }}>
               {questions.map((question) => (
-                <React.Fragment key={question.id}>
+                <Box
+                  key={question.id}
+                  sx={{
+                    mb: 2,
+                    borderRadius: 2,
+                    border: `1px solid ${theme.palette.grey[200]}`,
+                    overflow: "hidden",
+                    bgcolor: "#fafafa",
+                  }}
+                >
                   {/* Question header row */}
-                  <TableRow onClick={() => handleToggle(question.id)} sx={{ cursor: 'pointer' }}>
-                    <TableCell>
-                      <IconButton aria-label="expand row" size="small">
-                        {openRows[question.id] ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-                      </IconButton>
-                    </TableCell>
-
-                    {/* Question text */}
-                    <TableCell 
-                      component="th" 
-                      scope="row" 
-                      sx={{ 
-                        pl: { xs: 1, sm: 2 }, 
-                        textAlign: "left", 
-                        pr: { xs: 1, sm: 2 }, 
-                        fontWeight: "bold",
-                        fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                        minWidth: { xs: '200px', sm: '250px' },
-                        cursor: "pointer"
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      px: 1,
+                      py: 0.75,
+                      cursor: "pointer",
+                    }}
+                    onClick={() => handleToggle(question.id)}
+                  >
+                    <IconButton size="small">
+                      {openRows[question.id] ? (
+                        <KeyboardArrowUpIcon />
+                      ) : (
+                        <KeyboardArrowDownIcon />
+                      )}
+                    </IconButton>
+                    <Typography
+                      sx={{
+                        ml: 0.5,
+                        fontSize: "0.8rem",
+                        fontWeight: 600,
+                        lineHeight: 1.3,
                       }}
                     >
-                      <Typography 
-                        sx={{ 
-                          fontSize: { xs: "0.75rem", sm: "0.9375rem" },
-                          fontWeight: 600,
-                          lineHeight: 1.3,
-                          cursor: "pointer"
-                        }}
-                      >
-                        {question.questionText}
-                      </Typography>
-                    </TableCell>
+                      {question.questionText}
+                    </Typography>
+                  </Box>
 
-                    {/* Score input cells for each team */}
-                    {filteredTeams.map(team => (
-                      <TableCell key={team.id} align="center">
-                        {question.id !== 9 ? (
-                          <>
-                            <TextField
-                              onClick={(e) => e.stopPropagation()}
-                              type="number"
-                              size="small"
-                              value={
-                                formData[team.id] && 
-                                formData[team.id][question.id] !== undefined && 
-                                formData[team.id][question.id] !== null && 
-                                formData[team.id][question.id] !== "" &&
-                                formData[team.id][question.id] !== 0
-                                  ? formData[team.id][question.id]
-                                  : ""
-                              }
-                              onWheel={(e) => {
-                                const inputElement = e.target as HTMLInputElement;
-                                inputElement.blur();
-                              }}
-                              onChange={(e) => {
-                                let value: number | string | undefined = e.target.value;
+                  <Collapse in={openRows[question.id]} timeout="auto">
+                    <Box
+                      sx={{
+                        px: 1.25,
+                        pb: 1.25,
+                        pt: 0.5,
+                      }}
+                    >
+                      {/* Criteria block */}
+                      {renderCriteriaBlock(question)}
 
-                                if (value === "") {
-                                  value = undefined;
-                                } else if (Number(value) < question.lowPoints) {
-                                  value = undefined;
-                                } else if (Number(value) > question.highPoints) {
-                                  value = undefined;
-                                } else {
-                                  value = Number(value);
-                                }
+                      {/* Per-team inputs */}
+                      <Box sx={{ mt: 1.5 }}>
+                        {filteredTeams.map((team) => (
+                          <Box
+                            key={team.id}
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 1,
+                              py: 0.75,
+                              px: 0.75,
+                              mb: 0.75,
+                              borderRadius: 2,
+                              bgcolor: "#fff",
+                              border: `1px solid ${theme.palette.grey[200]}`,
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                flex: 1,
+                                minWidth: 0,
+                                mr: 1,
+                              }}
+                            >
+                              <Typography
+                                sx={{
+                                  fontSize: "0.75rem",
+                                  fontWeight: 600,
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
+                                title={team.name}
+                              >
+                                {team.name}
+                              </Typography>
+                            </Box>
 
-                                handleScoreChange(team.id, question.id, value);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-                                  e.preventDefault();
-                                }
-                              }}
-                              inputProps={{
-                                min: question.lowPoints,
-                                max: question.highPoints,
-                                step: 0.5,
-                              }}
-                              sx={{ 
-                                width: { xs: "60px", sm: "75px" },
-                                '& .MuiInputBase-input': {
-                                  fontSize: { xs: '0.75rem', sm: '0.9375rem' },
-                                  padding: { xs: '6px', sm: '8px' }
-                                }
-                              }}
-                            />
+                            {question.id !== 9 ? (
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 0.5,
+                                }}
+                              >
+                                <TextField
+                                  type="number"
+                                  size="small"
+                                  value={
+                                    formData[team.id] &&
+                                    formData[team.id][question.id] !==
+                                      undefined &&
+                                    formData[team.id][question.id] !== null &&
+                                    formData[team.id][question.id] !== "" &&
+                                    formData[team.id][question.id] !== 0
+                                      ? formData[team.id][question.id]
+                                      : ""
+                                  }
+                                  onClick={(e) => e.stopPropagation()}
+                                  onWheel={(e) => {
+                                    const inputElement =
+                                      e.target as HTMLInputElement;
+                                    inputElement.blur();
+                                  }}
+                                  onChange={(e) => {
+                                    let value:
+                                      | number
+                                      | string
+                                      | undefined = e.target.value;
 
-                            {/* Completion status indicator */}
-                            {formData[team.id] && (
-                              <Box sx={{ display: "inline", ml: 1 }}>
-                        {formData[team.id][question.id] === undefined ||
-                         formData[team.id][question.id] === "" ||
-                         formData[team.id][question.id] === 0 ||
-                         formData[team.id][question.id] === null ? (
-                                  <CloseIcon fontSize="small" sx={{ color: "red" }} />
-                                ) : (
-                                  <CheckIcon fontSize="small" sx={{ color: "green" }} />
+                                    if (value === "") {
+                                      value = undefined;
+                                    } else if (
+                                      Number(value) < question.lowPoints
+                                    ) {
+                                      value = undefined;
+                                    } else if (
+                                      Number(value) > question.highPoints
+                                    ) {
+                                      value = undefined;
+                                    } else {
+                                      value = Number(value);
+                                    }
+
+                                    handleScoreChange(
+                                      team.id,
+                                      question.id,
+                                      value
+                                    );
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (
+                                      e.key === "ArrowUp" ||
+                                      e.key === "ArrowDown"
+                                    ) {
+                                      e.preventDefault();
+                                    }
+                                  }}
+                                  inputProps={{
+                                    min: question.lowPoints,
+                                    max: question.highPoints,
+                                    step: 0.5,
+                                  }}
+                                  sx={{
+                                    width: "70px",
+                                    "& .MuiInputBase-input": {
+                                      fontSize: "0.75rem",
+                                      padding: "6px",
+                                    },
+                                  }}
+                                />
+                                {formData[team.id] && (
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                    }}
+                                  >
+                                    {formData[team.id][question.id] ===
+                                      undefined ||
+                                    formData[team.id][question.id] === "" ||
+                                    formData[team.id][question.id] === 0 ||
+                                    formData[team.id][question.id] ===
+                                      null ? (
+                                      <CloseIcon
+                                        fontSize="small"
+                                        sx={{ color: "red" }}
+                                      />
+                                    ) : (
+                                      <CheckIcon
+                                        fontSize="small"
+                                        sx={{ color: "green" }}
+                                      />
+                                    )}
+                                  </Box>
                                 )}
                               </Box>
+                            ) : (
+                              <TextField
+                                size="small"
+                                multiline
+                                placeholder="Comments"
+                                value={
+                                  formData[team.id] &&
+                                  formData[team.id][question.id] !== undefined
+                                    ? formData[team.id][question.id]
+                                    : ""
+                                }
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) =>
+                                  handleScoreChange(
+                                    team.id,
+                                    question.id,
+                                    e.target.value
+                                      ? String(e.target.value)
+                                      : undefined
+                                  )
+                                }
+                                sx={{
+                                  flex: 2,
+                                  "& .MuiInputBase-input": {
+                                    fontSize: "0.75rem",
+                                    padding: "6px",
+                                  },
+                                }}
+                              />
                             )}
-                          </>
-                        ) : (
-                          <TextField
-                            onClick={(e) => e.stopPropagation()}
-                            size="small"
-                            multiline
-                            placeholder="Comments"
-                            value={
-                              formData[team.id] && formData[team.id][question.id] !== undefined
-                                ? formData[team.id][question.id]
-                                : ""
-                            }
-                            onChange={(e) =>
-                              handleScoreChange(
-                                team.id,
-                                question.id,
-                                e.target.value ? String(e.target.value) : undefined
-                              )
-                            }
-                            sx={{ 
-                              width: { xs: "85%", sm: "90%" },
-                              '& .MuiInputBase-input': {
-                                fontSize: { xs: '0.75rem', sm: '0.9375rem' },
-                                padding: { xs: '6px', sm: '8px' }
-                              }
-                            }}
-                          />
-                        )}
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+                  </Collapse>
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            /* ===== DESKTOP/TABLET LAYOUT (wide table) ===== */
+            <TableContainer
+              component={Paper}
+              sx={{
+                borderRadius: 2,
+                border: `1px solid ${theme.palette.grey[200]}`,
+                overflow: { xs: "auto", sm: "hidden" },
+                width: "100%",
+                "&::-webkit-scrollbar": {
+                  height: "8px",
+                },
+                "&::-webkit-scrollbar-track": {
+                  backgroundColor: "#f1f1f1",
+                  borderRadius: "4px",
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  backgroundColor: "#c1c1c1",
+                  borderRadius: "4px",
+                },
+                "&::-webkit-scrollbar-thumb:hover": {
+                  backgroundColor: "#a8a8a8",
+                },
+              }}
+            >
+              <Table
+                sx={{
+                  minWidth: { xs: "600px", sm: "auto" },
+                  "& .MuiTableCell-root": {
+                    fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+                    py: { xs: 0.75, sm: 1.25 },
+                    px: { xs: 0.5, sm: 1 },
+                  },
+                }}
+              >
+                <TableHead>
+                  <TableRow>
+                    <TableCell
+                      sx={{
+                        width: { xs: "40px", sm: "50px" },
+                        minWidth: { xs: "40px", sm: "50px" },
+                      }}
+                    ></TableCell>
+                    <TableCell
+                      sx={{
+                        width: { xs: "30%", sm: "35%" },
+                        minWidth: { xs: "200px", sm: "250px" },
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+                          fontWeight: 600,
+                        }}
+                      >
+                        Criteria
+                      </Typography>
+                    </TableCell>
+                    {filteredTeams.map((team) => (
+                      <TableCell
+                        key={team.id}
+                        align="center"
+                        sx={{
+                          minWidth: { xs: "80px", sm: "100px" },
+                          maxWidth: { xs: "120px", sm: "150px" },
+                        }}
+                      >
+                        <Typography
+                          variant="subtitle1"
+                          sx={{
+                            fontSize: { xs: "0.75rem", sm: "0.9375rem" },
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                          title={team.name}
+                        >
+                          {team.name}
+                        </Typography>
                       </TableCell>
                     ))}
                   </TableRow>
+                </TableHead>
 
-                  {/* Expanded details: */}
-                  <TableRow>
-                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={filteredTeams.length + 2}>
-                      <Collapse in={openRows[question.id]} timeout="auto" unmountOnExit>
-                        <Box sx={{ 
-                          margin: { xs: 1, sm: 2 },
-                          p: { xs: 1, sm: 1.5 }
-                        }}>
-                          <Typography 
-                            variant="h6" 
-                            gutterBottom
-                            sx={{
-                              fontSize: { xs: "0.8125rem", sm: "1rem" },
-                              fontWeight: 600,
-                              mb: { xs: 1, sm: 1.5 }
-                            }}
+                <TableBody>
+                  {questions.map((question) => (
+                    <React.Fragment key={question.id}>
+                      <TableRow
+                        onClick={() => handleToggle(question.id)}
+                        sx={{ cursor: "pointer" }}
+                      >
+                        <TableCell>
+                          <IconButton
+                            aria-label="expand row"
+                            size="small"
                           >
-                            {question.questionText} - Scoring Criteria
-                          </Typography>
-
-                          <Box
-                            sx={{
-                              display: "flex",
-                              gap: { xs: 1.5, sm: 3 },
-                              flexDirection: { xs: "column", sm: "row" },
-                              width: "100%",
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            {/* Criteria boxes are only applicable for numeric questions */}
-                            {question.id !== 9 && (
-                              <>
-                                {/* Criteria 1 */}
-                                <Box
-                                  sx={{
-                                    bgcolor: theme.palette.grey[50],
-                                    border: `1px solid ${theme.palette.grey[200]}`,
-                                    p: { xs: 1, sm: 1.5 },
-                                    borderRadius: 2,
-                                    flex: 1,
-                                    minWidth: { xs: "200px", sm: "250px" },
-                                  }}
-                                >
-                                  <Typography sx={{ 
-                                    mt: { xs: 0.5, sm: 1 }, 
-                                    fontWeight: 800, 
-                                    fontSize: { xs: "0.75rem", sm: "0.9375rem" } 
-                                  }}>
-                                    {question.criteria1Points}
-                                  </Typography>
-
-                                  {/* Optional Jr/Sr text (question 4 only) */}
-                                  {seperateJrAndSr && question.id === 4 ? (
-                                    <>
-                                      <Typography sx={{ 
-                                        fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
-                                        fontWeight: 800, 
-                                        mb: { xs: 0.5, sm: 1 } 
-                                      }}>
-                                        Jr. Div.
-                                      </Typography>
-                                      <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>
-                                        {question.criteria1Junior}
-                                      </Typography>
-
-                                      <Typography sx={{ 
-                                        fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
-                                        fontWeight: 800, 
-                                        mb: { xs: 0.5, sm: 1 }, 
-                                        mt: { xs: 0.5, sm: 1 } 
-                                      }}>
-                                        Sr. Div.
-                                      </Typography>
-                                      <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>
-                                        {question.criteria1Senior}
-                                      </Typography>
-                                    </>
-                                  ) : (
-                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>
-                                      {question.criteria1}
-                                    </Typography>
-                                  )}
-                                </Box>
-
-                                {/* Criteria 2 */}
-                                <Box
-                                  sx={{
-                                    bgcolor: theme.palette.grey[50],
-                                    border: `1px solid ${theme.palette.grey[200]}`,
-                                    p: { xs: 1, sm: 1.5 },
-                                    borderRadius: 2,
-                                    flex: 1,
-                                    minWidth: { xs: "200px", sm: "250px" },
-                                  }}
-                                >
-                                  <Typography sx={{ 
-                                    mt: { xs: 0.5, sm: 1 }, 
-                                    fontWeight: 800, 
-                                    fontSize: { xs: "0.75rem", sm: "0.9375rem" } 
-                                  }}>
-                                    {question.criteria2Points}
-                                  </Typography>
-
-                                  {seperateJrAndSr && question.id === 4 ? (
-                                    <>
-                                      <Typography sx={{ 
-                                        fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
-                                        fontWeight: 800, 
-                                        mb: { xs: 0.5, sm: 1 } 
-                                      }}>
-                                        Jr. Div.
-                                      </Typography>
-                                      <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>
-                                        {question.criteria2Junior}
-                                      </Typography>
-
-                                      <Typography sx={{ 
-                                        fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
-                                        fontWeight: 800, 
-                                        mb: { xs: 0.5, sm: 1 }, 
-                                        mt: { xs: 0.5, sm: 1 } 
-                                      }}>
-                                        Sr. Div.
-                                      </Typography>
-                                      <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>
-                                        {question.criteria2Senior}
-                                      </Typography>
-                                    </>
-                                  ) : (
-                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>
-                                      {question.criteria2}
-                                    </Typography>
-                                  )}
-                                </Box>
-
-                                {/* Criteria 3 */}
-                                <Box
-                                  sx={{
-                                    bgcolor: theme.palette.grey[50],
-                                    border: `1px solid ${theme.palette.grey[200]}`,
-                                    p: { xs: 1, sm: 1.5 },
-                                    borderRadius: 2,
-                                    flex: 1,
-                                    minWidth: { xs: "200px", sm: "250px" },
-                                  }}
-                                >
-                                  <Typography sx={{ 
-                                    mt: { xs: 0.5, sm: 1 }, 
-                                    fontWeight: 800, 
-                                    fontSize: { xs: "0.75rem", sm: "0.9375rem" } 
-                                  }}>
-                                    {question.criteria3Points}
-                                  </Typography>
-
-                                  {seperateJrAndSr && question.id === 4 ? (
-                                    <>
-                                      <Typography sx={{ 
-                                        fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
-                                        fontWeight: 800, 
-                                        mb: { xs: 0.5, sm: 1 } 
-                                      }}>
-                                        Jr. Div.
-                                      </Typography>
-                                      <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>
-                                        {question.criteria3Junior}
-                                      </Typography>
-
-                                      <Typography sx={{ 
-                                        fontSize: { xs: "0.75rem", sm: "0.9375rem" }, 
-                                        fontWeight: 800, 
-                                        mb: { xs: 0.5, sm: 1 }, 
-                                        mt: { xs: 0.5, sm: 1 } 
-                                      }}>
-                                        Sr. Div.
-                                      </Typography>
-                                      <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>
-                                        {question.criteria3Senior}
-                                      </Typography>
-                                    </>
-                                  ) : (
-                                    <Typography sx={{ fontSize: { xs: "0.75rem", sm: "0.9375rem" } }}>
-                                      {question.criteria3}
-                                    </Typography>
-                                  )}
-                                </Box>
-                              </>
+                            {openRows[question.id] ? (
+                              <KeyboardArrowUpIcon />
+                            ) : (
+                              <KeyboardArrowDownIcon />
                             )}
-                          </Box>
-                        </Box>
-                      </Collapse>
-                    </TableCell>
-                  </TableRow>
-                </React.Fragment>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                          </IconButton>
+                        </TableCell>
 
-        {/* Final submission (disabled until all numeric fields are filled) */}
-        <Button
-          variant="contained"
-          onClick={() => setOpenAreYouSure(true)}
-          disabled={!allFieldsFilled}
-          sx={{
-            mt: { xs: 2, sm: 3 },
-            bgcolor: theme.palette.success.main,
-            "&:hover": { bgcolor: theme.palette.success.dark },
-            color: "#fff",
-            minWidth: { xs: "100%", sm: 200 },
-            height: { xs: 40, sm: 44 },
-            textTransform: "none",
-            borderRadius: 2,
-            fontSize: { xs: "0.9rem", sm: "1rem" },
-            fontWeight: 600,
-          }}
-        >
-          Submit All
-        </Button>
+                        <TableCell
+                          component="th"
+                          scope="row"
+                          sx={{
+                            pl: { xs: 1, sm: 2 },
+                            textAlign: "left",
+                            pr: { xs: 1, sm: 2 },
+                            fontWeight: "bold",
+                            fontSize: {
+                              xs: "0.75rem",
+                              sm: "0.9375rem",
+                            },
+                            minWidth: { xs: "200px", sm: "250px" },
+                            cursor: "pointer",
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              fontSize: {
+                                xs: "0.75rem",
+                                sm: "0.9375rem",
+                              },
+                              fontWeight: 600,
+                              lineHeight: 1.3,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {question.questionText}
+                          </Typography>
+                        </TableCell>
 
-        {/* Confirm modal */}
-        <AreYouSureModal
-          open={openAreYouSure}
-          handleClose={() => setOpenAreYouSure(false)}
-          title="Are you sure you want to submit scores for all teams?"
-          handleSubmit={() => handleSubmit()}
-        />
-      </Container>
+                        {filteredTeams.map((team) => (
+                          <TableCell key={team.id} align="center">
+                            {question.id !== 9 ? (
+                              <>
+                                <TextField
+                                  onClick={(e) => e.stopPropagation()}
+                                  type="number"
+                                  size="small"
+                                  value={
+                                    formData[team.id] &&
+                                    formData[team.id][question.id] !==
+                                      undefined &&
+                                    formData[team.id][question.id] !== null &&
+                                    formData[team.id][question.id] !== "" &&
+                                    formData[team.id][question.id] !== 0
+                                      ? formData[team.id][question.id]
+                                      : ""
+                                  }
+                                  onWheel={(e) => {
+                                    const inputElement =
+                                      e.target as HTMLInputElement;
+                                    inputElement.blur();
+                                  }}
+                                  onChange={(e) => {
+                                    let value:
+                                      | number
+                                      | string
+                                      | undefined = e.target.value;
+
+                                    if (value === "") {
+                                      value = undefined;
+                                    } else if (
+                                      Number(value) < question.lowPoints
+                                    ) {
+                                      value = undefined;
+                                    } else if (
+                                      Number(value) > question.highPoints
+                                    ) {
+                                      value = undefined;
+                                    } else {
+                                      value = Number(value);
+                                    }
+
+                                    handleScoreChange(
+                                      team.id,
+                                      question.id,
+                                      value
+                                    );
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (
+                                      e.key === "ArrowUp" ||
+                                      e.key === "ArrowDown"
+                                    ) {
+                                      e.preventDefault();
+                                    }
+                                  }}
+                                  inputProps={{
+                                    min: question.lowPoints,
+                                    max: question.highPoints,
+                                    step: 0.5,
+                                  }}
+                                  sx={{
+                                    width: { xs: "60px", sm: "75px" },
+                                    "& .MuiInputBase-input": {
+                                      fontSize: {
+                                        xs: "0.75rem",
+                                        sm: "0.9375rem",
+                                      },
+                                      padding: {
+                                        xs: "6px",
+                                        sm: "8px",
+                                      },
+                                    },
+                                  }}
+                                />
+
+                                {formData[team.id] && (
+                                  <Box
+                                    sx={{
+                                      display: "inline",
+                                      ml: 1,
+                                    }}
+                                  >
+                                    {formData[team.id][question.id] ===
+                                      undefined ||
+                                    formData[team.id][question.id] === "" ||
+                                    formData[team.id][question.id] === 0 ||
+                                    formData[team.id][question.id] ===
+                                      null ? (
+                                      <CloseIcon
+                                        fontSize="small"
+                                        sx={{ color: "red" }}
+                                      />
+                                    ) : (
+                                      <CheckIcon
+                                        fontSize="small"
+                                        sx={{ color: "green" }}
+                                      />
+                                    )}
+                                  </Box>
+                                )}
+                              </>
+                            ) : (
+                              <TextField
+                                onClick={(e) => e.stopPropagation()}
+                                size="small"
+                                multiline
+                                placeholder="Comments"
+                                value={
+                                  formData[team.id] &&
+                                  formData[team.id][question.id] !== undefined
+                                    ? formData[team.id][question.id]
+                                    : ""
+                                }
+                                onChange={(e) =>
+                                  handleScoreChange(
+                                    team.id,
+                                    question.id,
+                                    e.target.value
+                                      ? String(e.target.value)
+                                      : undefined
+                                  )
+                                }
+                                sx={{
+                                  width: { xs: "85%", sm: "90%" },
+                                  "& .MuiInputBase-input": {
+                                    fontSize: {
+                                      xs: "0.75rem",
+                                      sm: "0.9375rem",
+                                    },
+                                    padding: {
+                                      xs: "6px",
+                                      sm: "8px",
+                                    },
+                                  },
+                                }}
+                              />
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+
+                      <TableRow>
+                        <TableCell
+                          style={{ paddingBottom: 0, paddingTop: 0 }}
+                          colSpan={filteredTeams.length + 2}
+                        >
+                          <Collapse
+                            in={openRows[question.id]}
+                            timeout="auto"
+                            unmountOnExit
+                          >
+                            <Box
+                              sx={{
+                                margin: { xs: 1, sm: 2 },
+                                p: { xs: 1, sm: 1.5 },
+                              }}
+                            >
+                              <Typography
+                                variant="h6"
+                                gutterBottom
+                                sx={{
+                                  fontSize: {
+                                    xs: "0.8125rem",
+                                    sm: "1rem",
+                                  },
+                                  fontWeight: 600,
+                                  mb: { xs: 1, sm: 1.5 },
+                                }}
+                              >
+                                {question.questionText} - Scoring Criteria
+                              </Typography>
+
+                              {renderCriteriaBlock(question)}
+                            </Box>
+                          </Collapse>
+                        </TableCell>
+                      </TableRow>
+                    </React.Fragment>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+
+          {/* Submit button */}
+          <Button
+            variant="contained"
+            onClick={() => setOpenAreYouSure(true)}
+            disabled={!allFieldsFilled}
+            sx={{
+              mt: { xs: 2, sm: 3 },
+              bgcolor: theme.palette.success.main,
+              "&:hover": { bgcolor: theme.palette.success.dark },
+              color: "#fff",
+              minWidth: { xs: "100%", sm: 200 },
+              height: { xs: 40, sm: 44 },
+              textTransform: "none",
+              borderRadius: 2,
+              fontSize: { xs: "0.9rem", sm: "1rem" },
+              fontWeight: 600,
+            }}
+          >
+            Submit All
+          </Button>
+
+          <AreYouSureModal
+            open={openAreYouSure}
+            handleClose={() => setOpenAreYouSure(false)}
+            title="Are you sure you want to submit scores for all teams?"
+            handleSubmit={handleSubmit}
+          />
+        </Container>
       </Box>
     </>
   );

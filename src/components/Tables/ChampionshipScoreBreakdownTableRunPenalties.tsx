@@ -95,7 +95,7 @@ export default function ChampionshipScoreBreakdownTableRunPenalties() {
             scoreSheetBreakdown[ScoreSheetType.Championship] &&
             (scoreSheetBreakdown[ScoreSheetType.Championship] as any)[field] &&
             (scoreSheetBreakdown[ScoreSheetType.Championship] as any)[field].length > 0
-              ? (scoreSheetBreakdown[ScoreSheetType.Championship] as any)[field].join(", ")
+              ? (scoreSheetBreakdown[ScoreSheetType.Championship] as any)[field].map((v: any) => Math.abs(Number(v) || 0)).join(", ")
               : "0"}
           </Typography>
         </TableCell>
