@@ -28,13 +28,11 @@ export default function Home() {
         >
           <img
             ref={imgRef}
-            ref={imgRef}
             src={image}
             alt="Engineering Machine Design Contest Hero Image"
             width={1200}
             height={800}
             loading="eager"
-            decoding="async"
             decoding="async"
             style={{
               display: "block",
