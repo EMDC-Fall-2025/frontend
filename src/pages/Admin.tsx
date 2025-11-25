@@ -32,7 +32,6 @@ import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import CampaignIcon from "@mui/icons-material/Campaign";
 import GroupIcon from "@mui/icons-material/Group";
-import EmailIcon from "@mui/icons-material/Email";
 import theme from "../theme";
 
 // ==============================
