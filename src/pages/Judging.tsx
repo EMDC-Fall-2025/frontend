@@ -393,8 +393,6 @@ export default React.memo(function Judging() {
               : null;
           }
 
-          );
-
           // Attach plain objects for JudgeDashboardTable props
           if (currentClusterToSet) {
             const championshipByContestObj: { [key: number]: boolean } = {};
