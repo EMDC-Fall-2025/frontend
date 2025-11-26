@@ -100,7 +100,6 @@ export default function TeamModal(props: ITeamModalProps) {
 
         toast.success("Team created successfully!");
         onSuccess?.();
-        handleCloseModal();
       } catch (error: any) {
         handleAccountError(error, "create");
       }
@@ -144,7 +143,6 @@ export default function TeamModal(props: ITeamModalProps) {
 
       toast.success("Team updated successfully!");
       onSuccess?.();
-      handleCloseModal();
     } catch (error: any) {
       toast.error("Failed to update team. Please try again.");
     }
@@ -175,6 +173,7 @@ export default function TeamModal(props: ITeamModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    handleCloseModal();
     if (mode === "new") {
       handleCreateTeam();
     } else {

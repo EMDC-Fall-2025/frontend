@@ -193,7 +193,7 @@ export default function JudgeModal(props: IJudgeModalProps) {
     return !isClusterInvalid && !areTitlesInvalid && !areScoreSheetsInvalid;
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!validateForm()) {
@@ -205,15 +205,19 @@ export default function JudgeModal(props: IJudgeModalProps) {
       document.activeElement.blur();
     }
 
+    // Close modal immediately for faster UX
+    handleCloseModal();
+
     if (mode === "new") {
-      await handleCreateJudge();
+      handleCreateJudge();
     } else {
-      await handleEditJudge();
+      handleEditJudge();
     }
   };
 
   const handleCreateJudge = async () => {
     if (contestid) {
+      const loadingToast = toast.loading("Creating judge account and assignments...");
       try {
         // Apply cluster type filtering to scoresheets
         let allowedSheets = selectedSheets;
@@ -265,17 +269,16 @@ export default function JudgeModal(props: IJudgeModalProps) {
         }
 
         onSuccess?.();
-
-        toast.success("Judge created successfully!");
-        handleCloseModal();
+        toast.success("Judge created successfully!", { id: loadingToast });
       } catch (error: any) {
-        handleAccountError(error, "create");
+        toast.error("Failed to create judge. Please try again.", { id: loadingToast });
       }
     }
   };
 
   const handleEditJudge = async () => {
     if (contestid && judgeData) {
+      const loadingToast = toast.loading("Updating judge information and assignments...");
       try {
         // Prioritize dropdown selection over context
         const selectedClusterFromProps = clusterContext || judgeData.cluster;
@@ -395,17 +398,11 @@ export default function JudgeModal(props: IJudgeModalProps) {
           });
         }
 
-        toast.success("Judge updated successfully!");
+        toast.success("Judge updated successfully!", { id: loadingToast });
         onSuccess?.();
-        handleCloseModal();
       } catch (error: any) {
         console.error("Judge update error:", error);
-        const errorMessage = handleAccountError(error, "update");
-        setErrorMessage(errorMessage || null);
-        setErrors({
-          ...errors,
-          cluster: errorMessage ? true : false,
-        });
+        toast.error("Failed to update judge. Please try again.", { id: loadingToast });
       }
     }
   };
