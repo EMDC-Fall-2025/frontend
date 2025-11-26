@@ -8,9 +8,11 @@ export function getCookie(name: string): string | null {
 // Base URL pieces
 
 const BACKEND_ORIGIN =
-  (import.meta as any).env?.VITE_BACKEND_URL || "https://api.emdcresults.com/api";
-const API_BASE_URL = BACKEND_ORIGIN;
-const CSRF_URL = `${BACKEND_ORIGIN}/auth/csrf/`;
+  (import.meta as any).env?.VITE_BACKEND_URL || "https://api.emdcresults.com";
+const API_BASE_URL = BACKEND_ORIGIN.endsWith('/api')
+  ? BACKEND_ORIGIN
+  : `${BACKEND_ORIGIN}/api`;
+const CSRF_URL = `${API_BASE_URL}/auth/csrf/`;
 
 axios.defaults.withCredentials = true;
 
