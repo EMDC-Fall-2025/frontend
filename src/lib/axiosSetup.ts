@@ -13,7 +13,7 @@ const BACKEND_ORIGIN =
 export const API_BASE_URL = BACKEND_ORIGIN;
 
 // CSRF endpoint: /api/auth/csrf/
-const CSRF_URL = `${API_BASE_URL}/auth/csrf/`;
+const CSRF_URL = `${API_BASE_URL}/api/auth/csrf/`;
 
 axios.defaults.withCredentials = true;
 
