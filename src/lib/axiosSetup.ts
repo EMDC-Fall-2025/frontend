@@ -11,7 +11,10 @@ axios.defaults.withCredentials = true;
 // Use requestIdleCallback for non-blocking initialization
 if (typeof window !== "undefined") {
   const fetchCSRF = () => {
-    fetch("/api/auth/csrf/", { credentials: "include" }).catch(() => {
+    // Hit the Render backend directly so CSRFTOKEN comes from the API host
+    fetch("https://emdc-backend.onrender.com/api/auth/csrf/", {
+      credentials: "include",
+    }).catch(() => {
       // ignore — login/signup will retry automatically if needed
     });
   };
