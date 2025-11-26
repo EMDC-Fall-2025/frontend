@@ -1,25 +1,22 @@
 // src/lib/api.ts
 import axios from "axios";
 
-// Use Vite env for backend base URL in production; fall back to same-origin in dev
-const BACKEND_BASE_URL =
-  (import.meta as any).env?.VITE_BACKEND_URL || (import.meta as any).env?.VITE_BACKEND || "";
-
 function getCookie(name: string): string | null {
   const m = document.cookie.match(`(?:^|; )${name}=([^;]*)`);
   return m ? decodeURIComponent(m[1]) : null;
 }
 
+//temp backend URL so production always hits the correct API
 export const api = axios.create({
-  baseURL: BACKEND_BASE_URL,
+  baseURL: "https://emdc-backend.onrender.com",
   withCredentials: true,
 });
 
-api.interceptors.request.use(config => {
+api.interceptors.request.use((config) => {
   const method = (config.method || "get").toUpperCase();
-  if (["POST","PUT","PATCH","DELETE"].includes(method)) {
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
     const csrftoken = getCookie("csrftoken");
-    if (csrftoken) (config.headers as Record<string,string>)["X-CSRFToken"] = csrftoken;
+    if (csrftoken) (config.headers as Record<string, string>)["X-CSRFToken"] = csrftoken;
   }
   return config;
 });
@@ -30,11 +27,15 @@ api.interceptors.response.use(
   (error) => {
     // Handle 401 Unauthorized - session expired or not authenticated
     if (error?.response?.status === 401) {
-      const errorMessage = error?.response?.data?.detail || "Authentication credentials were not provided";
+      const errorMessage =
+        error?.response?.data?.detail || "Authentication credentials were not provided";
       console.error("Authentication error:", errorMessage);
-      
+
       // Clear auth state if session expired
-      if (errorMessage.includes("Authentication credentials") || errorMessage.includes("not authenticated")) {
+      if (
+        errorMessage.includes("Authentication credentials") ||
+        errorMessage.includes("not authenticated")
+      ) {
         // Only clear if we're not already on the login page
         if (window.location.pathname !== "/login/") {
           console.warn("Session expired. Please log in again.");
