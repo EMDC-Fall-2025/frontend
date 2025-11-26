@@ -797,13 +797,15 @@ const Ranking = () => {
       await undoChampionshipAdvancement(selectedContest.id);
       toast.success("Successfully undone championship advancement!", { id: toastId });
       await fetchClusters(true);
+
+      // Small delay to ensure backend processing is complete before notifying other components
       setTimeout(() => {
         window.dispatchEvent(
           new CustomEvent("championshipUndone", {
             detail: { contestId: selectedContest.id },
           })
         );
-      }, 100);
+      }, 50);
     } catch (error) {
       toast.error("Failed to undo championship advancement", { id: toastId });
     } finally {

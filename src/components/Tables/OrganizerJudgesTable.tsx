@@ -199,7 +199,7 @@ function JudgesTable(props: IJudgesTableProps) {
   const { submissionStatus, checkAllScoreSheetsSubmitted, deleteJudge } = useJudgeStore();
 
   const [judgeId, setJudgeId] = useState(0);
-  const { fetchJudgesByClusterId, removeJudgeFromCluster, fetchClustersForJudges, judgesByClusterId } = useMapClusterJudgeStore();
+  const { fetchJudgesByClusterId, removeJudgeFromCluster, fetchClustersForJudges, judgesByClusterId, fetchAllClustersByJudgeId } = useMapClusterJudgeStore();
   const { removeJudgeFromContestStoreIfNoOtherClusters, getAllJudgesByContestId } = useContestJudgeStore();
   const { clearMappings } = useMapScoreSheetStore();
 
@@ -241,10 +241,46 @@ function JudgesTable(props: IJudgesTableProps) {
   }, [judgeIdsString, fetchClustersForJudges, judges]);
 
   // Memoize the handler to prevent unnecessary re-renders
-  const handleOpenJudgeModal = useCallback((judgeData: JudgeData) => {
-    setJudgeData(judgeData);
-    setOpenJudgeModal(true);
-  }, []);
+  const handleOpenJudgeModal = useCallback(async (judgeData: JudgeData) => {
+    // For editing, we need to ensure we only use preliminary clusters
+    // Championship and redesign clusters should not be considered for editing
+    const isPreliminaryCluster = (cluster: Cluster | undefined): boolean => {
+      if (!cluster) return false;
+      const clusterType = cluster.cluster_type?.toLowerCase() || '';
+      const clusterName = cluster.cluster_name?.toLowerCase() || '';
+      return clusterType !== 'championship' && 
+             clusterType !== 'redesign' &&
+             !clusterName.includes('championship') &&
+             !clusterName.includes('redesign');
+    };
+    
+    let preliminaryCluster: Cluster | undefined = undefined;
+    
+    // Use currentCluster if it's preliminary, otherwise fetch all clusters and find a preliminary one
+    if (isPreliminaryCluster(currentCluster)) {
+      preliminaryCluster = currentCluster;
+    } else {
+      try {
+        const allClusters = await fetchAllClustersByJudgeId(judgeData.id);
+        const preliminaryClusters = allClusters.filter(isPreliminaryCluster);
+        if (preliminaryClusters.length > 0) {
+          preliminaryCluster = preliminaryClusters[0];
+        }
+      } catch (error) {
+        // Error fetching clusters - will use fallback
+      }
+    }
+    
+    if (preliminaryCluster) {
+      setJudgeData({
+        ...judgeData,
+        cluster: preliminaryCluster
+      });
+      setOpenJudgeModal(true);
+    } else {
+      toast.error('No preliminary cluster found for this judge. Cannot edit.');
+    }
+  }, [currentCluster, fetchAllClustersByJudgeId]);
 
   // Open delete options (choose between cluster-only vs complete delete)
   const handleOpenDeleteOptions = useCallback((judgeId: number) => {
@@ -426,15 +462,16 @@ function JudgesTable(props: IJudgesTableProps) {
       isChampionshipOrRedesignCluster ? null : (
         <Button
           variant="outlined"
-          onClick={(e) => {
+          onClick={async (e) => {
             e.stopPropagation();
             // Use cluster-specific sheet flags for editing
             const clusterFlags = judge.cluster_sheet_flags || {};
-            handleOpenJudgeModal({
+            // Note: cluster will be determined in handleOpenJudgeModal to ensure it's preliminary
+            await handleOpenJudgeModal({
               id: judge.id,
               firstName: judge.first_name,
               lastName: judge.last_name,
-              cluster: judgeClusters[judge.id],
+              cluster: judgeClusters[judge.id], // This might be championship/redesign, but will be replaced
               role: judge.role,
               journalSS: clusterFlags.journal || false,
               presSS: clusterFlags.presentation || false,

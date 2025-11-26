@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+// src/components/Preloader.tsx
 import { Box, Typography } from "@mui/material";
 import theme from "../theme";
+import { useEffect, useState } from "react";
 
 interface PreloaderProps {
   show: boolean;
@@ -135,24 +136,23 @@ export default function Preloader({ show }: PreloaderProps) {
           }}
         >
           {[0, 1, 2].map((i) => (
-              <Box
-                key={i}
-                sx={{
-                  width: { xs: 6, sm: 8 },
-                  height: { xs: 6, sm: 8 },
-                  borderRadius: "50%",
-                  bgcolor: theme.palette.success.main,
-                  animation: `pulse 1.2s ease-in-out infinite ${i * 0.2}s`,
-                  "@keyframes pulse": {
-                    "0%, 100%": { transform: "scale(1)", opacity: 0.5 },
-                    "50%": { transform: "scale(1.3)", opacity: 1 },
-                  },
-                }}
-              />
+            <Box
+              key={i}
+              sx={{
+                width: { xs: 6, sm: 8 },
+                height: { xs: 6, sm: 8 },
+                borderRadius: "50%",
+                bgcolor: theme.palette.success.main,
+                animation: `pulse 1.2s ease-in-out infinite ${i * 0.2}s`,
+                "@keyframes pulse": {
+                  "0%, 100%": { transform: "scale(1)", opacity: 0.5 },
+                  "50%": { transform: "scale(1.3)", opacity: 1 },
+                },
+              }}
+            />
           ))}
         </Box>
       </Box>
     </Box>
   );
 }
-

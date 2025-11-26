@@ -59,7 +59,6 @@ export default function Organizer() {
   // ------------------------------
   const [value, setValue] = useState("1"); // Tabs: "1" = current, "2" = past, etc.
   const [hasLoaded, setHasLoaded] = useState(false);
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const isInitialLoadRef = useRef(true);
 
   // ------------------------------
@@ -71,9 +70,7 @@ export default function Organizer() {
 
   const {
     role,
-    isAuthenticated,
-    setShowPreloader,
-    setPreloaderProgress,
+    isAuthenticated
   } = useAuthStore();
 
   // Organizer directory (for up-to-date name)
@@ -136,34 +133,7 @@ export default function Organizer() {
   }, [organizerId, isAuthenticated, role?.user_type]);
   // Note: fetchContestsByOrganizerId & fetchAllOrganizers intentionally
   // omitted to avoid infinite loops
-
-  // ==============================
-  // Global Preloader Coordination
-  // ==============================
-
-  /**
-   * Start minimum 1.5 second timer when component mounts.
-   * This makes the preloader feel intentional instead of "flashing".
-   */
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setMinTimeElapsed(true);
-    }, 1500); // 1.5 seconds minimum
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  /**
-   * Hide preloader when both:
-   *  - Data is loaded (hasLoaded), and
-   *  - Minimum time has elapsed.
-   */
-  useEffect(() => {
-    if (hasLoaded && minTimeElapsed) {
-      setShowPreloader(false);
-      setPreloaderProgress(""); // Clear progress when hiding preloader
-    }
-  }, [hasLoaded, minTimeElapsed, setShowPreloader, setPreloaderProgress]);
+  
 
   // ==============================
   // Contest Utilities / Memoization

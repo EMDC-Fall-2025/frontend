@@ -96,7 +96,7 @@ function App() {
           <Route path="/contestPage/" element={<ContestPage />} />
           <Route path="/set-password/" element={<SetPassword />} />
 
-          {/* ✅ Always render Login; preloader covers it when needed */}
+          {/* Always render Login; preloader covers it when needed */}
           <Route path="/login/" element={<Login />} />
 
           {/* Auth-gated */}

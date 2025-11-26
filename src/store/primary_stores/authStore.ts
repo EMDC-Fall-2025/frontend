@@ -106,7 +106,6 @@ export const useAuthStore = create<AuthState>()(
         sessionStorage.clear();
 
         try {
-          // Make logout API call (don't block UI on this)
           await api.post(`/api/logout/`, {});
         } catch (error) {
           console.error("Logout API error:", error);

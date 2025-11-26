@@ -26,6 +26,7 @@ import useContestJudgeStore from "../../store/map_stores/mapContestToJudgeStore"
 import { useMapClusterJudgeStore } from "../../store/map_stores/mapClusterToJudgeStore";
 import CloseIcon from "@mui/icons-material/Close";
 import { Cluster, JudgeData } from "../../types";
+import { dispatchDataChange } from "../../utils/dataChangeEvents";
 
 export interface IJudgeModalProps {
   open: boolean;
@@ -251,6 +252,15 @@ export default function JudgeModal(props: IJudgeModalProps) {
           addJudgeToContest(contestid, createdJudge);
           if (clusterId !== -1) {
             addJudgeToCluster(clusterId, createdJudge);
+
+            // Emit data change event for judge assignment
+            dispatchDataChange({
+              type: "judge",
+              action: "create",
+              judgeId: createdJudge.id,
+              clusterId: clusterId,
+              contestId: contestid,
+            });
           }
         }
 
@@ -374,6 +384,17 @@ export default function JudgeModal(props: IJudgeModalProps) {
           }
         }
 
+        // Dispatch data change event for judge update
+        if (selectedClusterId !== -1) {
+          dispatchDataChange({
+            type: "judge",
+            action: "update",
+            judgeId: judgeData.id,
+            clusterId: selectedClusterId,
+            contestId: contestid,
+          });
+        }
+
         toast.success("Judge updated successfully!");
         onSuccess?.();
         handleCloseModal();
@@ -467,8 +488,8 @@ export default function JudgeModal(props: IJudgeModalProps) {
           <TextField
             label="Last Name"
             variant="outlined"
-            sx={{ 
-              mt: { xs: 2, sm: 3 }, 
+            sx={{
+              mt: { xs: 2, sm: 3 },
               width: { xs: "100%", sm: 350 },
               "& .MuiInputLabel-root": { fontSize: { xs: "0.9rem", sm: "1rem" } },
               "& .MuiOutlinedInput-input": { fontSize: { xs: "0.9rem", sm: "1rem" } }

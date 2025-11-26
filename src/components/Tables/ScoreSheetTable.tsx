@@ -329,6 +329,7 @@ export default function ScoreSheetTable({
           }}
         >
           <Button
+            type="button"
             variant="contained"
             onClick={handleSaveScoreSheet}
             sx={{
@@ -884,6 +885,7 @@ export default function ScoreSheetTable({
         </TableContainer>
 
         <Button
+          type="button"
           variant="contained"
           onClick={() => setOpenAreYouSure(true)}
           disabled={!allFieldsFilled()}

@@ -1,3 +1,4 @@
+
 import {
   Button,
   Container,
@@ -16,11 +17,10 @@ import { useEffect, useState } from "react";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import theme from "../theme";
 import { useAuthStore } from "../store/primary_stores/authStore";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const { login, isLoadingAuth, authError, role, isAuthenticated } =
-    useAuthStore();
+  const { login, isLoadingAuth, authError, role, isAuthenticated } = useAuthStore();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,6 +28,7 @@ export default function Login() {
 
   const navigate = useNavigate();
 
+  // Redirect after successful login based on role
   useEffect(() => {
     if (isAuthenticated && role) {
       switch (role.user_type) {
@@ -51,10 +52,11 @@ export default function Login() {
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
 
-  const handleLogin = async (e: any) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await login(email, password);
+      // no navigate here – we let the useEffect do it
     } catch (error) {
       console.error("Login failed:", error);
     }
@@ -80,7 +82,7 @@ export default function Login() {
           alignItems: "center",
         }}
       >
-        <Typography 
+        <Typography
           variant="h1"
           sx={{
             fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
@@ -106,6 +108,7 @@ export default function Login() {
             required
             label="Email"
             variant="outlined"
+            value={email}
             onChange={(e) => setEmail(e.target.value)}
             sx={{ mt: 5, width: 300 }}
           />
@@ -146,7 +149,7 @@ export default function Login() {
               mt: 5,
             }}
           >
-            Login
+            {isLoadingAuth ? "Logging in..." : "Login"}
           </Button>
           {authError != null && (
             <Alert sx={{ mt: 3 }} severity="error">

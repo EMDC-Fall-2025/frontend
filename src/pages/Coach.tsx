@@ -46,7 +46,7 @@ export default function Coach() {
   // ------------------------------
   // Global state (Auth + Stores)
   // ------------------------------
-  const { role, setShowPreloader, setPreloaderProgress } = useAuthStore();
+  const { role} = useAuthStore();
 
   const { teams, fetchTeamsByCoachId, clearTeams } = useMapCoachToTeamStore();
 
@@ -60,7 +60,6 @@ export default function Coach() {
   // Local UI State
   // ------------------------------
   const [hasLoaded, setHasLoaded] = useState(false);
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const isInitialLoadRef = useRef(true);
 
   // ==============================
@@ -97,29 +96,6 @@ export default function Coach() {
     };
   }, [teams]);
 
-  /**
-   * Start a minimum 1.5s timer for the preloader when the component mounts.
-   * This ensures the preloader doesn’t just "flash" briefly.
-   */
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setMinTimeElapsed(true);
-    }, 1500); // 1.5 seconds minimum
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  /**
-   * Hide the global preloader when:
-   *  - Data has been loaded, AND
-   *  - The minimum preloader time has elapsed.
-   */
-  useEffect(() => {
-    if (hasLoaded && minTimeElapsed) {
-      setShowPreloader(false);
-      setPreloaderProgress("");
-    }
-  }, [hasLoaded, minTimeElapsed, setShowPreloader, setPreloaderProgress]);
 
   /**
    * When the page is being hidden (e.g., navigation/back), clean up

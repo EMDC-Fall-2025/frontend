@@ -11,7 +11,7 @@ const SearchBar = ({ judges = [], onJudgeSelect }: SearchBarProps) => {
     const [searchTerm, setSearchTerm] = useState("")
     const [showDropdown, setShowDropdown] = useState(false)
     
-    const filteredJudges = judges.filter(judge => 
+    const filteredJudges = judges.filter(judge =>
         `${judge.first_name} ${judge.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
     );
     
@@ -56,7 +56,7 @@ const SearchBar = ({ judges = [], onJudgeSelect }: SearchBarProps) => {
                             onClick={() => {
                                 setSearchTerm(`${judge.last_name} ${judge.first_name}`)
                                 setShowDropdown(false)
-                                onJudgeSelect?.(judge) 
+                                onJudgeSelect?.(judge)
                             }}
                         >
                             {judge.last_name} {judge.first_name} 

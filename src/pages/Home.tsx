@@ -1,8 +1,9 @@
 import { Box, Container, Typography, Paper } from "@mui/material";
-import { useRef, useEffect } from "react";
-import image from "../assets/group.png";
+import image from "../assets/group.webp";
+import { useEffect, useRef } from "react";
 
 export default function Home() {
+
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
