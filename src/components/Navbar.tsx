@@ -289,7 +289,7 @@ function Nav() {
                   ) : (
                     <Button
                       variant="contained"
-                      onClick={() => navigate("/login/")}
+                      onClick={() => navigate("/login/", { state: { skipPreloader: true } })}
                       sx={{
                         textTransform: "none",
                         borderRadius: 2,
