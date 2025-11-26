@@ -8,8 +8,8 @@ export function getCookie(name: string): string | null {
 // Base URL pieces
 const BACKEND_ORIGIN =
   (import.meta as any).env?.VITE_BACKEND_URL || "https://emdc-backend.onrender.com";
-const API_BASE = `${BACKEND_ORIGIN}/api`;
-const CSRF_URL = `${API_BASE}/auth/csrf/`;
+const API_BASE_URL = BACKEND_ORIGIN;
+const CSRF_URL = `${BACKEND_ORIGIN}/api/auth/csrf/`;
 
 axios.defaults.withCredentials = true;
 
@@ -20,7 +20,7 @@ if (typeof window !== "undefined") {
     fetch(CSRF_URL, {
       credentials: "include",
     }).catch(() => {
-   
+      // ignore — login/signup will retry automatically if needed
     });
   };
 
@@ -47,4 +47,4 @@ axios.interceptors.request.use((config) => {
   return config;
 });
 
-export const API_BASE_URL = API_BASE;
+export { API_BASE_URL };
