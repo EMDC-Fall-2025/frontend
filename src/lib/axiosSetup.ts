@@ -19,14 +19,22 @@ axios.defaults.withCredentials = true;
 
 // Prime the CSRF cookie once on app load (synchronous for reliability)
 if (typeof window !== "undefined") {
+  console.log("Starting CSRF fetch from:", CSRF_URL);
   fetch(CSRF_URL, {
     credentials: "include",
   })
-    .then((response) => response.json())
+    .then((response) => {
+      console.log("CSRF fetch response status:", response.status);
+      return response.json();
+    })
     .then((data) => {
+      console.log("CSRF response data:", data);
       if (data.csrfToken) {
         // Set the CSRF token cookie on the frontend domain for cross-domain access
         document.cookie = `csrftoken=${data.csrfToken}; path=/; domain=.emdcresults.com; secure; samesite=lax`;
+        console.log("CSRF cookie set, document.cookie:", document.cookie);
+      } else {
+        console.warn("No csrfToken in response");
       }
     })
     .catch((error) => {
@@ -44,8 +52,12 @@ axios.interceptors.request.use((config) => {
   const method = (config.method || "get").toUpperCase();
   if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
     const csrf = getCookie("csrftoken");
+    console.log("CSRF token from cookie:", csrf);
     if (csrf) {
       headers.set("X-CSRFToken", csrf);
+      console.log("Set X-CSRFToken header:", csrf);
+    } else {
+      console.warn("No CSRF token found in cookie");
     }
   }
 
