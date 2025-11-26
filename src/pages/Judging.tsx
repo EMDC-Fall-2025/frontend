@@ -21,10 +21,11 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import { useJudgeStore } from "../store/primary_stores/judgeStore";
 import { useAuthStore } from "../store/primary_stores/authStore";
-import { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useMapClusterJudgeStore } from "../store/map_stores/mapClusterToJudgeStore";
 import useClusterTeamStore from "../store/map_stores/mapClusterToTeamStore";
-import JudgeDashboardTable from "../components/Tables/JudgeDashboardTable";
+// Lazy load the heavy dashboard table for faster initial render
+const JudgeDashboardTable = React.lazy(() => import("../components/Tables/JudgeDashboardTable"));
 import theme from "../theme";
 import { Team, ClusterWithContest, Contest } from "../types";
 import { api } from "../lib/api";
@@ -95,7 +96,7 @@ const StatCard = ({ value, label }: { value: number | string; label: string }) =
 // Main component: Judging Dashboard
 // -----------------------------------------------------------------------------
 
-export default function Judging() {
+export default React.memo(function Judging() {
   // ---------------------------------------------------------------------------
   // Store hooks (global state)
   // ---------------------------------------------------------------------------
@@ -815,11 +816,19 @@ export default function Judging() {
               <Divider />
               <Box sx={{ px: 3, pb: 2 }}>
                 {teams.length > 0 ? (
-                  <JudgeDashboardTable
-                    teams={teams}
-                    currentCluster={currentCluster}
-                    onVisibleTeamsChange={setVisibleTeamsCount}
-                  />
+                  <React.Suspense fallback={
+                    <Box sx={{ textAlign: "center", py: 4 }}>
+                      <Typography variant="h6" color="text.secondary">
+                        Loading dashboard...
+                      </Typography>
+                    </Box>
+                  }>
+                    <JudgeDashboardTable
+                      teams={teams}
+                      currentCluster={currentCluster}
+                      onVisibleTeamsChange={setVisibleTeamsCount}
+                    />
+                  </React.Suspense>
                 ) : hasLoaded ? (
                   // No teams for this judge
                   <Box sx={{ textAlign: "center", py: 4 }}>
@@ -843,4 +852,4 @@ export default function Judging() {
       </Container>
     </Box>
   );
-}
+})
