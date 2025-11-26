@@ -42,7 +42,7 @@ if (typeof window !== "undefined") {
     });
 }
 
-axios.interceptors.request.use((config) => {
+api.interceptors.request.use((config) => {
   if (!config.headers) config.headers = new AxiosHeaders();
   const headers = config.headers as AxiosHeaders;
 
