@@ -5,29 +5,28 @@ export function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-// Base URL pieces
-
+// IMPORTANT: VITE_BACKEND_URL should be JUST the origin, no /api
 const BACKEND_ORIGIN =
   (import.meta as any).env?.VITE_BACKEND_URL || "https://api.emdcresults.com";
-const API_BASE_URL = BACKEND_ORIGIN.endsWith('/api')
-  ? BACKEND_ORIGIN
-  : `${BACKEND_ORIGIN}/api`;
+
+// All JSON API routes are under /api
+export const API_BASE_URL = `${BACKEND_ORIGIN}/api`;
+
+// CSRF endpoint: /api/auth/csrf/
 const CSRF_URL = `${API_BASE_URL}/auth/csrf/`;
 
 axios.defaults.withCredentials = true;
 
-// Prime the CSRF cookie once in the browser so subsequent POSTs succeed
-// Use requestIdleCallback for non-blocking initialization
+// Prime the CSRF cookie once
 if (typeof window !== "undefined") {
   const fetchCSRF = () => {
     fetch(CSRF_URL, {
       credentials: "include",
     }).catch(() => {
-   
+      // ignore errors
     });
   };
 
-  // Use requestIdleCallback if available (non-blocking), otherwise setTimeout
   if (window.requestIdleCallback) {
     window.requestIdleCallback(fetchCSRF, { timeout: 2000 });
   } else {
@@ -36,10 +35,12 @@ if (typeof window !== "undefined") {
 }
 
 axios.interceptors.request.use((config) => {
-  // Remove any stale Authorization header; rely on session cookie instead
   if (!config.headers) config.headers = new AxiosHeaders();
   const headers = config.headers as AxiosHeaders;
+
+  // We rely on session cookies, not Authorization
   if (headers.has("Authorization")) headers.delete("Authorization");
+
   const method = (config.method || "get").toUpperCase();
   if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
     const csrf = getCookie("csrftoken");
@@ -47,7 +48,6 @@ axios.interceptors.request.use((config) => {
       headers.set("X-CSRFToken", csrf);
     }
   }
+
   return config;
 });
-
-export { API_BASE_URL };
