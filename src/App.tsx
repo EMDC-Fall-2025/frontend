@@ -57,17 +57,10 @@ function App() {
 
   // Track only the "first load" splash preloader for the login page
   const [initialLoad, setInitialLoad] = useState(true);
-  const [appReady, setAppReady] = useState(false);
   const onLoginPage =
     currentLink === "/login" || currentLink === "/login/";
   const skipPreloader = location.state?.skipPreloader;
-  // Set app ready after a short delay to allow page to load
-  useEffect(() => {
-    const timer = setTimeout(() => setAppReady(true), 300);
-    return () => clearTimeout(timer);
-  }, []);
 
-  // Show preloader ONCE when first landing on /login, then never again
   // Skip if coming from navbar login button
   useEffect(() => {
     if (!initialLoad || !onLoginPage || skipPreloader) return;
@@ -76,18 +69,10 @@ function App() {
     const timer = setTimeout(() => {
       setShowPreloader(false);
       setInitialLoad(false);
-    }, 1600); // how long you want the splash preloader
+    }, 1700); // how long you want the splash preloader
 
     return () => clearTimeout(timer);
   }, [initialLoad, onLoginPage, skipPreloader, setShowPreloader]);
-
-  // Hide preloader early if app becomes ready before timer
-  useEffect(() => {
-    if (appReady && showPreloader && initialLoad) {
-      setShowPreloader(false);
-      setInitialLoad(false);
-    }
-  }, [appReady, showPreloader, initialLoad, setShowPreloader]);
 
   return (
     <>
