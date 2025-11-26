@@ -1,9 +1,15 @@
 import axios, { AxiosHeaders } from "axios";
 
-function getCookie(name: string): string | null {
+export function getCookie(name: string): string | null {
   const match = document.cookie.match(`(?:^|; )${name}=([^;]*)`);
   return match ? decodeURIComponent(match[1]) : null;
 }
+
+// Base URL pieces
+const BACKEND_ORIGIN =
+  (import.meta as any).env?.VITE_BACKEND_URL || "https://emdc-backend.onrender.com";
+const API_BASE = `${BACKEND_ORIGIN}/api`;
+const CSRF_URL = `${API_BASE}/auth/csrf/`;
 
 axios.defaults.withCredentials = true;
 
@@ -11,14 +17,13 @@ axios.defaults.withCredentials = true;
 // Use requestIdleCallback for non-blocking initialization
 if (typeof window !== "undefined") {
   const fetchCSRF = () => {
-    // Hit the Render backend directly so CSRFTOKEN comes from the API host
-    fetch("https://emdc-backend.onrender.com/api/auth/csrf/", {
+    fetch(CSRF_URL, {
       credentials: "include",
     }).catch(() => {
-      // ignore — login/signup will retry automatically if needed
+   
     });
   };
-  
+
   // Use requestIdleCallback if available (non-blocking), otherwise setTimeout
   if (window.requestIdleCallback) {
     window.requestIdleCallback(fetchCSRF, { timeout: 2000 });
@@ -42,4 +47,4 @@ axios.interceptors.request.use((config) => {
   return config;
 });
 
-
+export const API_BASE_URL = API_BASE;
