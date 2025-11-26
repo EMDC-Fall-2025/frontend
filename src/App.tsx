@@ -63,8 +63,8 @@ function App() {
   return (
     <>
       <ThemeProvider theme={theme}>
-        {/* Show preloader only after login, not on reload */}
-        <Preloader show={showPreloader} />
+        {/* Show preloader only during post-login transitions*/}
+        <Preloader show={showPreloader && isAuthenticated} />
         {currentLink !== "/set-password/" &&
           currentLink !== "/forgot-password/" &&
           currentLink !== "/login/" &&   
@@ -76,8 +76,7 @@ function App() {
           <Route path="/forgot-password/" element={<ForgotPassword />} />
           <Route path="/contestresults/:contestId" element={<ContestScores />} />
           <Route path="/rank" element={<Ranking />} />
-          <Route path="/login/" element={showPreloader ? null : <Login />}
-/>
+          <Route path="/login/" element={showPreloader ? null : <Login />} />
           <Route path="/contestPage/" element={<ContestPage />} />
           <Route path="/set-password/" element={<SetPassword />} />
 
