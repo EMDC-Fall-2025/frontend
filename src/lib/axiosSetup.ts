@@ -1,16 +1,11 @@
 import axios, { AxiosHeaders } from "axios";
+import { api, API_BASE_URL } from "./api";
+import type { InternalAxiosRequestConfig } from "axios";
 
 export function getCookie(name: string): string | null {
   const match = document.cookie.match(`(?:^|; )${name}=([^;]*)`);
   return match ? decodeURIComponent(match[1]) : null;
 }
-
-// VITE_BACKEND_URL should be just the origin, no /api suffix
-const BACKEND_ORIGIN =
-  (import.meta as any).env?.VITE_BACKEND_URL || "https://api.emdcresults.com";
-
-// API calls include /api/ prefix
-export const API_BASE_URL = BACKEND_ORIGIN;
 
 // CSRF endpoint: /api/auth/csrf/
 const CSRF_URL = `${API_BASE_URL}/api/auth/csrf/`;
@@ -42,7 +37,7 @@ if (typeof window !== "undefined") {
     });
 }
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (!config.headers) config.headers = new AxiosHeaders();
   const headers = config.headers as AxiosHeaders;
 
