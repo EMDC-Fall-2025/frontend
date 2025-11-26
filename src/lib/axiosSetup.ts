@@ -5,12 +5,12 @@ export function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-// IMPORTANT: VITE_BACKEND_URL should be JUST the origin, no /api
+// VITE_BACKEND_URL should be just the origin, no /api suffix
 const BACKEND_ORIGIN =
   (import.meta as any).env?.VITE_BACKEND_URL || "https://api.emdcresults.com";
 
-// All JSON API routes are under /api
-export const API_BASE_URL = `${BACKEND_ORIGIN}/api`;
+// API calls include /api/ prefix
+export const API_BASE_URL = BACKEND_ORIGIN;
 
 // CSRF endpoint: /api/auth/csrf/
 const CSRF_URL = `${API_BASE_URL}/auth/csrf/`;

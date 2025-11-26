@@ -9,11 +9,11 @@ export const api = axios.create({
 
 // Auth helpers
 export function login(username: string, password: string) {
-  return api.post("/auth/login/", { username, password });
+  return api.post("/api/login/", { username, password });
 }
 
 export function logout() {
-  return api.post("/auth/logout/");
+  return api.post("/api/logout/");
 }
 
 export function getAllOrganizers() {
