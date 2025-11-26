@@ -31,7 +31,7 @@ if (typeof window !== "undefined") {
       console.log("CSRF response data:", data);
       if (data.csrfToken) {
         // Set the CSRF token cookie on the frontend domain for cross-domain access
-        document.cookie = `csrftoken=${data.csrfToken}; path=/; domain=.emdcresults.com; secure; samesite=lax`;
+        document.cookie = `csrftoken=${data.csrfToken}; path=/; domain=.emdcresults.com; secure; samesite=none`;
         console.log("CSRF cookie set, document.cookie:", document.cookie);
       } else {
         console.warn("No csrfToken in response");
@@ -50,12 +50,14 @@ axios.interceptors.request.use((config) => {
   if (headers.has("Authorization")) headers.delete("Authorization");
 
   const method = (config.method || "get").toUpperCase();
+  console.log("Axios interceptor for:", config.url, method);
   if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
     const csrf = getCookie("csrftoken");
     console.log("CSRF token from cookie:", csrf);
     if (csrf) {
       headers.set("X-CSRFToken", csrf);
       console.log("Set X-CSRFToken header:", csrf);
+      console.log("Headers after CSRF set:", headers);
     } else {
       console.warn("No CSRF token found in cookie");
     }
