@@ -21,9 +21,17 @@ axios.defaults.withCredentials = true;
 if (typeof window !== "undefined") {
   fetch(CSRF_URL, {
     credentials: "include",
-  }).catch((error) => {
-    console.error("CSRF fetch failed:", error);
-  });
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.csrfToken) {
+        // Set the CSRF token cookie on the frontend domain for cross-domain access
+        document.cookie = `csrftoken=${data.csrfToken}; path=/; domain=.emdcresults.com; secure; samesite=lax`;
+      }
+    })
+    .catch((error) => {
+      console.error("CSRF fetch failed:", error);
+    });
 }
 
 axios.interceptors.request.use((config) => {
