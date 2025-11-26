@@ -1,13 +1,17 @@
 // src/lib/api.ts
 import axios from "axios";
 
+// Use Vite env for backend base URL in production; fall back to same-origin in dev
+const BACKEND_BASE_URL =
+  (import.meta as any).env?.VITE_BACKEND_URL || (import.meta as any).env?.VITE_BACKEND || "";
+
 function getCookie(name: string): string | null {
   const m = document.cookie.match(`(?:^|; )${name}=([^;]*)`);
   return m ? decodeURIComponent(m[1]) : null;
 }
 
 export const api = axios.create({
-  baseURL: "",     
+  baseURL: BACKEND_BASE_URL,
   withCredentials: true,
 });
 
