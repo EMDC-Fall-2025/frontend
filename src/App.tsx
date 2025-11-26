@@ -76,7 +76,7 @@ function App() {
     const timer = setTimeout(() => {
       setShowPreloader(false);
       setInitialLoad(false);
-    }, 1200); // how long you want the splash preloader
+    }, 1600); // how long you want the splash preloader
 
     return () => clearTimeout(timer);
   }, [initialLoad, onLoginPage, skipPreloader, setShowPreloader]);

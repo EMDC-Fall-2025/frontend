@@ -216,7 +216,6 @@ export default function JudgeModal(props: IJudgeModalProps) {
 
   const handleCreateJudge = async () => {
     if (contestid) {
-      const loadingToast = toast.loading("Creating judge account and assignments...");
       try {
         // Apply cluster type filtering to scoresheets
         let allowedSheets = selectedSheets;
@@ -268,16 +267,15 @@ export default function JudgeModal(props: IJudgeModalProps) {
         }
 
         onSuccess?.();
-        toast.success("Judge created successfully!", { id: loadingToast });
+        toast.success("Judge created successfully!");
       } catch (error: any) {
-        toast.error("Failed to create judge. Please try again.", { id: loadingToast });
+        toast.error("Failed to create judge. Please try again.");
       }
     }
   };
 
   const handleEditJudge = async () => {
     if (contestid && judgeData) {
-      const loadingToast = toast.loading("Updating judge information and assignments...");
       try {
         // Prioritize dropdown selection over context
         const selectedClusterFromProps = clusterContext || judgeData.cluster;
@@ -397,11 +395,11 @@ export default function JudgeModal(props: IJudgeModalProps) {
           });
         }
 
-        toast.success("Judge updated successfully!", { id: loadingToast });
+        toast.success("Judge updated successfully!");
         onSuccess?.();
       } catch (error: any) {
         console.error("Judge update error:", error);
-        toast.error("Failed to update judge. Please try again.", { id: loadingToast });
+        toast.error("Failed to update judge. Please try again.");
       }
     }
   };

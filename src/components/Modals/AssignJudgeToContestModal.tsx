@@ -295,8 +295,24 @@ export default function AssignJudgeToContestModal(
     setError(null);
     setSuccess(null);
 
+    const loadingToast = toast.loading("Assigning judge to contest...");
+
     // Close modal immediately for faster UX
     handleClose();
+
+    // Reset form
+    setSelectedJudgeId(-1);
+    setSelectedContestId(contestId || -1);
+    setSelectedClusterId(-1);
+    setScoreSheets({
+      presentation: false,
+      journal: false,
+      mdo: false,
+      runpenalties: false,
+      otherpenalties: false,
+      redesign: false,
+      championship: false,
+    });
 
     // Prepare assignment payload with judge, contest, cluster, and score sheet preferences
     const payload = {
@@ -312,7 +328,7 @@ export default function AssignJudgeToContestModal(
         // Refresh assigned judge-cluster pairs from server to ensure accuracy
         await loadClustersForContest(selectedContestId, true);
         onSuccess?.();
-        toast.success("Judge assigned to contest successfully!");
+        toast.success("Judge assigned to contest successfully!", { id: loadingToast });
       })
       .catch((err: any) => {
         const errorMessage = err?.response?.data?.error || err?.response?.data?.detail || "Failed to assign judge to contest";
@@ -321,15 +337,16 @@ export default function AssignJudgeToContestModal(
         if (errorMessage.toLowerCase().includes("preliminary") &&
             errorMessage.toLowerCase().includes("already assigned")) {
           setError(errorMessage);
+          toast.error(errorMessage, { id: loadingToast });
         }
         // Check for specific error about no teams in cluster
         else if (errorMessage.toLowerCase().includes("no teams") ||
             (errorMessage.toLowerCase().includes("teams") && errorMessage.toLowerCase().includes("cluster"))) {
           setError("Cannot assign judge: The selected cluster has no teams. Please add teams to the cluster first or select a different cluster.");
-          toast.error("Cannot assign judge: The selected cluster has no teams. Please add teams to the cluster first.");
+          toast.error("Cannot assign judge: The selected cluster has no teams. Please add teams to the cluster first.", { id: loadingToast });
         } else {
           setError(errorMessage);
-          toast.error("Failed to assign judge to contest. Please try again.");
+          toast.error("Failed to assign judge to contest. Please try again.", { id: loadingToast });
         }
       })
       .finally(() => {

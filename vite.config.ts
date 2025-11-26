@@ -22,6 +22,23 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    build: {
+      target: 'esnext', // Modern browsers for smaller bundles
+      minify: 'esbuild', // Faster minification
+      sourcemap: false, // Disable sourcemaps for prod
+      chunkSizeWarningLimit: 1000, // Warn if chunks > 1MB
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // Split vendor libs for better caching
+            vendor: ['react', 'react-dom'],
+            ui: ['@mui/material', '@mui/icons-material'],
+            router: ['react-router-dom'],
+            state: ['zustand'],
+          },
+        },
+      },
+    },
     server: {
       watch: { usePolling: true },
       host: "0.0.0.0",
