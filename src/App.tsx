@@ -63,8 +63,8 @@ function App() {
   return (
     <>
       <ThemeProvider theme={theme}>
-        {/* Show preloader only during post-login transitions*/}
-        <Preloader show={showPreloader && isAuthenticated} />
+        {/* Show preloader whenever auth store requests it (login -> preloader -> dashboard) */}
+        <Preloader show={showPreloader} />
         {currentLink !== "/set-password/" &&
           currentLink !== "/forgot-password/" &&
           currentLink !== "/login/" &&   
