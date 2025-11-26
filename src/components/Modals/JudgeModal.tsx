@@ -18,7 +18,6 @@ import {
 import Modal from "./Modal";
 import theme from "../../theme";
 import toast from "react-hot-toast";
-import { handleAccountError } from "../../utils/errorHandler";
 import { useEffect, useState } from "react";
 import useUserRoleStore from "../../store/map_stores/mapUserToRoleStore";
 import { useJudgeStore } from "../../store/primary_stores/judgeStore";
