@@ -17,21 +17,13 @@ const CSRF_URL = `${API_BASE_URL}/api/auth/csrf/`;
 
 axios.defaults.withCredentials = true;
 
-// Prime the CSRF cookie once
+// Prime the CSRF cookie once on app load (synchronous for reliability)
 if (typeof window !== "undefined") {
-  const fetchCSRF = () => {
-    fetch(CSRF_URL, {
-      credentials: "include",
-    }).catch(() => {
-      // ignore errors
-    });
-  };
-
-  if (window.requestIdleCallback) {
-    window.requestIdleCallback(fetchCSRF, { timeout: 2000 });
-  } else {
-    setTimeout(fetchCSRF, 0);
-  }
+  fetch(CSRF_URL, {
+    credentials: "include",
+  }).catch((error) => {
+    console.error("CSRF fetch failed:", error);
+  });
 }
 
 axios.interceptors.request.use((config) => {
