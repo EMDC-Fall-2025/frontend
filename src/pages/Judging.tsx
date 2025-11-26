@@ -386,42 +386,13 @@ export default React.memo(function Judging() {
           if (championshipOrRedesignClusters.length > 0) {
             // Prefer a championship/redesign cluster when available
             currentClusterToSet = { ...championshipOrRedesignClusters[0] };
-            console.log(
-              "[Judging] Selected championship/redesign cluster:",
-              currentClusterToSet.cluster_name ||
-                currentClusterToSet.cluster_type,
-              "for contest",
-              currentClusterToSet.contest_id
-            );
           } else {
             // Fallback to first cluster
             currentClusterToSet = clustersToShow[0]
               ? { ...clustersToShow[0] }
               : null;
-            console.log(
-              "[Judging] Selected fallback cluster:",
-              currentClusterToSet?.cluster_name ||
-                currentClusterToSet?.cluster_type,
-              "for contest",
-              currentClusterToSet?.contest_id
-            );
           }
 
-          console.log(
-            "[Judging] All clusters for judge:",
-            clustersToShow.map((c) => ({
-              name: c.cluster_name,
-              type: c.cluster_type,
-              contestId: (c as any).contest_id
-            }))
-          );
-          console.log(
-            "[Judging] Championship/redesign clusters found:",
-            championshipOrRedesignClusters.length
-          );
-          console.log(
-            "[Judging] Advancement status by contest:",
-            Object.fromEntries(hasAnyTeamAdvancedByContest)
           );
 
           // Attach plain objects for JudgeDashboardTable props

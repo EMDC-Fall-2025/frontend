@@ -98,10 +98,9 @@ export const useJudgeStore = create<JudgeState>()(
       // ==============================
 
       fetchJudgeById: async (judgeId: number) => {
-        // Check if already loaded
         const state = useJudgeStore.getState();
         if (state.loadedJudges.has(judgeId) && state.judge?.id === judgeId) {
-          return; // Already loaded, skip fetch
+          return; 
         }
 
         set({ isLoadingJudge: true });

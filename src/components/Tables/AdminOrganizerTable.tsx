@@ -132,18 +132,18 @@ const Row = memo(function Row(props: {
           align="right"
           sx={{
             whiteSpace: "nowrap",
-            width: { xs: 1, sm: "auto" }, // ⭐ let it take full width on xs
+            width: { xs: 1, sm: "auto" }, 
             pr: { xs: 1, sm: 2 },
           }}
         >
           <Stack
-            direction={{ xs: "column", sm: "row" }} // ⭐ vertical buttons on mobile
+            direction={{ xs: "column", sm: "row" }} 
             spacing={{ xs: 0.5, sm: 0.75 }}
             justifyContent="flex-end"
             alignItems={{ xs: "stretch", sm: "center" }}
             sx={{
               minHeight: { xs: "auto", sm: "35px" },
-              width: { xs: "100%", sm: "auto" }, // ⭐ full width stack on xs
+              width: { xs: "100%", sm: "auto" },
             }}
           >
             <Button
@@ -164,7 +164,7 @@ const Row = memo(function Row(props: {
                 py: { xs: 0.4, sm: 0.75 },
                 fontSize: { xs: "0.7rem", sm: "0.875rem" },
                 fontWeight: 500,
-                minWidth: { xs: "100%", sm: "80px" }, // ⭐ full width on mobile
+                minWidth: { xs: "100%", sm: "80px" },
                 height: { xs: "30px", sm: "36px" },
                 transition: "all 0.2s ease",
               }}
@@ -229,7 +229,7 @@ const Row = memo(function Row(props: {
         <TableCell
           style={{ paddingBottom: 0, paddingTop: 0 }}
           colSpan={3}
-          sx={{ borderBottom: 0, px: { xs: 1, sm: 2 } }} // ⭐ smaller side padding on xs
+          sx={{ borderBottom: 0, px: { xs: 1, sm: 2 } }} 
         >
           <Collapse in={open} timeout="auto" unmountOnExit>
             <Box sx={{ mt: 1, mb: 1, mx: { xs: 0.5, sm: 1.5 } }}>
@@ -439,16 +439,16 @@ export default function AdminOrganizerTable() {
       component={Paper}
       sx={{
         width: "100%",
-        overflowX: "auto", // ⭐ horizontal scroll on very small screens
+        overflowX: "auto", 
         borderRadius: { xs: 1, md: 2 },
         boxShadow: { xs: "none", md: 1 },
       }}
     >
       <Table
         aria-label="collapsible table"
-        size="small" // ⭐ slightly more compact rows
+        size="small" 
         sx={{
-          minWidth: 480, // ⭐ allow scroll instead of squishing everything
+          minWidth: 480, 
         }}
       >
         <TableHead>
