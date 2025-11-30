@@ -437,11 +437,13 @@ export default function AdminOrganizerTable() {
   return (
     <TableContainer
       component={Paper}
+      elevation={0}
       sx={{
         width: "100%",
-        overflowX: "auto", 
-        borderRadius: { xs: 1, md: 2 },
-        boxShadow: { xs: "none", md: 1 },
+        overflowX: "auto",
+        borderRadius: 0,
+        boxShadow: "none",
+        backgroundColor: "transparent",
       }}
     >
       <Table
