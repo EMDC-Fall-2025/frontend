@@ -3,7 +3,7 @@ import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableRow from "@mui/material/TableRow";
-import { Box, Button, Alert } from "@mui/material";
+import { Box, Button, Alert, Stack } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { Team, Contest } from "../../types";
 
@@ -18,6 +18,17 @@ export default function CoachTeamScoresTable(props: ICoachTeamScoresTable) {
   
   // Hide scores if contest is open or not tabulated
   const shouldHideScores = Boolean(contest && (contest.is_open === true || contest.is_tabulated === false));
+  
+  // Check if team has championship or redesign scores
+  const hasChampionshipScores = Boolean(
+    team.championship_score || 
+    team.championship_total_score || 
+    team.advanced_to_championship
+  );
+  const hasRedesignScores = Boolean(
+    team.redesign_score || 
+    team.redesign_total_score
+  );
   
   return (
     <Box>
@@ -58,12 +69,39 @@ export default function CoachTeamScoresTable(props: ICoachTeamScoresTable) {
                 {shouldHideScores ? "—" : (team.total_score || 0)}
               </TableCell>
               <TableCell align="center">
-                <Button 
-                  onClick={() => navigate(`/score-breakdown/${team.id}`)}
-                  disabled={shouldHideScores}
-                >
-                  View Score Breakdown
-                </Button>
+                <Stack direction="column" spacing={1} alignItems="center">
+                  <Button 
+                    onClick={() => navigate(`/score-breakdown/${team.id}`)}
+                    disabled={shouldHideScores}
+                    size="small"
+                    variant="outlined"
+                    sx={{ minWidth: "160px" }}
+                  >
+                    Preliminary
+                  </Button>
+                  {hasChampionshipScores && (
+                    <Button 
+                      onClick={() => navigate(`/championship-score-breakdown/${team.id}`)}
+                      disabled={shouldHideScores}
+                      size="small"
+                      variant="outlined"
+                      sx={{ minWidth: "160px" }}
+                    >
+                      Championship
+                    </Button>
+                  )}
+                  {hasRedesignScores && (
+                    <Button 
+                      onClick={() => navigate(`/redesign-score-breakdown/${team.id}`)}
+                      disabled={shouldHideScores}
+                      size="small"
+                      variant="outlined"
+                      sx={{ minWidth: "160px" }}
+                    >
+                      Redesign
+                    </Button>
+                  )}
+                </Stack>
               </TableCell>
             </TableRow>
           </TableBody>
