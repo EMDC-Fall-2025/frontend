@@ -50,6 +50,7 @@ interface JudgeState {
   // Utility functions
   clearSubmissionStatus: () => void;
   clearJudge: () => void;
+  loadedJudges: Set<number>;
 }
 
 // ==============================
@@ -66,6 +67,7 @@ export const useJudgeStore = create<JudgeState>()(
       isLoadingJudge: false,
       judgeError: null,
       submissionStatus: null,
+      loadedJudges: new Set(),
 
       // ==============================
       // Utility Functions
@@ -96,11 +98,19 @@ export const useJudgeStore = create<JudgeState>()(
       // ==============================
 
       fetchJudgeById: async (judgeId: number) => {
+        const state = useJudgeStore.getState();
+        if (state.loadedJudges.has(judgeId) && state.judge?.id === judgeId) {
+          return; 
+        }
+
         set({ isLoadingJudge: true });
         try {
           const { data } = await api.get(`/api/judge/get/${judgeId}/`);
-          set({ judge: data.Judge });
-          set({ judgeError: null });
+          set((state) => ({
+            judge: data.Judge,
+            judgeError: null,
+            loadedJudges: new Set([...state.loadedJudges, judgeId])
+          }));
         } catch (judgeError: any) {
           const errorMessage = "Error fetching judge:" + judgeError;
           set({ judgeError: errorMessage });
