@@ -251,11 +251,11 @@ export const useJudgeStore = create<JudgeState>()(
       },
       onRehydrateStorage: () => (state) => {
         // Ensure loadedJudges is always a Set after rehydration
-        if (state && !state.loadedJudges) {
-          state.loadedJudges = new Set();
-        } else if (state && !(state.loadedJudges instanceof Set)) {
-          // Convert array/object back to Set if needed
-          state.loadedJudges = new Set(Array.isArray(state.loadedJudges) ? state.loadedJudges : []);
+        // This fixes corrupted data from previous versions where Set was persisted
+        if (state) {
+          if (!state.loadedJudges || !(state.loadedJudges instanceof Set)) {
+            state.loadedJudges = new Set();
+          }
         }
       },
     }
