@@ -99,8 +99,9 @@ export const useJudgeStore = create<JudgeState>()(
 
       fetchJudgeById: async (judgeId: number) => {
         const state = useJudgeStore.getState();
-        if (state.loadedJudges.has(judgeId) && state.judge?.id === judgeId) {
-          return; 
+        const loaded = state.loadedJudges instanceof Set ? state.loadedJudges : new Set<number>();
+        if (loaded.has(judgeId) && state.judge?.id === judgeId) {
+          return;
         }
 
         set({ isLoadingJudge: true });
@@ -241,6 +242,16 @@ export const useJudgeStore = create<JudgeState>()(
       // ==============================
       name: "judge-storage",
       storage: createJSONStorage(() => sessionStorage),
-    }
+      partialize: (state) => {
+        const { loadedJudges, ...rest } = state;
+        return rest;
+      },
+      onRehydrateStorage: () => (state, error) => {
+        if(error) return;
+        if(state&&!(state.loadedJudges instanceof Set)){
+          useJudgeStore.setState({loadedJudges: new Set<number>() }, false);
+        }
+          },
+        }
   )
 );

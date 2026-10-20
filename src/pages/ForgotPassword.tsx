@@ -58,25 +58,16 @@ export default function ForgotPassword() {
         { username: email }
       );
 
-      // Backend may return error in 200 response for non-admin/coach users
+      //Backend may return error in 200 response for non-admin/coach users
       if (response.data?.error) {
         // Show error toast for non-admin/coach users
-        toast.error(
-          "Password reset is only available for administrators and coaches. Please contact an administrator for assistance.",
-          {
-            duration: 6000,
-            style: {
-              maxWidth: "500px",
-            },
-          }
-        );
         setError(response.data.detail || response.data.error);
       } else {
-        // Success - admin/coach email sent
+        //Success - admin/coach email sent
         toast.success(
-          "If this email belongs to an admin or coach, a password reset link has been sent.",
+          "If this email belongs to an admin or coach, a password reset link has been sent.\n\n You will be redirected to the login page.\n\n For organizer and judge resets please contant an Administrator.",
           {
-            duration: 5000,
+            duration: 8000,
           }
         );
         // Clear form
@@ -84,7 +75,7 @@ export default function ForgotPassword() {
         // Optionally navigate back to login after a delay
         setTimeout(() => {
           navigate("/login/");
-        }, 2000);
+        }, 8000);
       }
     } catch (err: any) {
       // Extract error message from backend response
