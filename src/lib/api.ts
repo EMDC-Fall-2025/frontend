@@ -40,28 +40,3 @@ api.interceptors.request.use((config) => {
 export function getAllOrganizers() {
   return api.get("/api/organizer/getAll/");
 }
-
-// Response interceptor to handle authentication errors
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Handle 401 Unauthorized - session expired or not authenticated
-    if (error?.response?.status === 401) {
-      const errorMessage =
-        error?.response?.data?.detail || "Authentication credentials were not provided";
-      console.error("Authentication error:", errorMessage);
-
-      if (
-        errorMessage.includes("Authentication credentials") ||
-        errorMessage.includes("not authenticated")
-      ) {
-        if (window.location.pathname !== "/login/") {
-          console.warn("Session expired. Please log in again.");
-          // window.location.href = "/login/"
-        }
-      }
-    }
-
-    return Promise.reject(error);
-  }
-);
